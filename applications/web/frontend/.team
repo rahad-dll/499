@@ -1,0 +1,14 @@
+# Frontend Service Setup
+
+This folder contains the frontend/UI service.
+
+## Setup Instructions
+1. Initialize your framework here
+2. Add configuration files and dependencies
+3. Create a .gitignore for dependencies and build artifacts
+4. Document UI components and design guidelines
+
+## Team Notes
+- Maintain consistent code style and components
+- Document UI components in a component library or Storybook
+- Ensure responsive design across devices

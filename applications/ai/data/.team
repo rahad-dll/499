@@ -1,0 +1,14 @@
+# AI/ML Datasets
+
+This folder contains datasets used for training and testing ML models.
+
+## Organization
+- Training data: /train
+- Testing data: /test
+- Validation data: /val
+- Raw data: /raw
+
+## Notes
+- Document data sources and licenses
+- Include data preprocessing scripts
+- Create README.md with data format description

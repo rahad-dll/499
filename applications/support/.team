@@ -1,0 +1,15 @@
+# Shared Support Utilities
+
+This folder contains shared utilities, helpers, and common code used across services.
+
+## Contents
+- Common utilities and helper functions
+- Shared configuration files
+- Logging and error handling modules
+- Authentication/authorization helpers
+- API client libraries
+
+## Team Notes
+- Keep this modular and service-agnostic
+- Document all exported functions and classes
+- Test utilities thoroughly before team usage

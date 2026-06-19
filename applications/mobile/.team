@@ -1,0 +1,14 @@
+# Mobile Service Setup
+
+This folder contains the mobile application service.
+
+## Setup Instructions
+1. Initialize your mobile framework here
+2. Add configuration files and build settings
+3. Create a .gitignore for build outputs and dependencies
+4. Document build and deployment process
+
+## Team Notes
+- Follow platform-specific guidelines (iOS/Android)
+- Document build and deployment process
+- Ensure compatibility with backend API

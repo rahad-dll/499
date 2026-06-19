@@ -1,0 +1,14 @@
+# AI/ML Service Setup
+
+This folder contains AI and machine learning models and services.
+
+## Setup Instructions
+1. Setup your ML framework here
+2. Add training scripts, model files, and evaluation tools
+3. Create dependency configuration files
+4. Document model architecture and training procedures
+
+## Team Notes
+- Keep data/ folder organized for datasets
+- Document model versions and performance metrics
+- Include model evaluation and testing scripts

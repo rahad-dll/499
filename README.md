@@ -76,8 +76,8 @@ project-499/
 <td>MD. Rokib Hasan Oli</td>
 <td>AI/ML, Frontend</td>
 <td>ECE</td>
-<td></></td>
-<td></></td>
+<td>rokib.oli@northsouth.edu</td>
+<td><a href="https://github.com/Rokib-Hasan-Oli">Rokib</a></td>
 </tr>
 </table>
 

@@ -61,21 +61,21 @@ project-499/
 <tr>
 <td>Md. Rahad Hossain</td>
 <td>AI/ML, Backend</td>
-<td>Electrical & Computer Engineering</td>
+<td>ECE</td>
 <td>sys.rahad[at]gmail[dot]com</td>
 <td><a href="https://github.com/rahad-dll">rahad-dll</a></td>
 </tr>
 <tr>
 <td>Md. Yousuf</td>
 <td>AI/ML, Mobile</td>
-<td>Electrical & Computer Engineering</td>
+<td>ECE</td>
 <td></></td>
 <td></></td>
 </tr>
 <tr>
 <td>MD. Rokib Hasan Oli</td>
 <td>AI/ML, Frontend</td>
-<td>Electrical & Computer Engineering</td>
+<td>ECE</td>
 <td></></td>
 <td></></td>
 </tr>

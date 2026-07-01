@@ -1,0 +1,9 @@
+huggingface_hub
+hf_transfer
+kaggle
+kagglehub
+pillow
+pandas
+scikit-learn
+torch
+torchvision

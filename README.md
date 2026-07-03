@@ -36,7 +36,7 @@ project-499/
 ├── applications/
 │   ├── web/              # Web services
 │   │   ├── backend/      # Backend service
-│   │   └── frontend/     # Frontend service
+│   │   └── frontend/     # Frontend service (see full at. applications/web/frontend/README.md)
 │   ├── mobile/           # Mobile service
 │   ├── ai/               # AI/ML service
 │   │   └── data/         # Datasets

@@ -1,6 +1,3 @@
-// CityPulse — Prisma Schema
-// https://pris.ly/d/prisma-schema
-
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -9,4 +6,374 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+model roles {
+  id          String             @id @default(uuid()) @db.Uuid
+  name        String             @unique @db.VarChar(50)
+  created_at  DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime           @updatedAt @db.Timestamptz(6)
+  deleted_at  DateTime?          @db.Timestamptz(6)
+  permissions role_permissions[]
+  users       users[]
+}
+
+model permissions {
+  id         String             @id @default(uuid()) @db.Uuid
+  name       String             @unique @db.VarChar(100)
+  created_at DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at DateTime           @updatedAt @db.Timestamptz(6)
+  deleted_at DateTime?          @db.Timestamptz(6)
+  roles      role_permissions[]
+}
+
+model role_permissions {
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  permission    permissions @relation(fields: [permission_id], references: [id])
+  role          roles       @relation(fields: [role_id], references: [id])
+
+  @@id([role_id, permission_id])
+}
+
+model users {
+  id                String                @id @default(uuid()) @db.Uuid
+  email             String                @unique @db.VarChar(255)
+  password_hash     String?               @db.VarChar(255)
+  phone             String                @unique @db.VarChar(20)
+  phone_verified    Boolean               @default(false)
+  role_id           String                @db.Uuid
+  is_active         Boolean               @default(true)
+  avatar_url        String?               @db.VarChar(500)
+  last_login_at     DateTime?             @db.Timestamptz(6)
+  created_at        DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime              @updatedAt @db.Timestamptz(6)
+  deleted_at        DateTime?             @db.Timestamptz(6)
+  authority_profile authority_profiles?
+  driver_profile    driver_profiles?
+  notifications     notifications[]
+  owner_profile     owner_profiles?
+  parking_spaces    parking_spaces[]
+  oauth_accounts    user_oauth_accounts[]
+  sessions          user_sessions[]
+  role              roles                 @relation(fields: [role_id], references: [id])
+
+  @@index([role_id])
+}
+
+model user_sessions {
+  id             String    @id @default(uuid()) @db.Uuid
+  user_id        String    @db.Uuid
+  jti            String    @unique @db.VarChar(255)
+  token_hash     String    @db.VarChar(255)
+  device_name    String?   @db.VarChar(255)
+  ip_address     String?   @db.VarChar(45)
+  user_agent     String?   @db.VarChar(500)
+  expires_at     DateTime  @db.Timestamptz(6)
+  revoked        Boolean   @default(false)
+  revoked_at     DateTime? @db.Timestamptz(6)
+  revoked_by     String?   @db.Uuid
+  revoked_reason String?   @db.VarChar(255)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime  @updatedAt @db.Timestamptz(6)
+  deleted_at     DateTime? @db.Timestamptz(6)
+  user           users     @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([jti])
+  @@index([revoked])
+  @@index([expires_at])
+}
+
+model user_oauth_accounts {
+  id               String         @id @default(uuid()) @db.Uuid
+  user_id          String         @db.Uuid
+  provider         oauth_provider
+  provider_user_id String         @db.VarChar(255)
+  access_token     String?
+  refresh_token    String?
+  token_expires_at DateTime?      @db.Timestamptz(6)
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at       DateTime?      @db.Timestamptz(6)
+  user             users          @relation(fields: [user_id], references: [id])
+
+  @@unique([provider, provider_user_id])
+  @@index([user_id])
+}
+
+model owner_profiles {
+  id            String    @id @default(uuid()) @db.Uuid
+  user_id       String    @unique @db.Uuid
+  business_name String?   @db.VarChar(255)
+  address       String?
+  national_id   String?   @db.VarChar(50)
+  verified      Boolean   @default(false)
+  verified_at   DateTime? @db.Timestamptz(6)
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime  @updatedAt @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
+  user          users     @relation(fields: [user_id], references: [id])
+}
+
+model driver_profiles {
+  id                       String          @id @default(uuid()) @db.Uuid
+  user_id                  String          @unique @db.Uuid
+  full_name                String?         @db.VarChar(255)
+  fcm_token                String?         @db.VarChar(500)
+  preferred_payment_method payment_method?
+  created_at               DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime        @updatedAt @db.Timestamptz(6)
+  deleted_at               DateTime?       @db.Timestamptz(6)
+  bookings                 bookings[]
+  user                     users           @relation(fields: [user_id], references: [id])
+}
+
+model authority_profiles {
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @unique @db.Uuid
+  full_name    String?   @db.VarChar(255)
+  organization String?   @db.VarChar(255)
+  badge_number String?   @db.VarChar(50)
+  jurisdiction String?   @db.VarChar(255)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime  @updatedAt @db.Timestamptz(6)
+  deleted_at   DateTime? @db.Timestamptz(6)
+  user         users     @relation(fields: [user_id], references: [id])
+}
+
+model parking_spaces {
+  id              String          @id @default(uuid()) @db.Uuid
+  owner_id        String          @db.Uuid
+  name            String          @db.VarChar(255)
+  description     String?
+  address         String?
+  division        String?         @db.VarChar(100)
+  district        String?         @db.VarChar(100)
+  thana           String?         @db.VarChar(100)
+  area            String?         @db.VarChar(100)
+  contact_phone   String?         @db.VarChar(20)
+  latitude        Float
+  longitude       Float
+  space_type      space_type      @default(outdoor)
+  total_capacity  Int
+  operating_hours Json?
+  amenities       String[]
+  base_rate_unit  Int?
+  max_height_cm   Int?
+  status          space_status    @default(pending)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @updatedAt @db.Timestamptz(6)
+  deleted_at      DateTime?       @db.Timestamptz(6)
+  bookings        bookings[]
+  cameras         cameras[]
+  slots           parking_slots[]
+  owner           users           @relation(fields: [owner_id], references: [id])
+  pricing_rules   pricing_rules[]
+  photos          space_photos[]
+
+  @@index([owner_id])
+  @@index([status])
+  @@index([latitude, longitude])
+  @@index([division])
+  @@index([district])
+  @@index([thana])
+  @@index([area])
+}
+
+model parking_slots {
+  id               String         @id @default(uuid()) @db.Uuid
+  space_id         String         @db.Uuid
+  camera_id        String?        @db.Uuid
+  slot_label       String         @db.VarChar(20)
+  slot_type        slot_type      @default(standard)
+  mask_polygon     Json?
+  occupied         Boolean        @default(false)
+  confidence_score Float?
+  last_updated     DateTime?      @db.Timestamptz(6)
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at       DateTime?      @db.Timestamptz(6)
+  bookings         bookings[]
+  camera           cameras?       @relation(fields: [camera_id], references: [id])
+  space            parking_spaces @relation(fields: [space_id], references: [id])
+
+  @@unique([space_id, slot_label])
+  @@index([space_id])
+  @@index([occupied])
+  @@index([camera_id])
+}
+
+model cameras {
+  id             String          @id @default(uuid()) @db.Uuid
+  space_id       String          @db.Uuid
+  label          String?         @db.VarChar(100)
+  rtsp_url       String          @db.VarChar(500)
+  status         camera_status   @default(setup)
+  last_heartbeat DateTime?       @db.Timestamptz(6)
+  created_at     DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime        @updatedAt @db.Timestamptz(6)
+  deleted_at     DateTime?       @db.Timestamptz(6)
+  space          parking_spaces  @relation(fields: [space_id], references: [id])
+  slots          parking_slots[]
+
+  @@index([space_id])
+}
+
+model space_photos {
+  id         String         @id @default(uuid()) @db.Uuid
+  space_id   String         @db.Uuid
+  s3_key     String         @db.VarChar(500)
+  s3_bucket  String         @db.VarChar(255)
+  is_primary Boolean        @default(false)
+  created_at DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at DateTime?      @db.Timestamptz(6)
+  space      parking_spaces @relation(fields: [space_id], references: [id])
+
+  @@index([space_id])
+}
+
+model bookings {
+  id                  String                @id @default(uuid()) @db.Uuid
+  driver_id           String                @db.Uuid
+  slot_id             String                @db.Uuid
+  space_id            String                @db.Uuid
+  status              booking_status        @default(pending)
+  scheduled_at        DateTime              @db.Timestamptz(6)
+  hold_expires_at     DateTime?             @db.Timestamptz(6)
+  arrived_at          DateTime?             @db.Timestamptz(6)
+  departed_at         DateTime?             @db.Timestamptz(6)
+  amount_unit         Int?
+  cancellation_reason String?               @db.VarChar(500)
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime              @updatedAt @db.Timestamptz(6)
+  deleted_at          DateTime?             @db.Timestamptz(6)
+  driver              driver_profiles       @relation(fields: [driver_id], references: [id])
+  slot                parking_slots         @relation(fields: [slot_id], references: [id])
+  space               parking_spaces        @relation(fields: [space_id], references: [id])
+  payment             payment_transactions?
+
+  @@index([driver_id])
+  @@index([slot_id])
+  @@index([space_id])
+  @@index([status])
+  @@index([scheduled_at])
+}
+
+model payment_transactions {
+  id                 String         @id @default(uuid()) @db.Uuid
+  booking_id         String         @unique @db.Uuid
+  status             payment_status @default(pending)
+  method             payment_method
+  amount_unit        Int
+  gateway_trx_id     String?        @db.VarChar(255)
+  gateway_meta       Json?
+  paid_at            DateTime?      @db.Timestamptz(6)
+  refunded_at        DateTime?      @db.Timestamptz(6)
+  refund_amount_unit Int?
+  created_at         DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at         DateTime?      @db.Timestamptz(6)
+  booking            bookings       @relation(fields: [booking_id], references: [id])
+
+  @@index([status])
+  @@index([gateway_trx_id])
+}
+
+model pricing_rules {
+  id              String         @id @default(uuid()) @db.Uuid
+  space_id        String         @db.Uuid
+  surge_threshold Int            @default(80)
+  surge_factor_bp Int            @default(15000)
+  min_rate_unit   Int?
+  max_rate_unit   Int?
+  is_active       Boolean        @default(false)
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at      DateTime?      @db.Timestamptz(6)
+  space           parking_spaces @relation(fields: [space_id], references: [id])
+
+  @@index([space_id])
+}
+
+model notifications {
+  id         String            @id @default(uuid()) @db.Uuid
+  user_id    String            @db.Uuid
+  type       notification_type
+  title      String            @db.VarChar(255)
+  body       String
+  ref_id     String?           @db.Uuid
+  payload    Json?
+  read_at    DateTime?         @db.Timestamptz(6)
+  sent_at    DateTime?         @db.Timestamptz(6)
+  created_at DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at DateTime          @updatedAt @db.Timestamptz(6)
+  deleted_at DateTime?         @db.Timestamptz(6)
+  user       users             @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([read_at])
+  @@index([sent_at])
+}
+
+enum space_type {
+  indoor
+  outdoor
+  rooftop
+}
+
+enum space_status {
+  active
+  inactive
+  pending
+}
+
+enum camera_status {
+  active
+  offline
+  setup
+}
+
+enum slot_type {
+  standard
+  motorcycle
+  disabled
+  ev
+}
+
+enum booking_status {
+  pending
+  confirmed
+  cancelled
+  completed
+  no_show
+}
+
+enum payment_status {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum payment_method {
+  bkash
+  nagad
+  card
+  cash
+}
+
+enum notification_type {
+  booking_confirmed
+  booking_cancelled
+  slot_available
+  payment_receipt
+  system_alert
+}
+
+enum oauth_provider {
+  google
+  facebook
+  apple
 }

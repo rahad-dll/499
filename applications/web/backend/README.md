@@ -1,11 +1,13 @@
 # CityPulse - API Backend
 
-NestJS backend service for the CityPulse platform. Handles API requests for the parking owner portal and traffic authority dashboard.
+NestJS backend service for the CityPulse platform. Handles API requests for the parking owner portal, driver mobile app, and traffic authority dashboard.
 
 ## Tech Stack
 
 - NestJS 11
 - TypeScript
+- Prisma 7 (ORM)
+- PostgreSQL (via Supabase or local)
 
 ## Getting Started
 
@@ -14,25 +16,32 @@ npm install
 npm run start:dev
 ```
 
-Server runs at [http://localhost:3000](http://localhost:3000) by default.
+Server runs at [http://localhost:3001](http://localhost:3001).
 
 ## Project Structure
 
 ```
 backend/
+├── prisma/
+│   ├── schema.prisma
+│   └── migrations/
 ├── src/
+│   ├── generated/prisma/   # auto-generated Prisma client
+│   ├── prisma/
+│   │   ├── prisma.module.ts
+│   │   └── prisma.service.ts
 │   ├── app.module.ts
 │   ├── app.controller.ts
 │   ├── app.service.ts
 │   └── main.ts
-├── test/
+├── prisma.config.ts
+├── .env.example
 ├── nest-cli.json
 ├── tsconfig.json
-├── eslint.config.mjs
 └── package.json
 ```
 
-**Structure Updated:** 2026-07-04
+**Structure Updated:** 2026-07-08
 
 ## Available Scripts
 
@@ -45,10 +54,20 @@ backend/
 | `npm run test` | Run unit tests |
 | `npm run test:e2e` | Run e2e tests |
 
+## Prisma
+
+```bash
+npx prisma generate          # regenerate client after schema change
+npx prisma migrate dev       # create and apply a new migration
+npx prisma migrate deploy    # apply migrations in production
+```
+
+Copy `.env.example` to `.env` and fill in `DATABASE_URL` before running.
+
 ## Part of
 
 CityPulse: Intelligent Parking & Traffic Control Platform
 
 ---
 
-**README Updated:** 2026-07-04
+**README Updated:** 2026-07-08

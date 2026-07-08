@@ -35,8 +35,8 @@ Parking owners register their spaces and connect existing CCTV cameras. The syst
 project-499/
 ├── applications/
 │   ├── web/              # Web services
-│   │   ├── backend/      # Backend service
-│   │   └── frontend/     # Frontend service
+│   │   ├── backend/      # Backend service (see full at. applications/web/backend/README.md)
+│   │   └── frontend/     # Frontend service (see full at. applications/web/frontend/README.md)
 │   ├── mobile/           # Mobile service
 │   ├── ai/               # AI/ML service
 │   │   └── data/         # Datasets
@@ -63,11 +63,10 @@ project-499/
 
 ### Sprint 2 (W3–4) — System Design & Architecture
 
-- ⬜ Explore: geospatial queries, WebSocket patterns, RTSP strategies
-- ⬜ Build: finalize system architecture & data flow diagrams
-- ⬜ Build: design full DB schema (PostgreSQL + MongoDB) & API contracts
-- ⬜ Build: prepare UI/UX wireframes for all three client interfaces
-- ⬜ Build: set up Docker Compose containerized dev environment
+- ✅ Explore: geospatial queries, WebSocket patterns, RTSP strategies
+- ✅ Build: finalize system architecture & data flow diagrams
+- ✅ Build: design full DB schema (PostgreSQL + MongoDB) & API contracts
+- ✅ Build: prepare UI/UX wireframes for all three client interfaces
 
 ### Sprint 3 (W5–6) — Authentication & Owner Registration
 
@@ -138,4 +137,4 @@ project-499/
 
 ---
 
-**README Updated:** 2026-06-27
+**README Updated:** 2026-07-08

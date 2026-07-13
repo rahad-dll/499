@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
-import 'screens/landing_screen.dart';
 
 void main() {
   runApp(const CityPulseApp());
@@ -31,10 +30,6 @@ class _CityPulseAppState extends State<CityPulseApp> {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: _themeMode,
-      home: LandingScreen(
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onToggleTheme: _toggleTheme,
-      ),
     );
   }
 }

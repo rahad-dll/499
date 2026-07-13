@@ -13,10 +13,10 @@ dependencies:
   # UI & Design
   google_fonts: ^6.2.1
   
-  # State Management - For Theme Toggle
+  # State Management
   provider: ^6.1.1
   
-  # Storage (for later)
+  # Storage - For Session Cookies
   shared_preferences: ^2.2.2
   
   # Networking (for later)

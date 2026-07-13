@@ -1,6 +1,5 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
 
@@ -32,7 +31,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Theme Provider Class
 class ThemeProvider extends ChangeNotifier {
   bool _isDarkMode = false;
 

@@ -1,9 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../theme/app_theme.dart';
-import '../../main.dart'; // Import for ThemeProvider
-import 'sign_up_screen.dart';
+import '../../main.dart';
+import '../../utils/responsive.dart';
+import '../../widgets/responsive_widgets.dart';
+import '../../services/session_service.dart';
+import '../../models/user_model.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,8 +21,26 @@ class _SignInScreenState extends State<SignInScreen> {
   
   bool obscurePassword = true;
   bool isLoading = false;
+  bool rememberMe = false;
   String? emailError;
   String? passwordError;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRememberMe();
+  }
+
+  void _checkRememberMe() async {
+    final remembered = await SessionService.getRememberMe();
+    if (remembered) {
+      final user = await SessionService.getSession();
+      if (user != null && user.isLoggedIn) {
+        // Auto-login
+        // Navigator.pushReplacementNamed(context, '/dashboard');
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -33,7 +54,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return regex.hasMatch(email);
   }
 
-  void _handleLogin() {
+  void _handleLogin() async {
     setState(() {
       emailError = null;
       passwordError = null;
@@ -60,20 +81,30 @@ class _SignInScreenState extends State<SignInScreen> {
     if (isValid) {
       setState(() => isLoading = true);
       
-      // Mock Login
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => isLoading = false);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Welcome back! 🎉'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      });
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted) {
+        setState(() => isLoading = false);
+        
+        final user = User(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          email: emailController.text,
+          fullName: 'Test User',
+          userType: 'driver',
+          createdAt: DateTime.now(),
+          isLoggedIn: true,
+        );
+        
+        await SessionService.saveSession(user, rememberMe);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Welcome back! 🎉'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -81,6 +112,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isMobile = Responsive.isMobile(context);
     
     return Scaffold(
       body: Container(
@@ -99,186 +131,266 @@ class _SignInScreenState extends State<SignInScreen> {
                   ],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Top Bar with Logo
-                _buildTopBar(isDark, themeProvider),
-                const SizedBox(height: 24),
-                
-                // Hero Section
-                _buildHeroSection(isDark),
-                const SizedBox(height: 24),
-                
-                // Status Pills
-                _buildStatusPills(isDark),
-                const SizedBox(height: 24),
-                
-                // Login Card
-                _buildLoginCard(isDark),
-                const SizedBox(height: 20),
-                
-                // Footer
-                _buildFooter(isDark),
-                const SizedBox(height: 16),
-                
-                // Security Note
-                _buildSecurityNote(isDark),
-              ],
+        child: Stack(
+          children: [
+            // ===== GLOW EFFECTS - LIGHT MODE =====
+            if (!isDark) ...[
+              // Top-left glow
+              Positioned(
+                left: -120,
+                top: -80,
+                child: Container(
+                  width: 340,
+                  height: 340,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7FE9DD).withOpacity(0.22),
+                    borderRadius: BorderRadius.circular(170),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+              // Top-right glow
+              Positioned(
+                left: 230,
+                top: -40,
+                child: Container(
+                  width: 320,
+                  height: 320,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC4B5FD).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(160),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+              // Bottom glow
+              Positioned(
+                left: 120,
+                top: 640,
+                child: Container(
+                  width: 360,
+                  height: 360,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFBFD4FF).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(180),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            
+            // ===== GLOW EFFECTS - DARK MODE =====
+            if (isDark) ...[
+              // Top-left glow
+              Positioned(
+                left: -120,
+                top: -80,
+                child: Container(
+                  width: 340,
+                  height: 340,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF18D6C0).withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(170),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 55, sigmaY: 55),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+              // Top-right glow
+              Positioned(
+                left: 220,
+                top: -40,
+                child: Container(
+                  width: 320,
+                  height: 320,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(160),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 55, sigmaY: 55),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+              // Bottom glow
+              Positioned(
+                left: 120,
+                top: 620,
+                child: Container(
+                  width: 360,
+                  height: 360,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(180),
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 55, sigmaY: 55),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            
+            // ===== CONTENT =====
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Responsive.paddingHorizontal(context).horizontal,
+                    vertical: isMobile ? 32 : 48,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Top Bar
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildLogo(isDark, isMobile),
+                          ResponsiveThemeToggle(
+                            isDark: isDark,
+                            onTap: themeProvider.toggleTheme,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: Responsive.spacing(context, base: 24)),
+                      
+                      // Hero Section
+                      _buildHeroSection(isDark, isMobile),
+                      SizedBox(height: Responsive.spacing(context, base: 24)),
+                      
+                      // Status Pills
+                      ResponsiveStatusPills(isDark: isDark),
+                      SizedBox(height: Responsive.spacing(context, base: 24)),
+                      
+                      // Login Card
+                      _buildLoginCard(isDark, isMobile),
+                      SizedBox(height: Responsive.spacing(context, base: 20)),
+                      
+                      // Footer
+                      _buildFooter(isDark, isMobile),
+                      SizedBox(height: Responsive.spacing(context, base: 16)),
+                      
+                      // Security Note
+                      _buildSecurityNote(isDark, isMobile),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTopBar(bool isDark, ThemeProvider themeProvider) {
+  Widget _buildLogo(bool isDark, bool isMobile) {
+    final logoSize = isMobile ? 38.0 : 48.0;
+    final fontSize = Responsive.fontSize(context, base: 19);
+    
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Logo
-        Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: isDark 
-                    ? const Color(0xFF0E2436).withOpacity(0.9)
-                    : const Color(0xFFF0FDFA).withOpacity(0.9),
-                border: Border.all(
-                  color: isDark 
-                      ? const Color(0xFF18D6C0).withOpacity(0.8)
-                      : const Color(0xFF00C9B1).withOpacity(0.8),
-                  width: 1.5,
-                ),
-                borderRadius: BorderRadius.circular(19),
-              ),
-              child: Center(
-                child: Icon(
-                  Icons.location_city,
-                  color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
-                  size: 20,
-                ),
-              ),
+        Container(
+          width: logoSize,
+          height: logoSize,
+          decoration: BoxDecoration(
+            color: isDark 
+                ? const Color(0xFF0E2436).withOpacity(0.9)
+                : const Color(0xFFF0FDFA).withOpacity(0.9),
+            border: Border.all(
+              color: isDark 
+                  ? const Color(0xFF18D6C0).withOpacity(0.8)
+                  : const Color(0xFF00C9B1).withOpacity(0.8),
+              width: 1.5,
             ),
-            const SizedBox(width: 10),
-            Row(
-              children: [
-                Text(
-                  'City',
-                  style: GoogleFonts.inter(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-                  ),
-                ),
-                Text(
-                  'Pulse',
-                  style: GoogleFonts.inter(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const Spacer(),
-        
-        // Theme Toggle Button - NOW WORKING
-        GestureDetector(
-          onTap: () {
-            themeProvider.toggleTheme();
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1A2740) : Colors.white,
-              border: Border.all(
-                color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
-              ),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  isDark ? Icons.dark_mode : Icons.light_mode,
-                  size: 16,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF94A3B8),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 38,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F1728) : const Color(0xFFE8EEF7),
-                    border: Border.all(
-                      color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFD8E1EC),
-                    ),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    alignment: isDark ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      margin: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF00C9B1),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isDark ? const Color(0xFF18D6C0) : const Color(0xFF00C9B1))
-                                .withOpacity(0.3),
-                            blurRadius: 4,
-                            spreadRadius: 1,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            borderRadius: BorderRadius.circular(logoSize / 2),
+          ),
+          child: Center(
+            child: Icon(
+              Icons.location_city,
+              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+              size: logoSize * 0.5,
             ),
           ),
+        ),
+        const SizedBox(width: 10),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'City',
+              style: GoogleFonts.inter(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
+              ),
+            ),
+            Text(
+              'Pulse',
+              style: GoogleFonts.inter(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildHeroSection(bool isDark) {
+  Widget _buildHeroSection(bool isDark, bool isMobile) {
     return Column(
       children: [
         Text(
           'WELCOME BACK',
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: isMobile ? 12 : 14,
             fontWeight: FontWeight.w600,
             letterSpacing: 2,
             color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isMobile ? 8 : 12),
         Text(
           'Sign in to CityPulse',
           style: GoogleFonts.inter(
-            fontSize: 26,
+            fontSize: Responsive.fontSize(context, base: 26),
             fontWeight: FontWeight.w700,
             color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: isMobile ? 8 : 12),
         Text(
           'Manage your city with intelligence and precision.',
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 13.5,
+            fontSize: Responsive.fontSize(context, base: 13.5),
             height: 1.45,
             color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           ),
@@ -287,59 +399,15 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _buildStatusPills(bool isDark) {
-    final List<Map<String, dynamic>> pills = [
-      {'label': 'Live tracking', 'color': const Color(0xFF22C55E)},
-      {'label': 'AI online', 'color': const Color(0xFF8B5CF6)},
-      {'label': '98% flow', 'color': isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697)},
-    ];
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: pills.map((pill) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          decoration: BoxDecoration(
-            color: isDark 
-                ? const Color(0xFF0E1D36).withOpacity(0.7)
-                : Colors.white,
-            border: Border.all(
-              color: isDark 
-                  ? const Color(0xFF22344F).withOpacity(0.8)
-                  : const Color(0xFFE2E8F0),
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: pill['color'],
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                pill['label'],
-                style: GoogleFonts.inter(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildLoginCard(bool isDark) {
+  Widget _buildLoginCard(bool isDark, bool isMobile) {
+    final cardWidth = Responsive.containerWidth(context);
+    final cardPadding = Responsive.cardPadding(context);
+    final borderRadius = isMobile ? 22.0 : 28.0;
+    final buttonHeight = isMobile ? 50.0 : 56.0;
+    
     return Container(
-      padding: const EdgeInsets.all(22),
+      width: cardWidth,
+      padding: cardPadding,
       decoration: BoxDecoration(
         color: isDark 
             ? const Color(0xFF141E30).withOpacity(0.72)
@@ -349,7 +417,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ? const Color(0xFF253248).withOpacity(0.9)
               : const Color(0xFFE2E8F0),
         ),
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: isDark
             ? [
                 BoxShadow(
@@ -379,8 +447,9 @@ class _SignInScreenState extends State<SignInScreen> {
             icon: Icons.email_outlined,
             errorText: emailError,
             isDark: isDark,
+            isMobile: isMobile,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: Responsive.spacing(context, base: 16)),
           
           // Password Field
           _buildTextField(
@@ -391,11 +460,21 @@ class _SignInScreenState extends State<SignInScreen> {
             obscureText: obscurePassword,
             errorText: passwordError,
             isDark: isDark,
+            isMobile: isMobile,
+            showForgotPassword: true,
+            onForgotPassword: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Forgot password - coming soon!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
             suffixIcon: IconButton(
               icon: Icon(
                 obscurePassword ? Icons.visibility_off : Icons.visibility,
                 color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                size: 20,
+                size: isMobile ? 20 : 24,
               ),
               onPressed: () {
                 setState(() {
@@ -403,14 +482,13 @@ class _SignInScreenState extends State<SignInScreen> {
                 });
               },
             ),
-            showForgotPassword: true,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: Responsive.spacing(context, base: 16)),
           
           // Login Button
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: buttonHeight,
             child: ElevatedButton(
               onPressed: isLoading ? null : _handleLogin,
               style: ElevatedButton.styleFrom(
@@ -418,15 +496,18 @@ class _SignInScreenState extends State<SignInScreen> {
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: const Color(0xFF18D6C0).withOpacity(0.5),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(isMobile ? 11 : 14),
                 ),
                 elevation: 0,
+                shadowColor: isDark 
+                    ? const Color(0xFF18D6C0).withOpacity(0.4)
+                    : const Color(0xFF00C9B1).withOpacity(0.32),
               ),
               child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
+                  ? SizedBox(
+                      width: isMobile ? 20 : 24,
+                      height: isMobile ? 20 : 24,
+                      child: const CircularProgressIndicator(
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
@@ -437,20 +518,20 @@ class _SignInScreenState extends State<SignInScreen> {
                         Text(
                           'Log In',
                           style: GoogleFonts.inter(
-                            fontSize: 15,
+                            fontSize: Responsive.fontSize(context, base: 15),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(width: 9),
+                        SizedBox(width: isMobile ? 9 : 12),
                         Icon(
                           Icons.arrow_forward,
-                          size: 17,
+                          size: isMobile ? 17 : 20,
                         ),
                       ],
                     ),
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: Responsive.spacing(context, base: 16)),
           
           // Divider
           Row(
@@ -466,7 +547,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Text(
                   'Or continue with',
                   style: GoogleFonts.inter(
-                    fontSize: 11.5,
+                    fontSize: Responsive.fontSize(context, base: 11.5),
                     color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                   ),
                 ),
@@ -479,7 +560,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: Responsive.spacing(context, base: 16)),
           
           // Social Buttons
           Row(
@@ -489,6 +570,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   label: 'Google',
                   icon: Icons.g_mobiledata,
                   isDark: isDark,
+                  isMobile: isMobile,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -499,12 +581,13 @@ class _SignInScreenState extends State<SignInScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: Responsive.spacing(context, base: 12)),
               Expanded(
                 child: _buildSocialButton(
                   label: 'GitHub',
                   icon: Icons.code,
                   isDark: isDark,
+                  isMobile: isMobile,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -528,11 +611,18 @@ class _SignInScreenState extends State<SignInScreen> {
     required TextEditingController controller,
     required IconData icon,
     required bool isDark,
+    required bool isMobile,
     String? errorText,
     bool obscureText = false,
     Widget? suffixIcon,
     bool showForgotPassword = false,
+    VoidCallback? onForgotPassword,
   }) {
+    final labelSize = Responsive.fontSize(context, base: 12.5);
+    final fontSize = Responsive.fontSize(context, base: 14);
+    final fieldHeight = isMobile ? 48.0 : 56.0;
+    final borderRadius = isMobile ? 11.0 : 14.0;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -542,21 +632,14 @@ class _SignInScreenState extends State<SignInScreen> {
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: 12.5,
+                  fontSize: labelSize,
                   fontWeight: FontWeight.w500,
                   color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
                 ),
               ),
               const Spacer(),
               TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Forgot password - coming soon!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onPressed: onForgotPassword,
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(0, 0),
@@ -565,7 +648,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Text(
                   'Forgot?',
                   style: GoogleFonts.inter(
-                    fontSize: 12.5,
+                    fontSize: labelSize,
                     fontWeight: FontWeight.w600,
                     color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
                   ),
@@ -577,59 +660,66 @@ class _SignInScreenState extends State<SignInScreen> {
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 12.5,
+              fontSize: labelSize,
               fontWeight: FontWeight.w500,
               color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
             ),
           ),
         const SizedBox(height: 7),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          style: TextStyle(
-            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-          ),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+        SizedBox(
+          height: fieldHeight,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            style: TextStyle(
+              fontSize: fontSize,
+              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
             ),
-            prefixIcon: Icon(
-              icon,
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-              size: 20,
-            ),
-            suffixIcon: suffixIcon,
-            errorText: errorText,
-            errorStyle: GoogleFonts.inter(fontSize: 11),
-            filled: true,
-            fillColor: isDark 
-                ? const Color(0xFF0E1728).withOpacity(0.9)
-                : const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: BorderSide(
-                color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(
+                fontSize: fontSize,
+                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+              ),
+              prefixIcon: Icon(
+                icon,
+                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                size: isMobile ? 20 : 24,
+              ),
+              suffixIcon: suffixIcon,
+              errorText: errorText,
+              errorStyle: GoogleFonts.inter(fontSize: isMobile ? 11 : 12),
+              filled: true,
+              fillColor: isDark 
+                  ? const Color(0xFF0E1728).withOpacity(0.9)
+                  : const Color(0xFFF8FAFC),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 13 : 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(
+                  color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF00C9B1),
+                  width: 2,
+                ),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: const BorderSide(color: Colors.red, width: 1.5),
               ),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: BorderSide(
-                color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: BorderSide(
-                color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF00C9B1),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(11),
-              borderSide: const BorderSide(color: Colors.red, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 13),
           ),
         ),
       ],
@@ -640,12 +730,17 @@ class _SignInScreenState extends State<SignInScreen> {
     required String label,
     required IconData icon,
     required bool isDark,
+    required bool isMobile,
     required VoidCallback onTap,
   }) {
+    final buttonHeight = isMobile ? 46.0 : 54.0;
+    final fontSize = Responsive.fontSize(context, base: 13);
+    final borderRadius = isMobile ? 11.0 : 14.0;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 46,
+        height: buttonHeight,
         decoration: BoxDecoration(
           color: isDark 
               ? const Color(0xFF0E1728).withOpacity(0.6)
@@ -653,7 +748,7 @@ class _SignInScreenState extends State<SignInScreen> {
           border: Border.all(
             color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
           ),
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(borderRadius),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -661,13 +756,13 @@ class _SignInScreenState extends State<SignInScreen> {
             Icon(
               icon,
               color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-              size: 20,
+              size: isMobile ? 20 : 24,
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: isMobile ? 8 : 10),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: fontSize,
                 fontWeight: FontWeight.w500,
                 color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
               ),
@@ -678,52 +773,58 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _buildFooter(bool isDark) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildFooter(bool isDark, bool isMobile) {
+    return Column(
       children: [
-        Text(
-          'Don\'t have an account?',
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-          ),
-        ),
-        const SizedBox(width: 5),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SignUpScreen()),
-            );
-          },
-          child: Text(
-            'Sign Up',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Don\'t have an account?',
+              style: GoogleFonts.inter(
+                fontSize: Responsive.fontSize(context, base: 13),
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              ),
             ),
-          ),
+            const SizedBox(width: 5),
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sign Up screen coming soon!'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              },
+              child: Text(
+                'Sign Up',
+                style: GoogleFonts.inter(
+                  fontSize: Responsive.fontSize(context, base: 13),
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildSecurityNote(bool isDark) {
+  Widget _buildSecurityNote(bool isDark, bool isMobile) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(
           Icons.shield_outlined,
-          size: 13,
+          size: isMobile ? 13 : 16,
           color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
         ),
         const SizedBox(width: 7),
         Text(
           'Protected with enterprise-grade security',
           style: GoogleFonts.inter(
-            fontSize: 11.5,
+            fontSize: Responsive.fontSize(context, base: 11.5),
             color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
           ),
         ),

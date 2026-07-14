@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
 const ROLE_LABEL: Record<string, string> = {
+  admin: "Admin",
   driver: "Driver",
   owner: "Parking Owner",
   authority: "Traffic Authority",

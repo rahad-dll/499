@@ -7,12 +7,14 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from './auth/guards/permissions.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { SpacesModule } from './spaces/spaces.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     AuthModule,
+    SpacesModule,
   ],
   controllers: [AppController],
   providers: [

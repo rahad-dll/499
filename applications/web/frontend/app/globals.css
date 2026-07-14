@@ -1,15 +1,173 @@
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@import "tailwindcss";
+
+/* Dark mode is driven by the existing [data-theme="dark"] attribute
+   (set by the pre-paint script + ThemeToggle), with a system fallback
+   when the user has made no explicit choice. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
 }
 
-body {
-  font-family: var(--font-geist), Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
+/* ---------------- CityPulse brand tokens ---------------- */
+:root {
+  --radius: 0.75rem;
+
+  --background: #f7f9fc;
+  --foreground: #172033;
+  --card: #ffffff;
+  --card-foreground: #172033;
+  --popover: #ffffff;
+  --popover-foreground: #172033;
+  --primary: #00c9b1;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef7;
+  --secondary-foreground: #223250;
+  --muted: #eef2f7;
+  --muted-foreground: #64748b;
+  --accent: #e8eef7;
+  --accent-foreground: #172033;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --success: #15803d;
+  --warning: #d97706;
+  --border: #d8e1ec;
+  --input: #d8e1ec;
+  --ring: #00c9b1;
+
+  /* CityPulse extras */
+  --brand: #00c9b1;
+  --brand-2: #26b7e8;
+  --brand-purple: #8b6cff;
+
+  /* Brand panel — always dark, independent of theme */
+  --panel-bg: radial-gradient(120% 90% at 75% 30%, rgba(24, 214, 192, 0.1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 30% 90%, rgba(124, 92, 255, 0.12) 0%, transparent 60%),
+    linear-gradient(160deg, #0b1322 0%, #0f1b31 55%, #131f3a 100%);
+  --panel-card: rgba(255, 255, 255, 0.04);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --panel-fg: #f1f5fb;
+  --panel-muted: #8fa0ba;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+[data-theme="dark"] {
+  --background: #0f1728;
+  --foreground: #f8fafc;
+  --card: #141e30;
+  --card-foreground: #f8fafc;
+  --popover: #141e30;
+  --popover-foreground: #f8fafc;
+  --primary: #18d6c0;
+  --primary-foreground: #082b27;
+  --secondary: #172235;
+  --secondary-foreground: #d6e2f0;
+  --muted: #172235;
+  --muted-foreground: #94a3b8;
+  --accent: #1c2b44;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --border: #253248;
+  --input: #2a3a54;
+  --ring: #18d6c0;
+  --brand: #18d6c0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #0f1728;
+    --foreground: #f8fafc;
+    --card: #141e30;
+    --card-foreground: #f8fafc;
+    --popover: #141e30;
+    --popover-foreground: #f8fafc;
+    --primary: #18d6c0;
+    --primary-foreground: #082b27;
+    --secondary: #172235;
+    --secondary-foreground: #d6e2f0;
+    --muted: #172235;
+    --muted-foreground: #94a3b8;
+    --accent: #1c2b44;
+    --accent-foreground: #f8fafc;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --border: #253248;
+    --input: #2a3a54;
+    --ring: #18d6c0;
+    --brand: #18d6c0;
+  }
+}
+
+/* ---------------- Tailwind theme mapping ---------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-purple: var(--brand-purple);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --animate-float: cp-float 6s ease-in-out infinite;
+  --animate-pulse-dot: cp-pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes cp-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes cp-pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* hide native password reveal (Edge) so only our toggle shows */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
+  }
 }

@@ -70,17 +70,17 @@ project-499/
 
 ### Sprint 3 (W5–6) — Authentication & Owner Registration
 
-- ⬜ Explore: RBAC patterns and token-based auth strategies
-- ⬜ Build: role-based auth — driver, owner, authority (JWT + NestJS)
-- ⬜ Build: parking space registration (location, capacity, photos, RTSP)
+- ✅ Explore: RBAC patterns and token-based auth strategies
+- ✅ Build: role-based auth — driver, owner, authority (JWT + NestJS)
+- ✅ Build: parking space registration (location, capacity, photos, RTSP)
 - ⬜ Build: owner portal UI (Next.js) + S3-compatible file storage
 
 ### Sprint 4 (W7–8) — Computer Vision & Slot Detection
 
-- ⬜ Explore: object detection & CV approaches for parking occupancy
+- ✅ Explore: object detection & CV approaches for parking occupancy
 - ⬜ Explore: fixed-camera CV challenges (lighting, angle, occlusion)
 - ⬜ Explore: model optimization & collect/annotate Dhaka parking images
-- ⬜ Build: train & evaluate slot detection model on benchmark + local data
+- ✅ Build: train & evaluate slot detection model on benchmark + local data
 - ⬜ Build: FastAPI AI service with RTSP ingestion & real-time slot status
 
 ### Sprint 5 (W9–10) — Mobile App, Map View & LPR Study
@@ -137,4 +137,4 @@ project-499/
 
 ---
 
-**README Updated:** 2026-07-08
+**README Updated:** 2026-07-14

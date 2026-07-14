@@ -1,130 +1,51 @@
 ﻿import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static ThemeData get light {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      scaffoldBackgroundColor: AppColorsLight.background,
-      colorScheme: const ColorScheme.light(
-        primary: AppColorsLight.primary,
-        onPrimary: AppColorsLight.primaryForeground,
-        secondary: AppColorsLight.secondary,
-        onSecondary: AppColorsLight.secondaryForeground,
-        tertiary: AppColorsLight.accent,
-        onTertiary: AppColorsLight.accentForeground,
-        surface: AppColorsLight.card,
-        onSurface: AppColorsLight.cardForeground,
-        error: AppColorsLight.destructive,
-        onError: AppColorsLight.destructiveForeground,
-        outline: AppColorsLight.border,
-      ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 40,
-          fontWeight: FontWeight.w800,
-          color: AppColorsLight.foreground,
-          height: 1.1,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-          color: AppColorsLight.mutedForeground,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 15,
-          color: AppColorsLight.mutedForeground,
-          height: 1.45,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColorsLight.primary,
-          foregroundColor: AppColorsLight.primaryForeground,
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          elevation: 0,
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColorsLight.foreground,
-          side: const BorderSide(color: AppColorsLight.border),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColorsLight.foreground),
-      ),
-    );
-  }
+  // Brand Colors - Based on Figma
+  static const Color primaryCyan = Color(0xFF18D6C0);
+  static const Color primaryCyanDark = Color(0xFF00C9B1);
+  static const Color tealDeep = Color(0xFF0BA697);
+  static const Color purple = Color(0xFF8B5CF6);
+  static const Color orange = Color(0xFFF59E0B);
+  
+  // Background Colors
+  static const Color lightBg = Color(0xFFF7F9FC);
+  static const Color darkBg = Color(0xFF0F1728);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color darkCard = Color(0xFF1A2740);
+  
+  // Text Colors
+  static const Color lightTextPrimary = Color(0xFF172033);
+  static const Color lightTextSecondary = Color(0xFF64748B);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFF94A3B8);
+  
+  // Border Colors
+  static const Color lightBorder = Color(0xFFE2E8F0);
+  static const Color darkBorder = Color(0xFF2A3B57);
 
-  static ThemeData get dark {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColorsDark.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColorsDark.primary,
-        onPrimary: AppColorsDark.primaryForeground,
-        secondary: AppColorsDark.secondary,
-        onSecondary: AppColorsDark.secondaryForeground,
-        tertiary: AppColorsDark.accent,
-        onTertiary: AppColorsDark.accentForeground,
-        surface: AppColorsDark.card,
-        onSurface: AppColorsDark.cardForeground,
-        error: AppColorsDark.destructive,
-        onError: AppColorsDark.destructiveForeground,
-        outline: AppColorsDark.border,
-      ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(
-          fontSize: 40,
-          fontWeight: FontWeight.w800,
-          color: AppColorsDark.foreground,
-          height: 1.1,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w500,
-          color: AppColorsDark.mutedForeground,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 15,
-          color: AppColorsDark.mutedForeground,
-          height: 1.45,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColorsDark.primary,
-          foregroundColor: AppColorsDark.primaryForeground,
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          elevation: 0,
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColorsDark.foreground,
-          side: const BorderSide(color: AppColorsDark.border),
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(color: AppColorsDark.foreground),
-      ),
-    );
-  }
+  static ThemeData lightTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: lightBg,
+    textTheme: GoogleFonts.interTextTheme(),
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      foregroundColor: lightTextPrimary,
+    ),
+  );
+
+  static ThemeData darkTheme = ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: darkBg,
+    textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+    appBarTheme: const AppBarTheme(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      foregroundColor: darkTextPrimary,
+    ),
+  );
 }

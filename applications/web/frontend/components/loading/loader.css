@@ -1,0 +1,152 @@
+/* ============================================================
+   Digital City Heartbeat loader + network-aware overlay
+   ============================================================ */
+.hb-frame {
+  color: var(--foreground);
+  max-width: 100%;
+}
+
+.hb-frame svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.hb-glow {
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.hb-flatline {
+  color: #ef4444;
+}
+
+/* ---------- glass overlay ---------- */
+.nal-root {
+  position: relative;
+  min-height: 340px;
+  width: 100%;
+}
+
+.nal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px 20px;
+  text-align: center;
+  overflow: hidden;
+  /* frosted glass: the page underneath stays visible, blurred */
+  background: color-mix(in srgb, var(--background) 45%, transparent);
+  backdrop-filter: blur(14px) saturate(150%);
+}
+
+/* full-viewport variant for route-level loading (app/loading.tsx) */
+.nal-overlay.nal-fixed {
+  position: fixed;
+  min-height: 100vh;
+}
+
+/* drifting "liquid" color blobs inside the glass */
+.nal-blob {
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.3;
+  pointer-events: none;
+}
+.nal-blob.teal {
+  background: #18d6c0;
+  top: -80px;
+  left: -60px;
+  animation: nal-drift-a 9s ease-in-out infinite alternate;
+}
+.nal-blob.purple {
+  background: #8b6cff;
+  bottom: -100px;
+  right: -70px;
+  animation: nal-drift-b 11s ease-in-out infinite alternate;
+}
+
+@keyframes nal-drift-a {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(45%, 30%) scale(1.25);
+  }
+}
+
+@keyframes nal-drift-b {
+  from {
+    transform: translate(0, 0) scale(1.2);
+  }
+  to {
+    transform: translate(-40%, -28%) scale(0.95);
+  }
+}
+
+/* keep the loader artwork above the blobs */
+.nal-overlay > .hb-frame,
+.nal-overlay > .nal-msg,
+.nal-overlay > .nal-msg-slot,
+.nal-overlay > .nal-offline {
+  position: relative;
+  z-index: 1;
+}
+
+.nal-msg-slot {
+  min-height: 24px;
+}
+
+.nal-msg {
+  color: var(--muted-foreground);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+/* ---------- offline alert ---------- */
+.nal-offline {
+  max-width: 380px;
+  margin-top: 10px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, #ef4444 40%, transparent);
+  background: color-mix(in srgb, #ef4444 9%, transparent);
+  color: #ef4444;
+  font-size: 14px;
+}
+
+.nal-offline-title {
+  font-weight: 800;
+  font-size: 15.5px;
+  margin-bottom: 4px;
+}
+
+.nal-offline p {
+  color: color-mix(in srgb, #ef4444 75%, var(--foreground));
+}
+
+.nal-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  height: 42px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 12px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.nal-retry:hover {
+  filter: brightness(1.08);
+}

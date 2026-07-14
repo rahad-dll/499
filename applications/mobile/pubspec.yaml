@@ -16,10 +16,10 @@ dependencies:
   # State Management
   provider: ^6.1.1
   
-  # Storage - For Session Cookies
+  # Storage
   shared_preferences: ^2.2.2
   
-  # Networking (for later)
+  # Networking
   http: ^1.1.2
   
   # Utilities
@@ -32,3 +32,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  assets:
+    - assets/icons/
+    - assets/images/

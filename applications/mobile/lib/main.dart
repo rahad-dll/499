@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
-import 'screens/auth/sign_in_screen.dart';
+import 'widgets/landing/landing_screen.dart';
 
 void main() {
   runApp(
@@ -22,9 +22,10 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'CityPulse',
           debugShowCheckedModeBanner: false,
-          theme: themeProvider.isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
-          themeMode: ThemeMode.light,
-          home: const SignInScreen(),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const LandingScreen(),
         );
       },
     );

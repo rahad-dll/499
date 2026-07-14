@@ -1,80 +1,136 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 class LandingScreen extends StatelessWidget {
-  final bool isDarkMode;
-  final VoidCallback onToggleTheme;
-
-  const LandingScreen({
-    super.key,
-    required this.isDarkMode,
-    required this.onToggleTheme,
-  });
+  const LandingScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          IconButton(
-            tooltip: isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
-            icon: Icon(
-              isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-            ),
-            onPressed: onToggleTheme,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: isDark
+                ? [
+                    const Color(0xFF0F1728),
+                    const Color(0xFF1A2740),
+                  ]
+                : [
+                    const Color(0xFF0BA697),
+                    const Color(0xFF00C9B1),
+                  ],
           ),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(
-                  'assets/images/logo.png',
-                  width: 140,
-                  height: 140,
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? const Color(0xFF0E2436).withOpacity(0.9)
+                        : Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: Icon(
+                    PhosphorIcons.car,
+                    size: 40,
+                    color: isDark
+                        ? const Color(0xFF18D6C0)
+                        : Colors.white,
+                  ),
                 ),
-                const SizedBox(height: 28),
-                Text(
-                  'CityPulse',
-                  style: theme.textTheme.headlineLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Intelligent Parking & Traffic Control Platform',
-                  style: theme.textTheme.titleMedium,
-                  textAlign: TextAlign.center,
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'City',
+                      style: GoogleFonts.inter(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? const Color(0xFFF8FAFC)
+                            : Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Pulse',
+                      style: GoogleFonts.inter(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? const Color(0xFF18D6C0)
+                            : Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Connecting Drivers, Parking Owners & Authorities for Smarter Cities',
-                  style: theme.textTheme.bodyMedium,
+                  'Intelligent Parking & Traffic Control',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : Colors.white70,
+                  ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 12,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // TODO: navigate to onboarding / auth flow
-                      },
-                      child: const Text('Get Started'),
+                const SizedBox(height: 60),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacementNamed(context, '/signin');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isDark
+                          ? const Color(0xFF18D6C0)
+                          : Colors.white,
+                      foregroundColor: isDark
+                          ? const Color(0xFF0F1728)
+                          : const Color(0xFF0BA697),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    OutlinedButton(
-                      onPressed: () {
-                        // TODO: navigate to an "about" / learn-more page
-                      },
-                      child: const Text('Learn More'),
+                    child: Text(
+                      'Get Started',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacementNamed(context, '/signin');
+                  },
+                  child: Text(
+                    'Already have an account? Sign In',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: isDark
+                          ? const Color(0xFF94A3B8)
+                          : Colors.white70,
+                    ),
+                  ),
                 ),
               ],
             ),

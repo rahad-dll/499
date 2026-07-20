@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsNumber, IsObject, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsNumber, IsObject, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SpaceType } from './create-space.dto';
 
@@ -6,10 +6,7 @@ export class UpdateSpaceDto {
   @IsOptional() @IsString() @MaxLength(255) name?: string;
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() address?: string;
-  @IsOptional() @IsString() @MaxLength(100) division?: string;
-  @IsOptional() @IsString() @MaxLength(100) district?: string;
-  @IsOptional() @IsString() @MaxLength(100) thana?: string;
-  @IsOptional() @IsString() @MaxLength(100) area?: string;
+  @IsOptional() @IsUUID() area_id?: string;
   @IsOptional() @IsString() @MaxLength(20) contact_phone?: string;
   @IsOptional() @IsNumber() @Min(-90) @Max(90) @Type(() => Number) latitude?: number;
   @IsOptional() @IsNumber() @Min(-180) @Max(180) @Type(() => Number) longitude?: number;

@@ -220,7 +220,7 @@ export class AuthService {
     switch (dto.role) {
       case RegisterRole.driver:
         await this.prisma.driver_profiles.create({
-          data: { user_id: userId, full_name: dto.full_name },
+          data: { user_id: userId },
         });
         break;
       case RegisterRole.owner:

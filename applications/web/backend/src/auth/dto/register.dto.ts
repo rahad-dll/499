@@ -1,9 +1,23 @@
-import { IsEmail, IsEnum, IsMobilePhone, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsMobilePhone,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MinLength,
+  MaxLength,
+} from 'class-validator';
 
 export enum RegisterRole {
-  driver = 'driver',
-  owner = 'owner',
+  driver    = 'driver',
+  owner     = 'owner',
   authority = 'authority',
+}
+
+export enum LicenceType {
+  A = 'A', B = 'B', C = 'C', D = 'D', E = 'E',
 }
 
 export class RegisterDto {
@@ -20,26 +34,40 @@ export class RegisterDto {
   @IsEnum(RegisterRole)
   role: RegisterRole;
 
-  // driver profile
-  @IsOptional()
-  @IsString()
+  // shared
+  @IsOptional() @IsString() @MaxLength(255)
   full_name?: string;
 
-  // owner profile
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsUUID()
+  area_id?: string;
+
+  // driver
+  @IsOptional() @IsDateString()
+  date_of_birth?: string;
+
+  @IsOptional() @IsString() @MaxLength(50)
+  driving_licence_no?: string;
+
+  @IsOptional() @IsEnum(LicenceType)
+  licence_type?: LicenceType;
+
+  // owner
+  @IsOptional() @IsString() @MaxLength(255)
   business_name?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   address?: string;
 
-  // authority profile
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
+  national_id?: string;
+
+  @IsOptional() @IsString() @MaxLength(50)
+  passport_no?: string;
+
+  // authority
+  @IsOptional() @IsString() @MaxLength(255)
   organization?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString() @MaxLength(50)
   badge_number?: string;
 }

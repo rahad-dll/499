@@ -23,15 +23,27 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: applications/web/backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --include=dev
 
       - name: Generate Prisma client
         run: npx prisma generate
 
       - name: Build
         run: npm run build
+
+  deploy:
+    name: SAIL
+    needs: build
+    runs-on: ubuntu-latest
+    # only SAIL on push event on main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Trigger SAIL
+        run: |
+          curl -s --fail -X POST "${{ secrets.SAIL }}"

@@ -45,7 +45,8 @@ api-services/
 │   └── inference.py     # endpoint handlers
 └── weights/
     └── mobilenetv2/
-        └── phase1_weights.pth
+        ├── phase1_weights.pth   (archived)
+        └── phase2_weights.pth   (active)
 ```
 
 ---
@@ -75,7 +76,7 @@ Swagger UI → `http://localhost:8001/docs`
 | `MONGO_URI` | `mongodb://localhost:27017` | |
 | `MONGO_DB` | `citypulse_ai` | |
 | `MODEL_DIR` | `./weights` | root folder for all model weights |
-| `OCCUPANCY_MODEL` | `mobilenetv2/phase1_weights.pth` | relative to `MODEL_DIR` |
+| `OCCUPANCY_MODEL` | `mobilenetv2/phase2_weights.pth` | relative to `MODEL_DIR` |
 | `HOST` | `0.0.0.0` | |
 | `PORT` | `8001` | |
 

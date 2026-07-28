@@ -1,0 +1,43 @@
+# YOLOv8n with a VGG-16 backbone  (paper §5.6)
+#
+# RECONSTRUCTED. The original config was never committed — the authors' args.yaml points at
+# `/content/drive/My Drive/VGG_16.yaml`, which is not in the repo. This file is rebuilt from the
+# paper's §5.6 description (taps at VGG-16 outputs 23, 30, 31 for P3/P4/P5) using the same neck
+# template as the other two torchvision variants.
+#
+# Verified locally (ultralytics 8.3.100, nc=2): 16.93 M params, 113 layers, 256.4 GFLOPs.
+#   -> layer count is an EXACT match to the paper's Table 4 (113), so the structure is right.
+#   -> params/GFLOPs land 4.8% / 2.2% under the paper's 17.78 M / 262.1 GFLOPs, so some head
+#      channel width in the original differed slightly. See PAPER_NOTES.md §7.2.
+
+nc: 2 # overridden by data.yaml at train time
+
+scales: # [depth, width, max_channels]
+  n: [0.33, 0.25, 1024]
+
+backbone:
+  # truncate=2 drops avgpool + classifier, leaving features[0..30]; y[0] = input, y[i] = features[i-1].
+  - [-1, 1, TorchVision, [512, "vgg16", "DEFAULT", True, 2, True]] # 0
+  - [0, 1, Index, [512, 23]] # 1  features[22] ReLU  -> (512, 80, 80)  P3/8
+  - [0, 1, Index, [512, 30]] # 2  features[29] ReLU  -> (512, 40, 40)  P4/16
+  - [0, 1, Index, [512, 31]] # 3  features[30] pool  -> (512, 20, 20)  P5/32
+  - [-1, 1, SPPF, [1024, 5]] # 4
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 5
+  - [[-1, 2], 1, Concat, [1]] # 6  cat backbone P4
+  - [-1, 3, C2f, [512]] # 7
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 8
+  - [[-1, 1], 1, Concat, [1]] # 9  cat backbone P3
+  - [-1, 3, C2f, [256]] # 10 (P3/8-small)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 11
+  - [[-1, 7], 1, Concat, [1]] # 12 cat head P4
+  - [-1, 3, C2f, [512]] # 13 (P4/16-medium)
+
+  - [-1, 1, Conv, [512, 3, 2]] # 14
+  - [[-1, 4], 1, Concat, [1]] # 15 cat head P5
+  - [-1, 3, C2f, [1024]] # 16 (P5/32-large)
+
+  - [[10, 13, 16], 1, Detect, [nc]] # 17 Detect(P3, P4, P5)

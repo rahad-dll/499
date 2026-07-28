@@ -1,0 +1,40 @@
+# YOLOv8n with an EfficientNetV2-S backbone  (paper §5.5)
+#
+# Differs from the authors' committed YAML by the `scales:` block below, which is required to
+# reproduce Table 4 (23.40 M params / 564 layers / 56.4 GFLOPs). Without it you get
+# 62.6 M / 596 L / 144.1 GFLOPs.  See PAPER_NOTES.md §7.1.
+#
+# Verified locally (ultralytics 8.3.100, nc=2): 23.40 M params, 564 layers, 56.4 GFLOPs — exact
+# match to the paper.
+
+nc: 2 # overridden by data.yaml at train time
+
+scales: # [depth, width, max_channels]
+  n: [0.33, 0.25, 1024]
+
+backbone:
+  # truncate=2 drops avgpool + classifier, leaving features[0..7]; y[0] = input.
+  - [-1, 1, TorchVision, [2048, "efficientnet_v2_s", "DEFAULT", True, 2, True]] # 0
+  - [0, 1, Index, [64, 4]] # 1  features[3] -> (64, 80, 80)     P3/8
+  - [0, 1, Index, [160, 6]] # 2  features[5] -> (160, 40, 40)   P4/16
+  - [0, 1, Index, [1280, 8]] # 3  features[7] -> (1280, 20, 20) P5/32
+  - [-1, 1, SPPF, [1024, 5]] # 4
+
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 5
+  - [[-1, 2], 1, Concat, [1]] # 6  cat backbone P4
+  - [-1, 3, C2f, [512]] # 7
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 8
+  - [[-1, 1], 1, Concat, [1]] # 9  cat backbone P3
+  - [-1, 3, C2f, [256]] # 10 (P3/8-small)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 11
+  - [[-1, 7], 1, Concat, [1]] # 12 cat head P4
+  - [-1, 3, C2f, [512]] # 13 (P4/16-medium)
+
+  - [-1, 1, Conv, [512, 3, 2]] # 14
+  - [[-1, 4], 1, Concat, [1]] # 15 cat head P5
+  - [-1, 3, C2f, [1024]] # 16 (P5/32-large)
+
+  - [[10, 13, 16], 1, Detect, [nc]] # 17 Detect(P3, P4, P5)

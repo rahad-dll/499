@@ -1,8 +1,10 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateSpaceDto } from './dto/create-space.dto';
@@ -10,7 +12,10 @@ import { UpdateSpaceDto } from './dto/update-space.dto';
 
 @Injectable()
 export class SpacesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private config: ConfigService,
+  ) {}
 
   // ── create ────────────────────────────────────────────────────────────────
 
@@ -69,7 +74,9 @@ export class SpacesService {
       where: { id, deleted_at: null },
       include: {
         photos: true,
-        cameras: { select: { id: true, label: true, rtsp_url: true, status: true } },
+        cameras: {
+          select: { id: true, label: true, rtsp_url: true, status: true },
+        },
         _count: { select: { slots: true, bookings: true } },
       },
     });
@@ -98,11 +105,18 @@ export class SpacesService {
 
     // if RTSP provided, upsert first camera
     if (rtsp_url !== undefined) {
-      const existing = await this.prisma.cameras.findFirst({ where: { space_id: id } });
+      const existing = await this.prisma.cameras.findFirst({
+        where: { space_id: id },
+      });
       if (existing) {
-        await this.prisma.cameras.update({ where: { id: existing.id }, data: { rtsp_url } });
+        await this.prisma.cameras.update({
+          where: { id: existing.id },
+          data: { rtsp_url },
+        });
       } else {
-        await this.prisma.cameras.create({ data: { space_id: id, rtsp_url, status: 'setup' } });
+        await this.prisma.cameras.create({
+          data: { space_id: id, rtsp_url, status: 'setup' },
+        });
       }
     }
 
@@ -120,11 +134,87 @@ export class SpacesService {
     return { message: 'Space deleted' };
   }
 
+  // ── AI inference ────────────────────────────────────────────────────────
+
+  async inferOccupancy(
+    id: string,
+    user: JwtPayload,
+    file: Express.Multer.File,
+  ) {
+    await this.assertOwnership(id, user);
+
+    const aiBaseUrl = this.config.get<string>(
+      'AI_INFERENCE_URL',
+      'http://localhost:8001',
+    );
+    const aiToken = this.config.get<string>(
+      'AI_API_TOKEN',
+      'change-me-in-production',
+    );
+    const endpoint = new URL(
+      '/api/v1/inference/predict',
+      aiBaseUrl.endsWith('/') ? aiBaseUrl : `${aiBaseUrl}/`,
+    );
+    endpoint.searchParams.set('space_id', id);
+    endpoint.searchParams.set('slot_id', `${id}-slot`);
+
+    const formData = new FormData();
+    formData.append(
+      'file',
+      new Blob([new Uint8Array(file.buffer)], {
+        type: file.mimetype || 'application/octet-stream',
+      }),
+      file.originalname || 'slot-image.jpg',
+    );
+
+    const response = await fetch(endpoint.toString(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${aiToken}` },
+      body: formData,
+      signal: AbortSignal.timeout(90_000),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new BadRequestException(`AI inference failed: ${message}`);
+    }
+
+    const payload = (await response.json()) as {
+      prediction?: { label?: string; confidence?: number };
+      label?: string;
+      confidence?: number;
+    };
+
+    const label = (
+      payload.prediction?.label ??
+      payload.label ??
+      'unknown'
+    ).toLowerCase();
+    const confidence =
+      payload.prediction?.confidence ?? payload.confidence ?? 0;
+    const status =
+      label === 'empty'
+        ? 'available'
+        : label === 'occupied'
+          ? 'not_available'
+          : 'unknown';
+
+    return {
+      space_id: id,
+      status,
+      label,
+      confidence,
+      source: 'ai',
+    };
+  }
+
   // ── photos ─────────────────────────────────────────────────────────────────
 
   async addPhotos(id: string, user: JwtPayload, photoKeys: string[]) {
     await this.assertOwnership(id, user);
-    const hasPhotos = await this.prisma.space_photos.count({ where: { space_id: id } });
+    const hasPhotos = await this.prisma.space_photos.count({
+      where: { space_id: id },
+    });
 
     await this.prisma.space_photos.createMany({
       data: photoKeys.map((key, i) => ({

@@ -157,6 +157,7 @@ export class SpacesService {
     );
     endpoint.searchParams.set('space_id', id);
     endpoint.searchParams.set('slot_id', `${id}-slot`);
+    endpoint.searchParams.set('model', 'occupancy');
 
     const formData = new FormData();
     formData.append(

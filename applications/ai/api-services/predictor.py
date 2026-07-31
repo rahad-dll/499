@@ -1,11 +1,12 @@
 import io
 import re
+from pathlib import Path
 
 import torch
 from PIL import Image
 from torchvision import models, transforms
 
-from config import MODEL_DIR, OCCUPANCY_MODEL
+from config import DEFAULT_MODEL, DEFAULT_OCCUPANCY_MODEL, MODEL_DIR, MODEL_PATHS
 
 # must match training order — ImageFolder sorts alphabetically
 CLASS_NAMES = ["empty", "occupied"]
@@ -14,8 +15,29 @@ INPUT_SIZE = (224, 224)
 MEAN = [0.485, 0.456, 0.406]
 STD  = [0.229, 0.224, 0.225]
 
-_model     = None
+_model = None
 _transform = None
+_model_name = None
+
+def resolve_model_path(model_name: str | None = None) -> str:
+    """Resolve the requested selector to the configured weight path from the env file."""
+    if not model_name:
+        default_alias = DEFAULT_MODEL.strip().lower()
+        if default_alias in MODEL_PATHS:
+            return MODEL_PATHS[default_alias]
+        return MODEL_PATHS.get("occupancy", DEFAULT_OCCUPANCY_MODEL)
+
+    normalized = model_name.strip().lower().replace(" ", "")
+    if normalized in MODEL_PATHS:
+        return MODEL_PATHS[normalized]
+
+    if normalized in {"slot-occupancy"}:
+        return MODEL_PATHS["slot-occupancy"]
+
+    if normalized.endswith(".pth") or normalized.endswith(".pt"):
+        return normalized
+
+    return MODEL_PATHS.get("occupancy", DEFAULT_OCCUPANCY_MODEL)
 
 
 def _remap_checkpoint(state_dict: dict) -> dict:
@@ -75,11 +97,12 @@ def _remap_checkpoint(state_dict: dict) -> dict:
     return new_sd
 
 
-def load_model():
+def load_model(model_name: str | None = None):
     """Load weights and put the model in eval mode. Singleton — loads once per process."""
-    global _model, _transform
+    global _model, _transform, _model_name
 
-    if _model is not None:
+    resolved_model = resolve_model_path(model_name)
+    if _model is not None and _model_name == resolved_model:
         return _model
 
     model = models.mobilenet_v2(weights=None)
@@ -88,12 +111,13 @@ def load_model():
         torch.nn.Linear(model.last_channel, 2),
     )
 
-    weights_path = f"{MODEL_DIR}/{OCCUPANCY_MODEL}"
+    weights_path = str(Path(MODEL_DIR) / resolved_model)
     raw = torch.load(weights_path, map_location="cpu")
     state_dict = _remap_checkpoint(raw)
     model.load_state_dict(state_dict)
     model.eval()
     _model = model
+    _model_name = resolved_model
 
     _transform = transforms.Compose([
         transforms.Resize(INPUT_SIZE),
@@ -104,9 +128,9 @@ def load_model():
     return _model
 
 
-def predict(image_bytes: bytes) -> dict:
+def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
     """Classify a single slot image. Returns label and confidence."""
-    model = load_model()
+    model = load_model(model_name)
 
     img    = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     tensor = _transform(img).unsqueeze(0)

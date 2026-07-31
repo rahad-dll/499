@@ -8,11 +8,12 @@ import {
   ParseFilePipe,
   Patch,
   Post,
+  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -84,6 +85,23 @@ export class SpacesController {
     return this.spacesService.remove(id, user);
   }
 
+  // POST /spaces/:id/infer — run AI inference on uploaded image
+  @Post(':id/infer')
+  @UseInterceptors(FileInterceptor('file'))
+  inferOccupancy(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 })],
+        fileIsRequired: true,
+      }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.spacesService.inferOccupancy(id, user, file);
+  }
+
   // POST /spaces/:id/photos — add more photos later
   @Post(':id/photos')
   @UseInterceptors(FilesInterceptor('photos', 10, { storage: photoStorage }))
@@ -98,7 +116,11 @@ export class SpacesController {
     )
     files: Express.Multer.File[],
   ) {
-    return this.spacesService.addPhotos(id, user, files.map((f) => f.filename));
+    return this.spacesService.addPhotos(
+      id,
+      user,
+      files.map((f) => f.filename),
+    );
   }
 
   // DELETE /spaces/:id/photos/:photoId

@@ -20,6 +20,7 @@ async def predict_single(
     file:     UploadFile = File(..., description="pre-cropped image of one parking slot"),
     slot_id:  str = Query(None, description="slot identifier"),
     space_id: str = Query(None, description="parking space identifier"),
+    model:    str = Query(None, description="use occupancy or slot-occupancy"),
     _token:   str = Depends(verify_token),
 ):
     """Classify a single slot image. Send a cropped slot patch — not the full frame."""
@@ -27,7 +28,7 @@ async def predict_single(
         raise HTTPException(status_code=400, detail="file must be an image")
 
     image_bytes = await file.read()
-    result = predict(image_bytes)
+    result = predict(image_bytes, model_name=model)
 
     doc = {
         "slot_id":    slot_id,
@@ -58,6 +59,7 @@ async def predict_batch(
     files:    list[UploadFile] = File(..., description="one image per slot"),
     slot_ids: str = Query(None, description="comma-separated slot ids, positional"),
     space_id: str = Query(None, description="parking space identifier"),
+    model:    str = Query(None, description="use occupancy or slot-occupancy"),
     _token:   str = Depends(verify_token),
 ):
     """Classify multiple slot images in one request.
@@ -81,7 +83,7 @@ async def predict_batch(
         if not f.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail=f"{f.filename} is not an image")
 
-        result = predict(await f.read())
+        result = predict(await f.read(), model_name=model)
         docs.append({
             "slot_id":    sid,
             "space_id":   space_id,

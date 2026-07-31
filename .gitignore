@@ -4,7 +4,6 @@ venv
 .venv
 .env
 raw
-weights
 prepare_datasets.ipynb
 
 # Python

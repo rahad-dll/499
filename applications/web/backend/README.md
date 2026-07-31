@@ -1,68 +1,136 @@
-# CityPulse - API Backend
+# CityPulse API Backend
 
-NestJS backend service for the CityPulse platform. Handles API requests for the parking owner portal, driver mobile app, and traffic authority dashboard.
+NestJS backend service for the CityPulse platform. It powers authentication, role-based access control, parking-space management, and database access for the web application.
+
+## Latest Updates
+
+The backend now includes:
+
+- JWT-based authentication with login, refresh, logout, and session management
+- Permission-aware guards for protected routes
+- Parking-space CRUD operations with photo uploads
+- Prisma models for geographic hierarchy and parking-domain entities
+- Swagger API documentation at `/docs`
+- Environment-based configuration for PostgreSQL, JWT secrets, and AI inference
 
 ## Tech Stack
 
+- Node.js 22
 - NestJS 11
 - TypeScript
-- Prisma 7 (ORM)
-- PostgreSQL (via Supabase or local)
+- Prisma 7
+- PostgreSQL
+- OpenAPI
+
+## Prerequisites
+
+- Node.js 22+
+- npm
+- PostgreSQL database
 
 ## Getting Started
 
+1. Install dependencies
+
 ```bash
 npm install
+```
+
+2. Create environment file
+
+```bash
+cp .env.example .env
+```
+
+3. Update the values in `.env` with your database and JWT configuration.
+
+4. Generate Prisma client and run migrations
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+
+5. Start the development server
+
+```bash
 npm run start:dev
 ```
 
-Server runs at [http://localhost:3001](http://localhost:3001).
+The API will be available at:
 
-## Project Structure
+- http://url
+- Swagger UI: http://url/docs
+- OpenAPI JSON: http://url/docs-json
 
-```
-backend/
-├── prisma/
-│   ├── schema.prisma
-│   └── migrations/
-├── src/
-│   ├── generated/prisma/   # auto-generated Prisma client
-│   ├── prisma/
-│   │   ├── prisma.module.ts
-│   │   └── prisma.service.ts
-│   ├── app.module.ts
-│   ├── app.controller.ts
-│   ├── app.service.ts
-│   └── main.ts
-├── prisma.config.ts
-├── .env.example
-├── nest-cli.json
-├── tsconfig.json
-└── package.json
-```
+** Please contact team for the live URL
 
-**Structure Updated:** 2026-07-08
+## API Documentation (Swagger)
+
+The backend exposes interactive Swagger documentation through NestJS Swagger.
+
+- Open the Swagger UI at http://ur/docs
+- Review the generated OpenAPI schema at http://url/docs-json
+- Use the Authorize button in Swagger UI to test protected endpoints with a Bearer token
+- Authentication endpoints such as login and refresh are exposed under the `/auth` route group
+
+This documentation is configured in the NestJS bootstrap file and supports bearer-auth setup for protected routes.
 
 ## Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run start:dev` | Start development server (watch mode) |
-| `npm run build` | Build for production |
-| `npm run start:prod` | Start production server |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run e2e tests |
+| Command               | Description                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| `npm run start:dev`   | Start the app in watch mode                                             |
+| `npm run start:debug` | Start in debug mode                                                     |
+| `npm run build`       | Build the NestJS application                                            |
+| `npm run build:prod`  | Install dependencies, generate Prisma client, run migrations, and build |
+| `npm run start:prod`  | Start the built application                                             |
+| `npm run lint`        | Run ESLint                                                              |
+| `npm run test`        | Run unit tests                                                          |
+| `npm run test:e2e`    | Run end-to-end tests                                                    |
+
+## Environment Variables
+
+The backend reads the following values from `.env`:
+
+- `DATABASE_URL` – PostgreSQL connection string
+- `DIRECT_URL` – direct database URL for Prisma migrations
+- `JWT_SECRET` – access token signing secret
+- `JWT_REFRESH_SECRET` – refresh token signing secret
+- `JWT_EXPIRES_IN` – access token lifetime
+- `AI_INFERENCE_URL` – base URL of the AI inference service
+- `AI_API_TOKEN` – bearer token used when calling the AI service
+- `CORS_ORIGINS` – allowed origins for CORS
+- `PORT` – server port (defaults to `3001`)
 
 ## Prisma
 
+Useful commands:
+
 ```bash
-npx prisma generate          # regenerate client after schema change
-npx prisma migrate dev       # create and apply a new migration
-npx prisma migrate deploy    # apply migrations in production
+npx prisma generate
+npx prisma migrate dev
+npx prisma migrate deploy
 ```
 
-Copy `.env.example` to `.env` and fill in `DATABASE_URL` before running.
+## Project Structure
+
+```text
+backend/
+├── prisma/
+│   └── schema.prisma
+├── src/
+│   ├── auth/                # auth controllers, services, DTOs, guards
+│   ├── spaces/              # parking-space CRUD and photo handling
+│   ├── prisma/              # Prisma module/service
+│   ├── generated/prisma/    # generated Prisma client
+│   ├── app.module.ts
+│   └── main.ts
+├── uploads/                 # uploaded space photos
+├── .env.example
+├── package.json
+└── tsconfig.json
+```
 
 ## Part of
 
@@ -70,4 +138,4 @@ CityPulse: Intelligent Parking & Traffic Control Platform
 
 ---
 
-**README Updated:** 2026-07-08
+**README Updated:** 2026-07-31

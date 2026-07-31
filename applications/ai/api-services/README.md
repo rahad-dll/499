@@ -70,17 +70,20 @@ Swagger UI → `http://localhost:8001/docs`
 
 ## Configuration
 
-| Variable | Default | Notes |
-|---|---|---|
-| `AI_API_TOKEN` | `change-me-in-production` | shared secret with the upstream caller — change before deploy |
-| `MONGO_URI` | `mongodb://localhost:27017` | |
-| `MONGO_DB` | `citypulse_ai` | |
-| `MODEL_DIR` | `./weights` | root folder for all model weights |
-| `OCCUPANCY_MODEL` | `mobilenetv2/phase2_weights.pth` | relative to `MODEL_DIR` |
-| `HOST` | `0.0.0.0` | |
-| `PORT` | `8001` | |
+| Variable               | Default                                       | Notes                                                         |
+| ---------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| `AI_API_TOKEN`         | `your-ai-api-token`                           | shared secret with the upstream caller — change before deploy |
+| `MONGO_URI`            | `mongodb://localhost:27017`                   | MongoDB connection string                                     |
+| `MONGO_DB`             | `citypulse_ai`                                | MongoDB database name                                         |
+| `MODEL_DIR`            | `./weights`                                   | root folder for all model weights                             |
+| `DEFAULT_MODEL`        | `occupancy`                                   | default selector used when no model is provided               |
+| `MODEL_PATH_OCCUPANCY` | `mobilenetv2/phase2_weights.pth`              | occupancy model path relative to `MODEL_DIR`                  |
+| `MODEL_PATH_VPS_NET`   | `vps-net/Customized.pth`                      | alternate model path relative to `MODEL_DIR`                  |
+| `HOST`                 | `0.0.0.0`                                     |                                                               |
+| `PORT`                 | `8001`                                        |                                                               |
+| `CORS_ORIGINS`         | `http://localhost:3000,http://localhost:5173` | comma-separated allowed origins                               |
 
-Each task gets its own `*_MODEL` variable. To add a new model, add a new variable — no existing config changes needed.
+The API accepts a simple `model` query parameter with two values: `occupancy` for the default occupancy model and `slot-occupancy` for the alternate model path configured in `MODEL_PATH_VPS_NET`.
 
 ---
 
@@ -98,12 +101,12 @@ This API is not intended for direct public access. Deploy it on an internal netw
 
 ## Endpoints
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | — | liveness probe |
-| POST | `/api/v1/inference/predict` | ✓ | single slot classification |
-| POST | `/api/v1/inference/predict-batch` | ✓ | batch slot classification |
-| GET | `/api/v1/inference/history` | ✓ | paginated inference log |
+| Method | Path                              | Auth | Description                |
+| ------ | --------------------------------- | ---- | -------------------------- |
+| GET    | `/health`                         | —    | liveness probe             |
+| POST   | `/api/v1/inference/predict`       | ✓    | single slot classification |
+| POST   | `/api/v1/inference/predict-batch` | ✓    | batch slot classification  |
+| GET    | `/api/v1/inference/history`       | ✓    | paginated inference log    |
 
 ---
 
@@ -113,7 +116,11 @@ Classify one slot image.
 
 **Form field:** `file` — JPEG or PNG of a single cropped slot patch
 
-**Query params:** `slot_id`, `space_id` (both optional)
+**Query params:**
+
+- `slot_id` (optional)
+- `space_id` (optional)
+- `model` (optional, use `occupancy` or `slot-occupancy`)
 
 ```json
 {
@@ -131,6 +138,12 @@ Classify one slot image.
 
 Classify multiple slot images in one call. `slot_ids` is comma-separated and maps to `files` by position.
 
+**Query params:**
+
+- `slot_ids` (optional, comma-separated)
+- `space_id` (optional)
+- `model` (optional, use `occupancy` or `slot-occupancy`)
+
 ```json
 { "results": [ ... ], "total": 3 }
 ```
@@ -141,7 +154,12 @@ Classify multiple slot images in one call. `slot_ids` is comma-separated and map
 
 Paginated inference log, newest first.
 
-**Query params:** `page` (default 1), `page_size` (default 20, max 100), `slot_id`, `space_id`
+**Query params:**
+
+- `page` (default 1)
+- `page_size` (default 20, max 100)
+- `slot_id` (optional)
+- `space_id` (optional)
 
 ---
 

@@ -1,4 +1,16 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent
+ENV_PATH = BASE_DIR / ".env"
+
+# Load local .env when present, keep env vars working too.
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
+else:
+    load_dotenv()
 
 # MongoDB connection — override via env in production
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")

@@ -11,3 +11,4 @@ fastapi
 uvicorn[standard]
 motor
 python-multipart
+python-dotenv

@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Query
 
-from auth.dependencies import verify_token
 from db.mongodb import get_collection
+
+from auth.dependencies import verify_token
 from models.schemas import (
     PredictionResponse,
     BatchPredictionResponse,
@@ -37,8 +38,11 @@ async def predict_single(
         "created_at": datetime.now(timezone.utc),
     }
 
-    col = get_collection("inferences")
-    insert_result = await col.insert_one(doc)
+    try:
+        col = get_collection("inferences")
+        insert_result = await col.insert_one(doc)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="inference storage unavailable") from exc
 
     return PredictionResponse(
         slot_id=slot_id,
@@ -66,7 +70,11 @@ async def predict_batch(
     if len(slot_id_list) != len(files):
         raise HTTPException(status_code=400, detail="slot_ids count must match files count")
 
-    col  = get_collection("inferences")
+    try:
+        col = get_collection("inferences")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="inference storage unavailable") from exc
+
     docs = []
 
     for f, sid in zip(files, slot_id_list):
@@ -108,7 +116,11 @@ async def get_history(
     _token:    str = Depends(verify_token),
 ):
     """Return paginated inference history, newest first."""
-    col   = get_collection("inferences")
+    try:
+        col = get_collection("inferences")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="inference storage unavailable") from exc
+
     query = {}
     if slot_id:
         query["slot_id"] = slot_id

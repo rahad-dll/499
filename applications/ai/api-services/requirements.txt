@@ -1,0 +1,13 @@
+torch
+torchvision
+pillow
+pandas
+scikit-learn
+huggingface_hub
+hf_transfer
+kaggle
+kagglehub
+fastapi
+uvicorn[standard]
+motor
+python-multipart

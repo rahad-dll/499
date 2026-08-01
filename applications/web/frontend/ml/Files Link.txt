@@ -1,0 +1,2 @@
+Paper  : https://arxiv.org/abs/2505.17364
+GitHub : https://github.com/pokhrelapar/yolov8-pklot

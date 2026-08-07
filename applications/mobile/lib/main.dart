@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'services/session_service.dart';
+import 'widgets/landing/landing_screen.dart'; // ← LandingScreen import করুন
 
 void main() {
   runApp(
@@ -44,15 +45,20 @@ class AuthWrapper extends StatelessWidget {
     return FutureBuilder<bool>(
       future: _checkAuth(),
       builder: (context, snapshot) {
+        // লোডিং অবস্থায় CircularProgressIndicator দেখাবে
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
+        
+        // ✅ যদি User Logged In থাকে → Dashboard দেখাবে
         if (snapshot.data == true) {
           return const DashboardScreen();
         }
-        return const SignInScreen();
+        
+        // ❌ যদি User Logged Out থাকে → Landing Page দেখাবে
+        return const LandingScreen();
       },
     );
   }

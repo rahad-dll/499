@@ -1,193 +1,105 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../main.dart';
-import '../../utils/responsive.dart';
+import '../../theme/app_colors.dart';
+import '../common/app_icon.dart';
+
+class _PortalData {
+  final String previewImage;
+  final String title;
+  final String description;
+
+  const _PortalData(this.previewImage, this.title, this.description);
+}
+
+const List<_PortalData> _portals = [
+  _PortalData('portal_driver_preview', 'Driver App', 'Find, book & navigate to verified parking in seconds.'),
+  _PortalData('portal_authority_preview', 'Authority Dashboard', 'Heatmaps, AI alerts & warden dispatch in one command center.'),
+  _PortalData('portal_owner_preview', 'Owner Portal', 'Monetize spaces with AI camera feeds & automated payouts.'),
+];
 
 class PortalSection extends StatelessWidget {
-  const PortalSection({super.key});
+  final bool isDark;
+  const PortalSection({super.key, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    final isMobile = Responsive.isMobile(context);
-    
-    final portals = [
-      {
-        'icon': Icons.directions_car,
-        'title': 'Driver App',
-        'description': 'Find, book & navigate to verified parking in seconds.',
-        'color': const Color(0xFF18D6C0),
-      },
-      {
-        'icon': Icons.dashboard,
-        'title': 'Authority Dashboard',
-        'description': 'Heatmaps, AI alerts & warden dispatch in one command center.',
-        'color': const Color(0xFF8B5CF6),
-      },
-      {
-        'icon': Icons.business,
-        'title': 'Owner Portal',
-        'description': 'Monetize spaces with AI camera feeds & automated payouts.',
-        'color': const Color(0xFFF59E0B),
-      },
-    ];
+    final textPrimary = isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary;
+    final textSecondary = isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary;
+    final accentTeal = isDark ? AppColorsDark.accentTeal : AppColorsLight.accentTeal;
 
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: Responsive.paddingHorizontal(context).horizontal,
-        vertical: isMobile ? 32 : 48,
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'INTEGRATED USER PORTALS',
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, base: 11),
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF18D6C0),
-              letterSpacing: 1.5,
-            ),
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: accentTeal),
           ),
           const SizedBox(height: 8),
           Text(
-            'One ecosystem, three\nexperiences',
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, base: isMobile ? 22 : 28),
-              fontWeight: FontWeight.w700,
-              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-              height: 1.2,
-            ),
+            'One ecosystem, three experiences',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: textPrimary),
           ),
           const SizedBox(height: 20),
-          
-          ...portals.map((portal) => Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: _buildPortalCard(context, portal, isDark),
-          )),
+          ..._portals.map((p) => Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: _PortalCard(data: p, isDark: isDark, textPrimary: textPrimary, textSecondary: textSecondary, accentTeal: accentTeal),
+              )),
         ],
       ),
     );
   }
+}
 
-  Widget _buildPortalCard(BuildContext context, Map<String, dynamic> portal, bool isDark) {
-    final isMobile = Responsive.isMobile(context);
-    final color = portal['color'] as Color;
-    
+class _PortalCard extends StatelessWidget {
+  final _PortalData data;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color accentTeal;
+
+  const _PortalCard({
+    required this.data,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.accentTeal,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final surface = isDark ? AppColorsDark.surface : AppColorsLight.surface;
+    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
+
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1A2740) : Colors.white,
-        border: Border.all(
-          color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
-          width: 1,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.transparent : Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Preview Image Placeholder
-          Container(
-            width: double.infinity,
-            height: isMobile ? 140 : 180,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.withOpacity(0.15), color.withOpacity(0.05)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: color.withOpacity(0.2),
-              ),
-            ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    portal['icon'] as IconData,
-                    color: color,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Preview',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          // Title with Icon
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
+          AppImage(data.previewImage, width: double.infinity, height: 190),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(data.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: textPrimary)),
+                const SizedBox(height: 6),
+                Text(data.description, style: TextStyle(fontSize: 13.5, height: 1.45, color: textSecondary)),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Explore', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: accentTeal)),
+                    const SizedBox(width: 4),
+                    AppIcon('arrow-right', size: 14, color: accentTeal),
+                  ],
                 ),
-                child: Center(
-                  child: Icon(
-                    portal['icon'] as IconData,
-                    color: color,
-                    size: 16,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  portal['title'] as String,
-                  style: TextStyle(
-                    fontSize: Responsive.fontSize(context, base: isMobile ? 16 : 18),
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            portal['description'] as String,
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, base: isMobile ? 12 : 14),
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () {},
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(0, 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Explore >',
-              style: TextStyle(
-                fontSize: Responsive.fontSize(context, base: isMobile ? 12 : 14),
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF18D6C0),
-              ),
+              ],
             ),
           ),
         ],

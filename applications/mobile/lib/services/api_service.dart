@@ -1,69 +1,70 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../models/auth_response.dart';
-import '../models/user_model.dart';
+import 'session_service.dart';
 
 class ApiService {
-  // ⚠️ Replace with your actual backend URL
-  static const String baseUrl = 'http://localhost:3001/api';
-  
-  // Sign In
-  static Future<AuthResponse> signIn(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/signin'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'password': password,
-      }),
-    );
-    
-    if (response.statusCode == 200) {
-      return AuthResponse.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Login failed: ${response.statusCode}');
+  // Live backend confirmed by team lead (Rahad)
+  static const String baseUrl = 'https://four99-b6wg.onrender.com';
+
+  static Uri _uri(String path) => Uri.parse('$baseUrl$path');
+
+  static Future<Map<String, String>> _headers({bool withAuth = false}) async {
+    final headers = {'Content-Type': 'application/json'};
+    if (withAuth) {
+      final token = await SessionService.getAccessToken();
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
     }
+    return headers;
   }
-  
-  // Sign Up
-  static Future<AuthResponse> signUp({
-    required String email,
-    required String password,
-    required String fullName,
-    required String userType,
+
+  static Future<http.Response> post(
+    String path,
+    Map<String, dynamic> body, {
+    bool withAuth = false,
   }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/signup'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'email': email,
-        'password': password,
-        'fullName': fullName,
-        'userType': userType,
-      }),
+    return http.post(
+      _uri(path),
+      headers: await _headers(withAuth: withAuth),
+      body: jsonEncode(body),
     );
-    
-    if (response.statusCode == 201) {
-      return AuthResponse.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Sign up failed: ${response.statusCode}');
-    }
   }
-  
-  // Get Profile (with token)
-  static Future<User> getProfile(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/user/profile'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+
+  static Future<http.Response> get(String path, {bool withAuth = true}) async {
+    return http.get(_uri(path), headers: await _headers(withAuth: withAuth));
+  }
+
+  static Future<http.Response> patch(
+    String path,
+    Map<String, dynamic> body, {
+    bool withAuth = true,
+  }) async {
+    return http.patch(
+      _uri(path),
+      headers: await _headers(withAuth: withAuth),
+      body: jsonEncode(body),
     );
-    
-    if (response.statusCode == 200) {
-      return User.fromJson(json.decode(response.body));
-    } else {
-      throw Exception('Failed to get profile');
+  }
+
+  static Future<http.Response> delete(String path, {bool withAuth = true}) async {
+    return http.delete(_uri(path), headers: await _headers(withAuth: withAuth));
+  }
+
+  /// Pulls a readable message out of a NestJS-style error response,
+  /// e.g. { "message": "Invalid credentials", "statusCode": 401 }
+  /// or   { "message": ["email must be an email"], "statusCode": 400 }
+  static String extractErrorMessage(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['message'] != null) {
+        final msg = decoded['message'];
+        if (msg is List) return msg.join(', ');
+        return msg.toString();
+      }
+    } catch (_) {
+      // response wasn't JSON, fall through
     }
+    return 'Something went wrong (status ${response.statusCode})';
   }
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/responsive_widgets.dart';
+import '../../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,6 +16,7 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
   
@@ -26,6 +28,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   
   String? fullNameError;
   String? emailError;
+  String? phoneError;
   String? passwordError;
   String? confirmPasswordError;
   String? termsError;
@@ -34,6 +37,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void dispose() {
     fullNameController.dispose();
     emailController.dispose();
+    phoneController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -50,10 +54,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password.contains(RegExp(r'[0-9]'));
   }
 
-  void _handleSignUp() {
+  // Maps the UI dropdown label to the backend's role enum: driver, owner, authority
+  String _mapRole(String? userType) {
+    switch (userType) {
+      case 'Driver':
+        return 'driver';
+      case 'Parking Owner':
+        return 'owner';
+      case 'Authority':
+        return 'authority';
+      default:
+        return 'driver';
+    }
+  }
+
+  void _handleSignUp() async {
     setState(() {
       fullNameError = null;
       emailError = null;
+      phoneError = null;
       passwordError = null;
       confirmPasswordError = null;
       termsError = null;
@@ -71,6 +90,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       isValid = false;
     } else if (!_validateEmail(emailController.text)) {
       setState(() => emailError = 'Please enter a valid email');
+      isValid = false;
+    }
+
+    if (phoneController.text.isEmpty) {
+      setState(() => phoneError = 'Phone number is required');
       isValid = false;
     }
 
@@ -94,19 +118,35 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     if (isValid) {
       setState(() => isLoading = true);
-      
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully! 🎉'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context);
-        }
-      });
+
+      final result = await AuthService.register(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        phone: phoneController.text.trim(),
+        role: _mapRole(selectedUserType),
+        fullName: fullNameController.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() => isLoading = false);
+
+      if (result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Sign up failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -202,6 +242,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           controller: emailController,
                           icon: Icons.email_outlined,
                           errorText: emailError,
+                          isDark: isDark,
+                        ),
+                        SizedBox(height: Responsive.spacing(context, base: 16)),
+
+                        // Phone
+                        ResponsiveTextField(
+                          label: 'Phone Number',
+                          hint: '01712345678',
+                          controller: phoneController,
+                          icon: Icons.phone_outlined,
+                          errorText: phoneError,
                           isDark: isDark,
                         ),
                         SizedBox(height: Responsive.spacing(context, base: 16)),

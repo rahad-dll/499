@@ -6,7 +6,8 @@ import '../../main.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../services/session_service.dart';
-import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
+import 'sign_up_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,7 +19,7 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  
+
   bool obscurePassword = true;
   bool isLoading = false;
   bool rememberMe = false;
@@ -80,28 +81,33 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (isValid) {
       setState(() => isLoading = true);
-      
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        setState(() => isLoading = false);
-        
-        final user = User(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          email: emailController.text,
-          fullName: 'Test User',
-          userType: 'driver',
-          createdAt: DateTime.now(),
-          isLoggedIn: true,
-        );
-        
-        await SessionService.saveSession(user, rememberMe);
-        
+
+      final result = await AuthService.login(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        deviceName: 'Flutter App',
+        rememberMe: rememberMe,
+      );
+
+      if (!mounted) return;
+      setState(() => isLoading = false);
+
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Welcome back! 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
+          ),
+        );
+        // TODO: navigate to dashboard once it's ready
+        // Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Login failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -789,11 +795,9 @@ class _SignInScreenState extends State<SignInScreen> {
             const SizedBox(width: 5),
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sign Up screen coming soon!'),
-                    duration: Duration(seconds: 2),
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
                 );
               },
               child: Text(

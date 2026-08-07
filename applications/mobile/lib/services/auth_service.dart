@@ -26,7 +26,7 @@ class AuthService {
   // true  = data saved locally on the phone (SharedPreferences)
   // false = real API calls to ApiService.baseUrl
   // ============================================================
-  static const bool useLocalMock = true;
+  static const bool useLocalMock = false;
 
   static const _keyLocalUsers = 'cp_local_users';
 

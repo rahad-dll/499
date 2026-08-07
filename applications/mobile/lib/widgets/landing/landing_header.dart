@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../main.dart';
 import '../../theme/app_colors.dart';
 import '../../screens/auth/sign_in_screen.dart';
 import '../common/app_icon.dart';
 
 class LandingHeader extends StatelessWidget {
   final bool isDark;
-  final VoidCallback onToggleTheme;
   final VoidCallback onMenuTap;
 
   const LandingHeader({
     super.key,
     required this.isDark,
-    required this.onToggleTheme,
     required this.onMenuTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final textPrimary = isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary;
     final accentTeal = isDark ? AppColorsDark.accentTeal : AppColorsLight.accentTeal;
     final surface = isDark ? AppColorsDark.surface : AppColorsLight.surface;
@@ -92,7 +93,9 @@ class LandingHeader extends StatelessWidget {
               size: 16,
               color: textPrimary,
             ),
-            onTap: onToggleTheme,
+            onTap: () {
+              themeProvider.toggleTheme();
+            },
           ),
           const SizedBox(width: 8),
           

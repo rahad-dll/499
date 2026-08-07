@@ -65,16 +65,8 @@ class ImpactSection extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: AppIcon(item.icon, size: 20, color: color),
-                  ),
+                  // Icon without container - directly showing the icon
+                  AppIcon(item.icon, size: 40, color: color),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(

@@ -321,28 +321,38 @@ class _SignInScreenState extends State<SignInScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        // CityPulse Icon from assets - using waveform_dark/light
+        Image.asset(
+          isDark ? 'assets/icons/waveform_dark.png' : 'assets/icons/waveform_light.png',
           width: logoSize,
           height: logoSize,
-          decoration: BoxDecoration(
-            color: isDark 
-                ? const Color(0xFF0E2436).withOpacity(0.9)
-                : const Color(0xFFF0FDFA).withOpacity(0.9),
-            border: Border.all(
-              color: isDark 
-                  ? const Color(0xFF18D6C0).withOpacity(0.8)
-                  : const Color(0xFF00C9B1).withOpacity(0.8),
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(logoSize / 2),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.location_city,
-              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
-              size: logoSize * 0.5,
-            ),
-          ),
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback if asset not found
+            return Container(
+              width: logoSize,
+              height: logoSize,
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? const Color(0xFF0E2436).withOpacity(0.9)
+                    : const Color(0xFFF0FDFA).withOpacity(0.9),
+                border: Border.all(
+                  color: isDark 
+                      ? const Color(0xFF18D6C0).withOpacity(0.8)
+                      : const Color(0xFF00C9B1).withOpacity(0.8),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(logoSize / 2),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.waves,
+                  color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+                  size: logoSize * 0.5,
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(width: 10),
         Row(

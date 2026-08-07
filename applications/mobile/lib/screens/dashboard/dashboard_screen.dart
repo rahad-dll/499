@@ -1,3 +1,4 @@
+// lib/screens/dashboard/dashboard_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -5,12 +6,12 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../main.dart';
 import '../../models/parking_model.dart';
+import '../../models/user_model.dart';
 import '../../services/location_service.dart';
-import '../../widgets/common/bottom_nav_bar.dart';
-
-// আলাদা import দিয়ে নাম conflict resolve করুন
-import 'bookings_screen.dart' as bookings;
-import 'profile_screen.dart' as profile;
+import '../../services/session_service.dart';
+import '../auth/sign_in_screen.dart';
+import 'bookings_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,11 +33,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   CameraPosition? _cameraPosition;
   final LocationService _locationService = LocationService();
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
+    _loadUser();
     _initializeLocation();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await SessionService.getSession();
+    setState(() {
+      _currentUser = user;
+    });
   }
 
   Future<void> _initializeLocation() async {
@@ -228,13 +238,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            parking.name,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  parking.name,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: parking.availabilityColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  parking.availabilityStatus,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: parking.availabilityColor,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Row(
@@ -281,6 +312,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
+          if (parking.amenities.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              children: parking.amenities.map((amenity) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark 
+                        ? const Color(0xFF0F1728)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    amenity,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[300] : Colors.grey[600],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 20),
           Row(
             children: [
@@ -305,10 +360,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {
+                  onPressed: parking.hasAvailableSpots ? () {
                     Navigator.pop(context);
                     _bookParking(parking);
-                  },
+                  } : null,
                   icon: const Icon(Icons.book_online),
                   label: const Text('Book Now'),
                   style: OutlinedButton.styleFrom(
@@ -506,33 +561,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: BottomNavBar(
-        selectedIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) async {
           if (index == 0) {
+            setState(() => _selectedIndex = index);
             _initializeLocation();
           } else if (index == 1) {
+            setState(() => _selectedIndex = index);
             Navigator.push(
               context,
-              // এখানে bookings ব্যবহার করুন
-              MaterialPageRoute(builder: (context) => const bookings.BookingsScreen()),
-            );
+              MaterialPageRoute(builder: (context) => const BookingsScreen()),
+            ).then((_) {
+              setState(() {});
+            });
           } else if (index == 2) {
-            Navigator.push(
+            setState(() => _selectedIndex = index);
+            final result = await Navigator.push(
               context,
-              // এখানে profile ব্যবহার করুন
-              MaterialPageRoute(builder: (context) => const profile.ProfileScreen()),
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
             );
+            if (result == true) {
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignInScreen()),
+                );
+              }
+            }
           }
         },
-        isDark: isDark,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            activeIcon: Icon(Icons.map),
+            label: 'Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.book_online_outlined),
+            activeIcon: Icon(Icons.book_online),
+            label: 'Bookings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
+        ],
       ),
     );
   }
 }
 
-// Search Delegate
 class ParkingSearchDelegate extends SearchDelegate<ParkingModel?> {
   final List<ParkingModel> parkings;
 

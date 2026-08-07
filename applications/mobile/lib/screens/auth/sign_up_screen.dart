@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../utils/responsive.dart';
@@ -17,18 +18,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController dobController = TextEditingController();
+  final TextEditingController nationalIdController = TextEditingController();
+  final TextEditingController licenceController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
-  
-  String? selectedUserType = 'Driver';
+
+  // Every sign up from this screen is a driver account — sent to the
+  // backend automatically, no UI shown for it.
+  static const String _fixedRole = 'driver';
+
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
   bool agreeTerms = false;
   bool isLoading = false;
-  
+
   String? fullNameError;
   String? emailError;
-  String? phoneError;
   String? passwordError;
   String? confirmPasswordError;
   String? termsError;
@@ -38,6 +44,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     fullNameController.dispose();
     emailController.dispose();
     phoneController.dispose();
+    dobController.dispose();
+    nationalIdController.dispose();
+    licenceController.dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -54,17 +63,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password.contains(RegExp(r'[0-9]'));
   }
 
-  // Maps the UI dropdown label to the backend's role enum: driver, owner, authority
-  String _mapRole(String? userType) {
-    switch (userType) {
-      case 'Driver':
-        return 'driver';
-      case 'Parking Owner':
-        return 'owner';
-      case 'Authority':
-        return 'authority';
-      default:
-        return 'driver';
+  Future<void> _pickDateOfBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 20, now.month, now.day),
+      firstDate: DateTime(1940),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() {
+        dobController.text = DateFormat('yyyy-MM-dd').format(picked);
+      });
     }
   }
 
@@ -72,7 +82,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() {
       fullNameError = null;
       emailError = null;
-      phoneError = null;
       passwordError = null;
       confirmPasswordError = null;
       termsError = null;
@@ -93,10 +102,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       isValid = false;
     }
 
-    if (phoneController.text.isEmpty) {
-      setState(() => phoneError = 'Phone number is required');
-      isValid = false;
-    }
+    // Phone is optional — no validation.
 
     if (passwordController.text.isEmpty) {
       setState(() => passwordError = 'Password is required');
@@ -123,8 +129,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         email: emailController.text.trim(),
         password: passwordController.text,
         phone: phoneController.text.trim(),
-        role: _mapRole(selectedUserType),
+        role: _fixedRole,
         fullName: fullNameController.text.trim(),
+        dateOfBirth: dobController.text.trim(),
+        nationalId: nationalIdController.text.trim(),
+        drivingLicenceNo: licenceController.text.trim(),
       );
 
       if (!mounted) return;
@@ -246,64 +255,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         SizedBox(height: Responsive.spacing(context, base: 16)),
 
-                        // Phone
+                        // Phone (optional)
                         ResponsiveTextField(
-                          label: 'Phone Number',
+                          label: 'Phone Number (optional)',
                           hint: '01712345678',
                           controller: phoneController,
                           icon: Icons.phone_outlined,
-                          errorText: phoneError,
                           isDark: isDark,
                         ),
                         SizedBox(height: Responsive.spacing(context, base: 16)),
-                        
-                        // User Type Dropdown
-                        Text(
-                          'User Type',
-                          style: GoogleFonts.inter(
-                            fontSize: Responsive.fontSize(context, base: 12.5),
-                            fontWeight: FontWeight.w500,
-                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF334155),
+
+                        // Date of Birth (optional) — tap anywhere on the field to open the picker
+                        GestureDetector(
+                          onTap: _pickDateOfBirth,
+                          child: AbsorbPointer(
+                            child: ResponsiveTextField(
+                              label: 'Date of Birth (optional)',
+                              hint: 'YYYY-MM-DD',
+                              controller: dobController,
+                              icon: Icons.calendar_today_outlined,
+                              isDark: isDark,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 7),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: isDark 
-                                ? const Color(0xFF0E1728).withOpacity(0.9)
-                                : const Color(0xFFF8FAFC),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
-                            ),
-                            borderRadius: BorderRadius.circular(isMobile ? 11 : 14),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: selectedUserType,
-                              items: const [
-                                DropdownMenuItem(value: 'Driver', child: Text('Driver')),
-                                DropdownMenuItem(value: 'Parking Owner', child: Text('Parking Owner')),
-                                DropdownMenuItem(value: 'Authority', child: Text('Authority')),
-                              ],
-                              onChanged: (value) {
-                                setState(() => selectedUserType = value);
-                              },
-                              dropdownColor: isDark ? const Color(0xFF1A2740) : Colors.white,
-                              style: TextStyle(
-                                color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-                                fontSize: Responsive.fontSize(context, base: 14),
-                              ),
-                              icon: Icon(
-                                Icons.arrow_drop_down,
-                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-                                size: isMobile ? 24 : 28,
-                              ),
-                              isExpanded: true,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: isMobile ? 13 : 16,
-                              ),
-                            ),
-                          ),
+                        SizedBox(height: Responsive.spacing(context, base: 16)),
+
+                        // National ID (optional)
+                        ResponsiveTextField(
+                          label: 'National ID (optional)',
+                          hint: '1234567890',
+                          controller: nationalIdController,
+                          icon: Icons.badge_outlined,
+                          isDark: isDark,
+                        ),
+                        SizedBox(height: Responsive.spacing(context, base: 16)),
+
+                        // Driving Licence Number (optional)
+                        ResponsiveTextField(
+                          label: 'Driving Licence Number (optional)',
+                          hint: 'DL-123456',
+                          controller: licenceController,
+                          icon: Icons.directions_car_outlined,
+                          isDark: isDark,
                         ),
                         SizedBox(height: Responsive.spacing(context, base: 16)),
                         

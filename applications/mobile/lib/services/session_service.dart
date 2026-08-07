@@ -1,3 +1,4 @@
+// lib/services/session_service.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -27,7 +28,8 @@ class SessionService {
     final raw = prefs.getString(_keyUser);
     if (raw == null) return null;
     try {
-      return User.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      return User.fromJson(data);
     } catch (_) {
       return null;
     }

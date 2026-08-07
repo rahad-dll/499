@@ -1,8 +1,9 @@
+// lib/models/user_model.dart
 class User {
   final String id;
   final String email;
   final String? phone;
-  final String role; // driver, owner, authority
+  final String role;
   final String? fullName;
   final String? areaId;
   final String? dateOfBirth;
@@ -37,7 +38,8 @@ class User {
     this.isLoggedIn = false,
   });
 
-  /// kept for any old UI code that referred to `user.userType`
+  String get displayName => fullName ?? email.split('@').first;
+
   String get userType => role;
 
   factory User.fromJson(Map<String, dynamic> json) {

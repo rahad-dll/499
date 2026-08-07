@@ -1,3 +1,6 @@
+// lib/models/parking_model.dart
+import 'package:flutter/material.dart'; // ← এই লাইন যোগ করুন
+
 class ParkingModel {
   final String id;
   final String name;
@@ -9,9 +12,8 @@ class ParkingModel {
   final double pricePerHour;
   final double distance;
   final bool isOpen;
-  final String? imageUrl;
   final double rating;
-  final List<String>? amenities;
+  final List<String> amenities;
 
   ParkingModel({
     required this.id,
@@ -22,17 +24,16 @@ class ParkingModel {
     required this.availableSpots,
     required this.totalSpots,
     required this.pricePerHour,
-    this.distance = 0,
-    this.isOpen = true,
-    this.imageUrl,
-    this.rating = 0,
-    this.amenities,
+    required this.distance,
+    required this.isOpen,
+    required this.rating,
+    this.amenities = const [],
   });
 
   factory ParkingModel.fromJson(Map<String, dynamic> json) {
     return ParkingModel(
       id: json['id']?.toString() ?? '',
-      name: json['name'] ?? 'Unknown Parking',
+      name: json['name'] ?? '',
       address: json['address'] ?? '',
       latitude: (json['latitude'] ?? 0.0).toDouble(),
       longitude: (json['longitude'] ?? 0.0).toDouble(),
@@ -40,12 +41,9 @@ class ParkingModel {
       totalSpots: json['totalSpots'] ?? 0,
       pricePerHour: (json['pricePerHour'] ?? 0.0).toDouble(),
       distance: (json['distance'] ?? 0.0).toDouble(),
-      isOpen: json['isOpen'] ?? true,
-      imageUrl: json['imageUrl'],
+      isOpen: json['isOpen'] ?? false,
       rating: (json['rating'] ?? 0.0).toDouble(),
-      amenities: json['amenities'] != null 
-          ? List<String>.from(json['amenities']) 
-          : null,
+      amenities: List<String>.from(json['amenities'] ?? []),
     );
   }
 
@@ -61,9 +59,53 @@ class ParkingModel {
       'pricePerHour': pricePerHour,
       'distance': distance,
       'isOpen': isOpen,
-      'imageUrl': imageUrl,
       'rating': rating,
       'amenities': amenities,
     };
+  }
+
+  ParkingModel copyWith({
+    String? id,
+    String? name,
+    String? address,
+    double? latitude,
+    double? longitude,
+    int? availableSpots,
+    int? totalSpots,
+    double? pricePerHour,
+    double? distance,
+    bool? isOpen,
+    double? rating,
+    List<String>? amenities,
+  }) {
+    return ParkingModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      availableSpots: availableSpots ?? this.availableSpots,
+      totalSpots: totalSpots ?? this.totalSpots,
+      pricePerHour: pricePerHour ?? this.pricePerHour,
+      distance: distance ?? this.distance,
+      isOpen: isOpen ?? this.isOpen,
+      rating: rating ?? this.rating,
+      amenities: amenities ?? this.amenities,
+    );
+  }
+
+  // Helper getters for UI
+  bool get hasAvailableSpots => availableSpots > 0;
+  
+  String get availabilityStatus {
+    if (availableSpots > 5) return 'Plenty Available';
+    if (availableSpots > 0) return 'Limited Spots';
+    return 'Fully Booked';
+  }
+  
+  Color get availabilityColor {
+    if (availableSpots > 5) return const Color(0xFF22C55E);
+    if (availableSpots > 0) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
   }
 }

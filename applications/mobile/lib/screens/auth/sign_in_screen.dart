@@ -8,6 +8,7 @@ import '../../widgets/responsive_widgets.dart';
 import '../../services/session_service.dart';
 import '../../services/auth_service.dart';
 import 'sign_up_screen.dart';
+import '../dashboard/dashboard_screen.dart';  // ← শুধু এই import টা যোগ করুন
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -100,8 +101,11 @@ class _SignInScreenState extends State<SignInScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        // TODO: navigate to dashboard once it's ready
-        // Navigator.pushReplacementNamed(context, '/dashboard');
+        // ← এই অংশটুকু change করুন
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -578,45 +582,67 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           SizedBox(height: Responsive.spacing(context, base: 16)),
           
-          // Social Buttons
-          Row(
-            children: [
-              Expanded(
-                child: _buildSocialButton(
-                  label: 'Google',
-                  icon: Icons.g_mobiledata,
-                  isDark: isDark,
-                  isMobile: isMobile,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google login coming soon!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              SizedBox(width: Responsive.spacing(context, base: 12)),
-              Expanded(
-                child: _buildSocialButton(
-                  label: 'GitHub',
-                  icon: Icons.code,
-                  isDark: isDark,
-                  isMobile: isMobile,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('GitHub login coming soon!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+          // Google Button Only - uses google.png from assets
+          _buildGoogleButton(isDark, isMobile),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(bool isDark, bool isMobile) {
+    final buttonHeight = isMobile ? 46.0 : 54.0;
+    final fontSize = Responsive.fontSize(context, base: 13);
+    final borderRadius = isMobile ? 11.0 : 14.0;
+    
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google login coming soon!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        height: buttonHeight,
+        decoration: BoxDecoration(
+          color: isDark 
+              ? const Color(0xFF0E1728).withOpacity(0.6)
+              : Colors.white,
+          border: Border.all(
+            color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
+          ),
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Google Icon from assets - directly using google.png
+            Image.asset(
+              'assets/icons/google.png',
+              width: isMobile ? 20 : 24,
+              height: isMobile ? 20 : 24,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback if google.png not found
+                return Icon(
+                  Icons.g_mobiledata,
+                  color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                  size: isMobile ? 20 : 24,
+                );
+              },
+            ),
+            SizedBox(width: isMobile ? 8 : 10),
+            Text(
+              'Google',
+              style: GoogleFonts.inter(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
+                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -739,53 +765,6 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialButton({
-    required String label,
-    required IconData icon,
-    required bool isDark,
-    required bool isMobile,
-    required VoidCallback onTap,
-  }) {
-    final buttonHeight = isMobile ? 46.0 : 54.0;
-    final fontSize = Responsive.fontSize(context, base: 13);
-    final borderRadius = isMobile ? 11.0 : 14.0;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: buttonHeight,
-        decoration: BoxDecoration(
-          color: isDark 
-              ? const Color(0xFF0E1728).withOpacity(0.6)
-              : Colors.white,
-          border: Border.all(
-            color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
-          ),
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-              size: isMobile ? 20 : 24,
-            ),
-            SizedBox(width: isMobile ? 8 : 10),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w500,
-                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

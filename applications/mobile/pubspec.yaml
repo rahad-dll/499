@@ -9,22 +9,29 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # UI & Design
   google_fonts: ^6.2.1
-  
+
   # State Management
   provider: ^6.1.1
-  
+
   # Storage
   shared_preferences: ^2.2.2
-  
+
   # Networking
   http: ^1.1.2
-  
+
   # Utilities
   intl: ^0.18.1
   flutter_launcher_icons: ^0.14.4
+
+  # Google Maps & Location
+  google_maps_flutter: ^2.6.0
+  geolocator: ^10.1.0
+  permission_handler: ^11.3.0
+  location: ^6.0.0
+  flutter_polyline_points: ^2.0.0
 
 dev_dependencies:
   flutter_test:
@@ -33,7 +40,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/icons/
     - assets/images/
@@ -42,3 +49,4 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "assets/icons/app_icon.png"
+

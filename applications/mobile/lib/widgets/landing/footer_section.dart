@@ -32,18 +32,48 @@ class FooterSection extends StatelessWidget {
             spacing: 22,
             runSpacing: 12,
             children: [
-              _PartnerLogo(icon: 'waveform', label: 'CityPulse', textPrimary: textPrimary),
-              _PartnerLogo(icon: 'globe', label: 'BTRC', textPrimary: textPrimary),
-              _PartnerLogo(icon: 'heart', label: 'DNCC', textPrimary: textPrimary),
-              _PartnerLogo(icon: 'roboflow-logo', label: 'roboflow', textPrimary: textPrimary),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'waveform', 
+                label: 'CityPulse', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'globe', 
+                label: 'BTRC', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'heart', 
+                label: 'DNCC', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'roboflow-logo', 
+                label: 'roboflow', 
+                textPrimary: textPrimary,
+              ),
             ],
           ),
           const SizedBox(height: 32),
 
-          // Brand row
+          // Brand row with waveform dark/light images
           Row(
             children: [
-              AppIcon('waveform', size: 22, color: accentTeal),
+              isDark
+                  ? Image.asset(
+                      'assets/icons/waveform_dark.png',
+                      width: 22,
+                      height: 22,
+                    )
+                  : Image.asset(
+                      'assets/icons/waveform_light.png',
+                      width: 22,
+                      height: 22,
+                    ),
               const SizedBox(width: 8),
               Text.rich(
                 TextSpan(
@@ -114,18 +144,32 @@ class FooterSection extends StatelessWidget {
 }
 
 class _PartnerLogo extends StatelessWidget {
+  final bool isDark;
   final String icon;
   final String label;
   final Color textPrimary;
 
-  const _PartnerLogo({required this.icon, required this.label, required this.textPrimary});
+  const _PartnerLogo({
+    required this.isDark,
+    required this.icon, 
+    required this.label, 
+    required this.textPrimary,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppIcon(icon, size: 16, color: textPrimary),
+        // For waveform icon, use image asset from assets/icons/
+        if (icon == 'waveform')
+          Image.asset(
+            'assets/icons/waveform.png',
+            width: 16,
+            height: 16,
+          )
+        else
+          AppIcon(icon, size: 16, color: textPrimary),
         const SizedBox(width: 6),
         Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
       ],

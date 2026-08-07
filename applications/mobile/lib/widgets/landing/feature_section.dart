@@ -90,16 +90,8 @@ class _FeatureCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: accentTeal.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            alignment: Alignment.center,
-            child: AppIcon(data.icon, size: 20, color: accentTeal),
-          ),
+          // Icon without container padding - directly showing the icon
+          AppIcon(data.icon, size: 40, color: accentTeal),
           const SizedBox(height: 14),
           Text(data.title, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: textPrimary)),
           const SizedBox(height: 6),

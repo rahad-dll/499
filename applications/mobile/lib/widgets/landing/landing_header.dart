@@ -28,7 +28,18 @@ class LandingHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
         children: [
-          AppIcon('waveform', size: 22, color: accentTeal),
+          // Brand logo with dark/light mode images (raw images without color overlay)
+          isDark
+              ? Image.asset(
+                  'assets/icons/waveform_dark.png',
+                  width: 22,
+                  height: 22,
+                )
+              : Image.asset(
+                  'assets/icons/waveform_light.png',
+                  width: 22,
+                  height: 22,
+                ),
           const SizedBox(width: 8),
           Text.rich(
             TextSpan(
@@ -39,10 +50,15 @@ class LandingHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          
+          // Get Started button
           Container(
             height: 36,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(gradient: kBrandGradient, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+              gradient: kBrandGradient,
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
@@ -53,23 +69,42 @@ class LandingHeader extends StatelessWidget {
                   );
                 },
                 child: const Center(
-                  child: Text('Get Started', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  child: Text(
+                    'Get Started',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 10),
+          
+          // Theme toggle button
           _CircleButton(
             surface: surface,
             border: border,
-            child: AppIcon(isDark ? 'sun' : 'moon-stars', size: 16, color: textPrimary),
+            child: Icon(
+              isDark ? Icons.light_mode : Icons.dark_mode,
+              size: 16,
+              color: textPrimary,
+            ),
             onTap: onToggleTheme,
           ),
           const SizedBox(width: 8),
+          
+          // Menu button - using Icon with color based on theme
           _CircleButton(
             surface: surface,
             border: border,
-            child: AppIcon('list', size: 16, color: textPrimary),
+            child: Icon(
+              Icons.menu,
+              size: 16,
+              color: textPrimary, // Changes color based on theme
+            ),
             onTap: onMenuTap,
           ),
         ],
@@ -84,17 +119,28 @@ class _CircleButton extends StatelessWidget {
   final Color border;
   final VoidCallback onTap;
 
-  const _CircleButton({required this.child, required this.surface, required this.border, required this.onTap});
+  const _CircleButton({
+    required this.child,
+    required this.surface,
+    required this.border,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: surface,
-      shape: CircleBorder(side: BorderSide(color: border)),
+      shape: CircleBorder(
+        side: BorderSide(color: border),
+      ),
       child: InkWell(
         customBorder: const CircleBorder(),
         onTap: onTap,
-        child: SizedBox(width: 36, height: 36, child: Center(child: child)),
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(child: child),
+        ),
       ),
     );
   }

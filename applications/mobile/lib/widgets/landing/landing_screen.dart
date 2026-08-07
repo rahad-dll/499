@@ -36,23 +36,66 @@ class _LandingScreenState extends State<LandingScreen> {
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              LandingHeader(
-                isDark: _isDark,
-                onToggleTheme: _toggleTheme,
-                onMenuTap: _openMenu,
+        child: CustomScrollView(
+          slivers: [
+            // Sticky header - pinned at top
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SliverAppBarDelegate(
+                minHeight: 70,
+                maxHeight: 70,
+                child: LandingHeader(
+                  isDark: _isDark,
+                  onToggleTheme: _toggleTheme,
+                  onMenuTap: _openMenu,
+                ),
               ),
-              HeroSection(isDark: _isDark),
-              FeatureSection(isDark: _isDark),
-              PortalSection(isDark: _isDark),
-              ImpactSection(isDark: _isDark),
-              FooterSection(isDark: _isDark),
-            ],
-          ),
+            ),
+            
+            // Scrollable content
+            SliverList(
+              delegate: SliverChildListDelegate([
+                HeroSection(isDark: _isDark),
+                FeatureSection(isDark: _isDark),
+                PortalSection(isDark: _isDark),
+                ImpactSection(isDark: _isDark),
+                FooterSection(isDark: _isDark),
+                const SizedBox(height: 20), // Extra bottom padding
+              ]),
+            ),
+          ],
         ),
       ),
     );
+  }
+}
+
+// Delegate class for SliverPersistentHeader
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+
+  _SliverAppBarDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+  });
+
+  @override
+  double get minExtent => minHeight;
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return SizedBox.expand(child: child);
+  }
+
+  @override
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight ||
+           minHeight != oldDelegate.minHeight ||
+           child != oldDelegate.child;
   }
 }

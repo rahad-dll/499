@@ -16,7 +16,7 @@ class HeroSection extends StatelessWidget {
     final surface = isDark ? AppColorsDark.surface : AppColorsLight.surface;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 40), // Increased top padding from 24 to 40
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -155,49 +155,14 @@ class HeroSection extends StatelessWidget {
           ),
           const SizedBox(height: 28),
 
-          // 3D city illustration card
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: AppImage(
-                  isDark ? 'hero_city_illustration_dark' : 'hero_city_illustration_light',
-                  width: double.infinity,
-                  height: 260,
-                ),
-              ),
-              Positioned(
-                top: 14,
-                left: 14,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: (isDark ? Colors.black : Colors.white).withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(color: accentTeal, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'LIVE 3D',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                          color: isDark ? Colors.white : textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          // City illustration card - Live 3D removed
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AppImage(
+              isDark ? 'hero_city_illustration_dark' : 'hero_city_illustration_light',
+              width: double.infinity,
+              height: 260,
+            ),
           ),
         ],
       ),

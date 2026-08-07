@@ -1,139 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/landing/landing_header.dart';
+import '../../widgets/landing/hero_section.dart';
+import '../../widgets/landing/feature_section.dart';
+import '../../widgets/landing/portal_section.dart';
+import '../../widgets/landing/impact_section.dart';
+import '../../widgets/landing/footer_section.dart';
 
-class LandingScreen extends StatelessWidget {
-  const LandingScreen({Key? key}) : super(key: key);
+/// CityPulse Landing Page — mobile layout.
+/// Matches Figma frames: "Landing / Mobile / Dark" and "Landing / Mobile / Light".
+///
+/// If your app already has a ThemeProvider (see AppTheme / ThemeProvider in
+/// the auth work), replace the local `_isDark` state below with that
+/// provider instead of keeping a second theme switch.
+class LandingScreen extends StatefulWidget {
+  const LandingScreen({super.key});
+
+  @override
+  State<LandingScreen> createState() => _LandingScreenState();
+}
+
+class _LandingScreenState extends State<LandingScreen> {
+  bool _isDark = true; // Figma dark frame is the default state shown first
+
+  void _toggleTheme() => setState(() => _isDark = !_isDark);
+
+  void _openMenu() {
+    // TODO: wire to your nav drawer / bottom sheet menu
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = _isDark ? AppColorsDark.background : AppColorsLight.background;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: isDark
-                ? [
-                    const Color(0xFF0F1728),
-                    const Color(0xFF1A2740),
-                  ]
-                : [
-                    const Color(0xFF0BA697),
-                    const Color(0xFF00C9B1),
-                  ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? const Color(0xFF0E2436).withOpacity(0.9)
-                        : Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(40),
-                  ),
-                  child: Icon(
-                    PhosphorIcons.car,
-                    size: 40,
-                    color: isDark
-                        ? const Color(0xFF18D6C0)
-                        : Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'City',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? const Color(0xFFF8FAFC)
-                            : Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'Pulse',
-                      style: GoogleFonts.inter(
-                        fontSize: 40,
-                        fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? const Color(0xFF18D6C0)
-                            : Colors.white.withOpacity(0.9),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Intelligent Parking & Traffic Control',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    color: isDark
-                        ? const Color(0xFF94A3B8)
-                        : Colors.white70,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 60),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/signin');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF18D6C0)
-                          : Colors.white,
-                      foregroundColor: isDark
-                          ? const Color(0xFF0F1728)
-                          : const Color(0xFF0BA697),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Get Started',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, '/signin');
-                  },
-                  child: Text(
-                    'Already have an account? Sign In',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: isDark
-                          ? const Color(0xFF94A3B8)
-                          : Colors.white70,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              LandingHeader(
+                isDark: _isDark,
+                onToggleTheme: _toggleTheme,
+                onMenuTap: _openMenu,
+              ),
+              HeroSection(isDark: _isDark),
+              FeatureSection(isDark: _isDark),
+              PortalSection(isDark: _isDark),
+              ImpactSection(isDark: _isDark),
+              FooterSection(isDark: _isDark),
+            ],
           ),
         ),
       ),

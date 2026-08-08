@@ -10,6 +10,7 @@ import { PermissionsGuard } from './auth/guards/permissions.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { SpacesModule } from './spaces/spaces.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SpacesModule } from './spaces/spaces.module';
     AdminModule,
     ProfilesModule,
     SpacesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -28,4 +30,4 @@ import { SpacesModule } from './spaces/spaces.module';
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
 })
-export class AppModule {}
+export class AppModule { }

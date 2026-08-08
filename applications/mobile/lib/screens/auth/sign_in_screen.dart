@@ -6,7 +6,9 @@ import '../../main.dart';
 import '../../utils/responsive.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../services/session_service.dart';
-import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
+import 'sign_up_screen.dart';
+import '../dashboard/dashboard_screen.dart';  // ← শুধু এই import টা যোগ করুন
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,7 +20,7 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  
+
   bool obscurePassword = true;
   bool isLoading = false;
   bool rememberMe = false;
@@ -80,28 +82,36 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (isValid) {
       setState(() => isLoading = true);
-      
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (mounted) {
-        setState(() => isLoading = false);
-        
-        final user = User(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          email: emailController.text,
-          fullName: 'Test User',
-          userType: 'driver',
-          createdAt: DateTime.now(),
-          isLoggedIn: true,
-        );
-        
-        await SessionService.saveSession(user, rememberMe);
-        
+
+      final result = await AuthService.login(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+        deviceName: 'Flutter App',
+        rememberMe: rememberMe,
+      );
+
+      if (!mounted) return;
+      setState(() => isLoading = false);
+
+      if (result.success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Welcome back! 🎉'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
+          ),
+        );
+        // ← এই অংশটুকু change করুন
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error ?? 'Login failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -315,28 +325,38 @@ class _SignInScreenState extends State<SignInScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        // CityPulse Icon from assets - using waveform_dark/light
+        Image.asset(
+          isDark ? 'assets/icons/waveform_dark.png' : 'assets/icons/waveform_light.png',
           width: logoSize,
           height: logoSize,
-          decoration: BoxDecoration(
-            color: isDark 
-                ? const Color(0xFF0E2436).withOpacity(0.9)
-                : const Color(0xFFF0FDFA).withOpacity(0.9),
-            border: Border.all(
-              color: isDark 
-                  ? const Color(0xFF18D6C0).withOpacity(0.8)
-                  : const Color(0xFF00C9B1).withOpacity(0.8),
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(logoSize / 2),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.location_city,
-              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
-              size: logoSize * 0.5,
-            ),
-          ),
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            // Fallback if asset not found
+            return Container(
+              width: logoSize,
+              height: logoSize,
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? const Color(0xFF0E2436).withOpacity(0.9)
+                    : const Color(0xFFF0FDFA).withOpacity(0.9),
+                border: Border.all(
+                  color: isDark 
+                      ? const Color(0xFF18D6C0).withOpacity(0.8)
+                      : const Color(0xFF00C9B1).withOpacity(0.8),
+                  width: 1.5,
+                ),
+                borderRadius: BorderRadius.circular(logoSize / 2),
+              ),
+              child: Center(
+                child: Icon(
+                  Icons.waves,
+                  color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
+                  size: logoSize * 0.5,
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(width: 10),
         Row(
@@ -562,45 +582,67 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
           SizedBox(height: Responsive.spacing(context, base: 16)),
           
-          // Social Buttons
-          Row(
-            children: [
-              Expanded(
-                child: _buildSocialButton(
-                  label: 'Google',
-                  icon: Icons.g_mobiledata,
-                  isDark: isDark,
-                  isMobile: isMobile,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Google login coming soon!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              SizedBox(width: Responsive.spacing(context, base: 12)),
-              Expanded(
-                child: _buildSocialButton(
-                  label: 'GitHub',
-                  icon: Icons.code,
-                  isDark: isDark,
-                  isMobile: isMobile,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('GitHub login coming soon!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+          // Google Button Only - uses google.png from assets
+          _buildGoogleButton(isDark, isMobile),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleButton(bool isDark, bool isMobile) {
+    final buttonHeight = isMobile ? 46.0 : 54.0;
+    final fontSize = Responsive.fontSize(context, base: 13);
+    final borderRadius = isMobile ? 11.0 : 14.0;
+    
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google login coming soon!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        height: buttonHeight,
+        decoration: BoxDecoration(
+          color: isDark 
+              ? const Color(0xFF0E1728).withOpacity(0.6)
+              : Colors.white,
+          border: Border.all(
+            color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
+          ),
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Google Icon from assets - directly using google.png
+            Image.asset(
+              'assets/icons/google.png',
+              width: isMobile ? 20 : 24,
+              height: isMobile ? 20 : 24,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback if google.png not found
+                return Icon(
+                  Icons.g_mobiledata,
+                  color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+                  size: isMobile ? 20 : 24,
+                );
+              },
+            ),
+            SizedBox(width: isMobile ? 8 : 10),
+            Text(
+              'Google',
+              style: GoogleFonts.inter(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w500,
+                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -726,53 +768,6 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  Widget _buildSocialButton({
-    required String label,
-    required IconData icon,
-    required bool isDark,
-    required bool isMobile,
-    required VoidCallback onTap,
-  }) {
-    final buttonHeight = isMobile ? 46.0 : 54.0;
-    final fontSize = Responsive.fontSize(context, base: 13);
-    final borderRadius = isMobile ? 11.0 : 14.0;
-    
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: buttonHeight,
-        decoration: BoxDecoration(
-          color: isDark 
-              ? const Color(0xFF0E1728).withOpacity(0.6)
-              : Colors.white,
-          border: Border.all(
-            color: isDark ? const Color(0xFF253248) : const Color(0xFFE2E8F0),
-          ),
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-              size: isMobile ? 20 : 24,
-            ),
-            SizedBox(width: isMobile ? 8 : 10),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: fontSize,
-                fontWeight: FontWeight.w500,
-                color: isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildFooter(bool isDark, bool isMobile) {
     return Column(
       children: [
@@ -789,11 +784,9 @@ class _SignInScreenState extends State<SignInScreen> {
             const SizedBox(width: 5),
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Sign Up screen coming soon!'),
-                    duration: Duration(seconds: 2),
-                  ),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SignUpScreen()),
                 );
               },
               child: Text(

@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateSpaceDto } from './dto/create-space.dto';
@@ -15,7 +17,7 @@ export class SpacesService {
   constructor(
     private prisma: PrismaService,
     private config: ConfigService,
-  ) {}
+  ) { }
 
   // ── create ────────────────────────────────────────────────────────────────
 
@@ -227,6 +229,54 @@ export class SpacesService {
     });
 
     return { added: photoKeys.length };
+  }
+
+  async getPhotoPresignedUrl(
+    spaceId: string,
+    photoId: string,
+    user: JwtPayload,
+  ) {
+    await this.assertOwnership(spaceId, user);
+
+    const photo = await this.prisma.space_photos.findFirst({
+      where: { id: photoId, space_id: spaceId },
+    });
+    if (!photo) throw new NotFoundException('Photo not found');
+    if (!photo.s3_bucket || !photo.s3_key) {
+      throw new BadRequestException('Photo is not stored in object storage');
+    }
+    if (photo.s3_bucket === 'local') {
+      throw new BadRequestException(
+        'Cannot generate presigned URL for local storage photos',
+      );
+    }
+
+    const endpoint = this.config.get<string>('STORAGE_ENDPOINT');
+    const region = this.config.get<string>('STORAGE_REGION');
+    const accessKeyId = this.config.get<string>('STORAGE_ACCESS_KEY_ID');
+    const secretAccessKey = this.config.get<string>('STORAGE_SECRET_ACCESS_KEY');
+
+    if (!endpoint || !region || !accessKeyId || !secretAccessKey) {
+      throw new Error('Storage configuration is not set');
+    }
+
+    const s3 = new S3Client({
+      endpoint,
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+      forcePathStyle: true,
+    });
+
+    const command = new GetObjectCommand({
+      Bucket: photo.s3_bucket,
+      Key: photo.s3_key,
+    });
+    const url = await getSignedUrl(s3, command, { expiresIn: 900 });
+
+    return { url };
   }
 
   async deletePhoto(spaceId: string, photoId: string, user: JwtPayload) {

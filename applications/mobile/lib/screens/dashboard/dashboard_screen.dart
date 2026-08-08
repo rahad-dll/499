@@ -9,9 +9,9 @@ import '../../models/parking_model.dart';
 import '../../models/user_model.dart';
 import '../../services/location_service.dart';
 import '../../services/session_service.dart';
-import '../auth/sign_in_screen.dart';
+import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'bookings_screen.dart';
-import 'profile_screen.dart';
+import 'new_booking_sheet.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,13 +24,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   GoogleMapController? _mapController;
   Position? _currentPosition;
   final Completer<GoogleMapController> _controllerCompleter = Completer();
-  
+
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-  
+
   List<ParkingModel> _nearbyParkings = [];
   bool _isLoading = true;
-  int _selectedIndex = 0;
   CameraPosition? _cameraPosition;
   final LocationService _locationService = LocationService();
   User? _currentUser;
@@ -78,17 +77,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_currentPosition == null) return;
 
     try {
+      // TODO real API: replace with GET /spaces (nearby by lat/lng) once
+      // driver-facing endpoints are confirmed. ParkingModel.fromJson()
+      // already matches a plausible response shape, so this is a
+      // drop-in swap later.
       final mockParkings = _getMockParkings(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
       );
-      
+
       setState(() {
         _nearbyParkings = mockParkings;
         _updateMarkers(mockParkings);
       });
     } catch (e) {
-      print('Error loading parkings: $e');
+      debugPrint('Error loading parkings: $e');
     }
   }
 
@@ -106,7 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         distance: 0.3,
         isOpen: true,
         rating: 4.5,
-        amenities: ['CCTV', 'EV Charging', '24/7'],
+        amenities: const ['CCTV', 'EV Charging', '24/7'],
       ),
       ParkingModel(
         id: '2',
@@ -120,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         distance: 0.5,
         isOpen: true,
         rating: 4.2,
-        amenities: ['CCTV', 'Covered'],
+        amenities: const ['CCTV', 'Covered'],
       ),
       ParkingModel(
         id: '3',
@@ -134,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         distance: 0.8,
         isOpen: true,
         rating: 3.8,
-        amenities: ['CCTV'],
+        amenities: const ['CCTV'],
       ),
       ParkingModel(
         id: '4',
@@ -148,17 +151,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         distance: 1.2,
         isOpen: false,
         rating: 4.0,
-        amenities: ['CCTV', 'Covered', '24/7'],
+        amenities: const ['CCTV', 'Covered', '24/7'],
       ),
     ];
   }
 
   void _updateMarkers(List<ParkingModel> parkings) {
     if (_currentPosition == null) return;
-    
+
     setState(() {
       _markers.clear();
-      
+
       _markers.add(
         Marker(
           markerId: const MarkerId('user_location'),
@@ -166,27 +169,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _currentPosition!.latitude,
             _currentPosition!.longitude,
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueAzure,
-          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           infoWindow: const InfoWindow(title: 'Your Location'),
         ),
       );
-      
+
       for (var parking in parkings) {
         BitmapDescriptor markerIcon;
         if (parking.availableSpots > 5) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueGreen,
-          );
+          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
         } else if (parking.availableSpots > 0) {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueOrange,
-          );
+          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
         } else {
-          markerIcon = BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueRed,
-          );
+          markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
         }
 
         _markers.add(
@@ -194,6 +189,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             markerId: MarkerId('parking_${parking.id}'),
             position: LatLng(parking.latitude, parking.longitude),
             icon: markerIcon,
+            // Tapping the marker itself now opens the details sheet too,
+            // not just the tiny info-window snippet — much easier to hit
+            // on a phone screen.
+            onTap: () => _showParkingDetails(parking),
             infoWindow: InfoWindow(
               title: parking.name,
               snippet: '${parking.availableSpots} spots • \$${parking.pricePerHour}/hr',
@@ -216,7 +215,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildParkingDetailsSheet(ParkingModel parking) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A2740) : Colors.white,
@@ -270,19 +269,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(
-                Icons.location_on,
-                size: 16,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
+              Icon(Icons.location_on, size: 16, color: isDark ? Colors.grey[400] : Colors.grey[600]),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   parking.address,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                 ),
               ),
             ],
@@ -290,26 +282,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildStatItem(
-                icon: Icons.local_parking,
-                label: 'Available',
-                value: '${parking.availableSpots}',
-                isDark: isDark,
-              ),
+              _buildStatItem(icon: Icons.local_parking, label: 'Available', value: '${parking.availableSpots}', isDark: isDark),
               const SizedBox(width: 12),
-              _buildStatItem(
-                icon: Icons.attach_money,
-                label: 'Price/Hour',
-                value: '\$${parking.pricePerHour}',
-                isDark: isDark,
-              ),
+              _buildStatItem(icon: Icons.attach_money, label: 'Price/Hour', value: '\$${parking.pricePerHour}', isDark: isDark),
               const SizedBox(width: 12),
-              _buildStatItem(
-                icon: Icons.star,
-                label: 'Rating',
-                value: parking.rating.toString(),
-                isDark: isDark,
-              ),
+              _buildStatItem(icon: Icons.star, label: 'Rating', value: parking.rating.toString(), isDark: isDark),
             ],
           ),
           if (parking.amenities.isNotEmpty) ...[
@@ -320,17 +297,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isDark 
-                        ? const Color(0xFF0F1728)
-                        : Colors.grey[100],
+                    color: isDark ? const Color(0xFF0F1728) : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     amenity,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.grey[300] : Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[300] : Colors.grey[600]),
                   ),
                 );
               }).toList(),
@@ -351,34 +323,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     backgroundColor: const Color(0xFF18D6C0),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: parking.hasAvailableSpots ? () {
-                    Navigator.pop(context);
-                    _bookParking(parking);
-                  } : null,
+                  onPressed: parking.hasAvailableSpots
+                      ? () {
+                          Navigator.pop(context);
+                          _bookParking(parking);
+                        }
+                      : null,
                   icon: const Icon(Icons.book_online),
                   label: const Text('Book Now'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF18D6C0),
                     side: const BorderSide(color: Color(0xFF18D6C0)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );
@@ -394,9 +363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: isDark 
-              ? const Color(0xFF0F1728)
-              : Colors.grey[50],
+          color: isDark ? const Color(0xFF0F1728) : Colors.grey[50],
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
@@ -405,18 +372,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 4),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
             ),
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey[600]),
             ),
           ],
         ),
@@ -426,20 +386,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _navigateToParking(ParkingModel parking) {
     final url = 'https://www.google.com/maps/dir/?api=1&destination=${parking.latitude},${parking.longitude}';
-    print('Navigate to: $url');
+    debugPrint('Navigate to: $url');
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening Google Maps...'),
-        duration: Duration(seconds: 1),
-      ),
+      const SnackBar(content: Text('Opening Google Maps...'), duration: Duration(seconds: 1)),
     );
   }
 
-  void _bookParking(ParkingModel parking) {
+  // Now actually creates a booking (mock-backed today, same call shape
+  // works once BookingService.useLocalMock is flipped to false) instead
+  // of just showing a snackbar.
+  Future<void> _bookParking(ParkingModel parking) async {
+    final booking = await showNewBookingSheet(context, parking);
+    if (booking == null || !mounted) return; // user cancelled the sheet
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Booking ${parking.name}...'),
-        duration: const Duration(seconds: 1),
+        content: Text('Booked ${parking.name} for ${booking.durationHours}h'),
+        backgroundColor: const Color(0xFF22C55E),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: Colors.white,
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const BookingsScreen()),
+            );
+          },
+        ),
       ),
     );
   }
@@ -459,7 +432,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Scaffold(
       body: Stack(
         children: [
@@ -477,7 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             )
           else
             const Center(child: CircularProgressIndicator()),
-          
+
           Positioned(
             top: 0,
             left: 0,
@@ -495,120 +468,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                child: GestureDetector(
-                  onTap: _onSearchPressed,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDark 
-                          ? const Color(0xFF1A2740).withOpacity(0.9)
-                          : Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark 
-                            ? const Color(0xFF253248)
-                            : Colors.grey[200]!,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: _onSearchPressed,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1A2740).withOpacity(0.9) : Colors.white.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isDark ? const Color(0xFF253248) : Colors.grey[200]!),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.search, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Search nearby parking...',
+                                  style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 14),
+                                ),
+                              ),
+                              if (_nearbyParkings.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF18D6C0).withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_nearbyParkings.length} spots',
+                                    style: const TextStyle(color: Color(0xFF18D6C0), fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.search,
-                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    const SizedBox(width: 10),
+                    // Quick theme toggle, right on the map bar — no need
+                    // to dig into Profile just to flip light/dark.
+                    GestureDetector(
+                      onTap: () => Provider.of<ThemeProvider>(context, listen: false).toggleTheme(),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1A2740).withOpacity(0.9) : Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? const Color(0xFF253248) : Colors.grey[200]!),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Search nearby parking...',
-                            style: TextStyle(
-                              color: isDark ? Colors.grey[400] : Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                          ),
+                        child: Icon(
+                          isDark ? Icons.dark_mode : Icons.light_mode,
+                          color: const Color(0xFF18D6C0),
+                          size: 20,
                         ),
-                        if (_nearbyParkings.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF18D6C0).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              '${_nearbyParkings.length} spots',
-                              style: const TextStyle(
-                                color: Color(0xFF18D6C0),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
           ),
-          
+
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
               child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF18D6C0)),
-                ),
+                child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF18D6C0))),
               ),
             ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) async {
-          if (index == 0) {
-            setState(() => _selectedIndex = index);
-            _initializeLocation();
-          } else if (index == 1) {
-            setState(() => _selectedIndex = index);
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BookingsScreen()),
-            ).then((_) {
-              setState(() {});
-            });
-          } else if (index == 2) {
-            setState(() => _selectedIndex = index);
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProfileScreen()),
-            );
-            if (result == true) {
-              if (mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SignInScreen()),
-                );
-              }
-            }
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            activeIcon: Icon(Icons.map),
-            label: 'Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.book_online_outlined),
-            activeIcon: Icon(Icons.book_online),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 0),
     );
   }
 }
@@ -645,10 +578,9 @@ class ParkingSearchDelegate extends SearchDelegate<ParkingModel?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    final results = parkings.where((p) => 
-      p.name.toLowerCase().contains(query.toLowerCase()) ||
-      p.address.toLowerCase().contains(query.toLowerCase())
-    ).toList();
+    final results = parkings
+        .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || p.address.toLowerCase().contains(query.toLowerCase()))
+        .toList();
 
     return ListView.builder(
       itemCount: results.length,
@@ -669,10 +601,9 @@ class ParkingSearchDelegate extends SearchDelegate<ParkingModel?> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    final results = parkings.where((p) => 
-      p.name.toLowerCase().contains(query.toLowerCase()) ||
-      p.address.toLowerCase().contains(query.toLowerCase())
-    ).toList();
+    final results = parkings
+        .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || p.address.toLowerCase().contains(query.toLowerCase()))
+        .toList();
 
     return ListView.builder(
       itemCount: results.length,

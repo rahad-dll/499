@@ -7,15 +7,15 @@ import { ProfilesService } from './profiles.service';
 @Controller('profiles')
 @UseGuards(JwtAuthGuard)
 export class ProfilesController {
-  constructor(private readonly profilesService: ProfilesService) {}
+    constructor(private readonly profilesService: ProfilesService) { }
 
-  @Get('me')
-  getMyProfile(@CurrentUser() user: JwtPayload) {
-    return this.profilesService.getMyProfile(user.sub, user.role);
-  }
+    @Get('me')
+    getMyProfile(@CurrentUser() user: JwtPayload) {
+        return this.profilesService.getMyProfile(user.sub, user.role);
+    }
 
-  @Patch('me')
-  updateMyProfile(@CurrentUser() user: JwtPayload, @Body() body: Record<string, unknown>) {
-    return this.profilesService.updateMyProfile(user.sub, user.role, body);
-  }
+    @Patch('me')
+    updateMyProfile(@CurrentUser() user: JwtPayload, @Body() body: Record<string, unknown>) {
+        return this.profilesService.updateMyProfile(user.sub, user.role, body);
+    }
 }

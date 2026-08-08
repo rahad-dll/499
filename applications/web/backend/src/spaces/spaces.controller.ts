@@ -37,7 +37,7 @@ const photoStorage = diskStorage({
 @Controller('spaces')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SpacesController {
-  constructor(private spacesService: SpacesService) {}
+  constructor(private spacesService: SpacesService) { }
 
   // POST /spaces  — create with optional photos
   @Post()
@@ -121,6 +121,16 @@ export class SpacesController {
       user,
       files.map((f) => f.filename),
     );
+  }
+
+  // GET /spaces/:id/photos/:photoId/presign — get a full presigned photo URL
+  @Get(':id/photos/:photoId/presign')
+  presignPhoto(
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.spacesService.getPhotoPresignedUrl(id, photoId, user);
   }
 
   // DELETE /spaces/:id/photos/:photoId

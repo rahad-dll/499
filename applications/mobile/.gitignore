@@ -1,45 +1,93 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Dart / Flutter
 .dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
+.packages/
+build/
+pubspec.lock
+*.iml
+*.iws
+*.lock
+*.swp
+*.log
+*.tmp
+*.temp
+*.vscode/
+.idea/
+.vscode/
+DS_Store
+Thumbs.db
 
-# Symbolication related
-app.*.symbols
+# Environment variables
+.env
+.env.*
+!*.env.example
 
-# Obfuscation related
-app.*.map.json
+# Android
+android/.gradle/
+android/app/.gradle/
+android/app/build/
+android/app/*.iml
+android/.project
+android/.classpath
+android/.settings/
+android/local.properties
+android/*.keystore
+android/*.jks
+android/key.properties
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# iOS
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_assets/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Podfile.lock
+ios/Pods/
+ios/.symlinks/
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+firebase.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+pip-install.log
+
+# FastAPI / uvicorn
+*.log
+
+# Virtual environments
+env/
+ENV/
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+prepare_datasets.ipynb
+raw/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+
+# All generated files
+**/generated_*
+**/GeneratedPluginRegistrant.*

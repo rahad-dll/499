@@ -1,188 +1,212 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../main.dart';
-import '../../utils/responsive.dart';
+import '../../theme/app_colors.dart';
+import '../common/app_icon.dart';
 
 class FooterSection extends StatelessWidget {
-  const FooterSection({super.key});
+  final bool isDark;
+  const FooterSection({super.key, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    final isMobile = Responsive.isMobile(context);
-    
-    final exploreLinks = ['Solutions', 'Case Studies', 'API Docs', 'Support'];
-    final contactInfo = ['info@citypulse.com', '+880 (2) 723-4750', 'Gulshan Ave, Dhaka'];
-    final legalLinks = ['Terms', 'Privacy', 'Security'];
+    final textPrimary = isDark ? AppColorsDark.textPrimary : AppColorsLight.textPrimary;
+    final textSecondary = isDark ? AppColorsDark.textSecondary : AppColorsLight.textSecondary;
+    final textMuted = isDark ? AppColorsDark.textMuted : AppColorsLight.textMuted;
+    final accentTeal = isDark ? AppColorsDark.accentTeal : AppColorsLight.accentTeal;
+    final border = isDark ? AppColorsDark.border : AppColorsLight.border;
 
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: Responsive.paddingHorizontal(context).horizontal,
-        vertical: isMobile ? 32 : 48,
-      ),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
-            width: 1,
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+      decoration: BoxDecoration(border: Border(top: BorderSide(color: border))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo
-          _buildLogo(isDark, context),
-          const SizedBox(height: 20),
-          
-          // Partner Logos
-          _buildPartnerLogos(context, isDark),
+          Center(
+            child: Text(
+              'OUR PARTNERS & CAPITALIZATION',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: textMuted),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 22,
+            runSpacing: 12,
+            children: [
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'waveform', 
+                label: 'CityPulse', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'globe', 
+                label: 'BTRC', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'heart', 
+                label: 'DNCC', 
+                textPrimary: textPrimary,
+              ),
+              _PartnerLogo(
+                isDark: isDark,
+                icon: 'roboflow-logo', 
+                label: 'roboflow', 
+                textPrimary: textPrimary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Brand row with waveform dark/light images
+          Row(
+            children: [
+              isDark
+                  ? Image.asset(
+                      'assets/icons/waveform_dark.png',
+                      width: 22,
+                      height: 22,
+                    )
+                  : Image.asset(
+                      'assets/icons/waveform_light.png',
+                      width: 22,
+                      height: 22,
+                    ),
+              const SizedBox(width: 8),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: 'City', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w800, fontSize: 17)),
+                    TextSpan(text: 'Pulse', style: TextStyle(color: accentTeal, fontWeight: FontWeight.w800, fontSize: 17)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
-          
-          // Footer Links
+
+          // Flex row for Explore, Contact, Legal with proper margins
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildLinkColumn('Explore', exploreLinks, context, isDark),
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _FooterColumn(
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    title: 'Explore',
+                    items: const ['Solutions', 'Case Studies', 'API Docs', 'Support'],
+                  ),
+                ),
               ),
               Expanded(
-                child: _buildLinkColumn('Contact', contactInfo, context, isDark),
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: _FooterColumn(
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    title: 'Contact',
+                    items: const ['info@citypulse.com', '+880 (2) 723-4750', 'Gulshan Ave, Dhaka'],
+                  ),
+                ),
               ),
               Expanded(
-                child: _buildLinkColumn('Legal', legalLinks, context, isDark),
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12),
+                  child: _FooterColumn(
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    title: 'Legal',
+                    items: const ['Terms', 'Privacy', 'Security'],
+                  ),
+                ),
               ),
             ],
           ),
-          
-          const SizedBox(height: 24),
-          
-          Divider(
-            color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
-          ),
-          const SizedBox(height: 16),
-          
-          Text(
-            '© 2026 CityPulse — Made in Dhaka',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, base: 12),
-              color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+          const SizedBox(height: 28),
+
+          Center(
+            child: Text(
+              '© 2026 CityPulse — Made in Dhaka',
+              style: TextStyle(fontSize: 12, color: textMuted),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildLogo(bool isDark, BuildContext context) {
-    final isMobile = Responsive.isMobile(context);
-    
+class _PartnerLogo extends StatelessWidget {
+  final bool isDark;
+  final String icon;
+  final String label;
+  final Color textPrimary;
+
+  const _PartnerLogo({
+    required this.isDark,
+    required this.icon, 
+    required this.label, 
+    required this.textPrimary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: isMobile ? 28 : 32,
-          height: isMobile ? 28 : 32,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0E2436) : const Color(0xFFF0FDFA),
-            border: Border.all(
-              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF00C9B1),
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.location_city,
-              color: isDark ? const Color(0xFF18D6C0) : const Color(0xFF0BA697),
-              size: isMobile ? 14 : 18,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'CityPulse',
-          style: TextStyle(
-            fontSize: Responsive.fontSize(context, base: isMobile ? 14 : 16),
-            fontWeight: FontWeight.w700,
-            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-          ),
-        ),
+        // For waveform icon, use image asset from assets/icons/
+        if (icon == 'waveform')
+          Image.asset(
+            'assets/icons/waveform.png',
+            width: 16,
+            height: 16,
+          )
+        else
+          AppIcon(icon, size: 16, color: textPrimary),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary)),
       ],
     );
   }
+}
 
-  Widget _buildPartnerLogos(BuildContext context, bool isDark) {
-    final partners = ['BTRC', 'DNCC', 'Roboflow'];
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: partners.map((name) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A2740) : Colors.white,
-            border: Border.all(
-              color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
-              width: 1,
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F1728) : const Color(0xFFF7F9FC),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Icon(
-                  Icons.business,
-                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-                  size: 12,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
+class _FooterColumn extends StatelessWidget {
+  final String title;
+  final List<String> items;
+  final Color textPrimary;
+  final Color textSecondary;
 
-  Widget _buildLinkColumn(String title, List<String> links, BuildContext context, bool isDark) {
+  const _FooterColumn({
+    required this.title,
+    required this.items,
+    required this.textPrimary,
+    required this.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          title,
-          style: TextStyle(
-            fontSize: Responsive.fontSize(context, base: 13),
-            fontWeight: FontWeight.w600,
-            color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF172033),
-          ),
+          title, 
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: textPrimary),
         ),
-        const SizedBox(height: 12),
-        ...links.map((link) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(
-            link,
-            style: TextStyle(
-              fontSize: Responsive.fontSize(context, base: 12),
-              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
-            ),
-          ),
-        )),
+        const SizedBox(height: 10),
+        ...items.map((i) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                i, 
+                style: TextStyle(fontSize: 13, color: textSecondary),
+              ),
+            )),
       ],
     );
   }

@@ -32,4 +32,17 @@ class Responsive {
     if (width < 480) return base * 0.9;
     return base;
   }
+
+  static double containerWidth(BuildContext context) {
+    final width = screenWidth(context);
+    if (isMobile(context)) return width;
+    if (isTablet(context)) return 480;
+    return 440;
+  }
+
+  static EdgeInsets cardPadding(BuildContext context) {
+    if (isMobile(context)) return const EdgeInsets.all(20);
+    if (isTablet(context)) return const EdgeInsets.all(32);
+    return const EdgeInsets.all(40);
+  }
 }

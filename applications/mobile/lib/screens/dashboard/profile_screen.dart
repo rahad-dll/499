@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/user_model.dart';
+import '../../services/booking_service.dart';
 import '../../services/session_service.dart';
+import '../../widgets/dashboard/app_bottom_nav.dart';
 import '../auth/sign_in_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -11,8 +13,9 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F1728) : const Color(0xFFF7F9FC),
       appBar: AppBar(
@@ -27,12 +30,12 @@ class ProfileScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          
+
           final user = snapshot.data;
           final displayName = user?.fullName ?? user?.email?.split('@').first ?? 'User';
           final email = user?.email ?? 'No email';
           final role = user?.role ?? 'driver';
-          
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -54,10 +57,10 @@ class ProfileScreen extends StatelessWidget {
                         backgroundColor: const Color(0xFF18D6C0).withOpacity(0.2),
                         child: Text(
                           displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: const Color(0xFF18D6C0),
+                            color: Color(0xFF18D6C0),
                           ),
                         ),
                       ),
@@ -97,9 +100,9 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Stats Cards
                 Row(
                   children: [
@@ -113,11 +116,17 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildStatCard(
-                        isDark: isDark,
-                        icon: Icons.book_online,
-                        label: 'Bookings',
-                        value: '0',
+                      child: FutureBuilder(
+                        future: BookingService().getBookings(),
+                        builder: (context, snap) {
+                          final count = snap.data?.length ?? 0;
+                          return _buildStatCard(
+                            isDark: isDark,
+                            icon: Icons.book_online,
+                            label: 'Bookings',
+                            value: '$count',
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -131,9 +140,38 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
+                // Dark / Light mode toggle
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1A2740) : Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: SwitchListTile(
+                    activeColor: const Color(0xFF18D6C0),
+                    secondary: Icon(
+                      isDark ? Icons.dark_mode : Icons.light_mode,
+                      color: const Color(0xFF18D6C0),
+                    ),
+                    title: Text(
+                      'Dark Mode',
+                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                    ),
+                    subtitle: Text(
+                      isDark ? 'On' : 'Off',
+                      style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    ),
+                    value: isDark,
+                    onChanged: (_) => themeProvider.toggleTheme(),
+                  ),
+                ),
+
                 // Menu Items
                 _buildMenuItem(
                   isDark: isDark,
@@ -149,21 +187,6 @@ class ProfileScreen extends StatelessWidget {
                   isDark: isDark,
                   icon: Icons.notifications_outlined,
                   title: 'Notifications',
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      '3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Notifications - Coming Soon!')),
@@ -190,19 +213,9 @@ class ProfileScreen extends StatelessWidget {
                     );
                   },
                 ),
-                _buildMenuItem(
-                  isDark: isDark,
-                  icon: Icons.settings_outlined,
-                  title: 'Settings',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Settings - Coming Soon!')),
-                    );
-                  },
-                ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 // Logout Button
                 ElevatedButton.icon(
                   onPressed: () async {
@@ -218,19 +231,21 @@ class ProfileScreen extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.red,
-                            ),
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
                             child: const Text('Logout'),
                           ),
                         ],
                       ),
                     );
-                    
+
                     if (confirm == true) {
                       await SessionService.clearSession();
                       if (context.mounted) {
-                        Navigator.pop(context, true);
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SignInScreen()),
+                          (route) => false,
+                        );
                       }
                     }
                   },
@@ -240,9 +255,7 @@ class ProfileScreen extends StatelessWidget {
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     minimumSize: const Size(double.infinity, 50),
                   ),
                 ),
@@ -251,6 +264,7 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 2),
     );
   }
 
@@ -313,9 +327,7 @@ class ProfileScreen extends StatelessWidget {
         leading: Icon(icon, color: const Color(0xFF18D6C0)),
         title: Text(
           title,
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black87,
-          ),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
         ),
         trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,

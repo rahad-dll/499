@@ -1,4 +1,3 @@
-
 tmp
 venv
 .venv
@@ -39,6 +38,10 @@ Thumbs.db
 .vscode/
 *.suo
 *.user
+
 # All generated files
 **/generated_*
 **/GeneratedPluginRegistrant.*
+
+android/local.properties
+.vscode/launch.json

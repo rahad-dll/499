@@ -116,7 +116,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     },
                   ),
                 ),
-      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
+      // bottomNavigationBar: const AppBottomNav(currentIndex: 1),
     );
   }
 

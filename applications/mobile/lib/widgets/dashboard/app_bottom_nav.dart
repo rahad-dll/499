@@ -12,8 +12,13 @@ import '../../screens/dashboard/profile_screen.dart';
 
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
+  final Function(int) onTap;  // এই লাইন যোগ করুন
 
-  const AppBottomNav({super.key, required this.currentIndex});
+  const AppBottomNav({
+    super.key, 
+    required this.currentIndex,
+    required this.onTap,  // এই লাইন যোগ করুন
+  });
 
   void _go(BuildContext context, int index) {
     if (index == currentIndex) return;
@@ -42,7 +47,10 @@ class AppBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
-      onTap: (index) => _go(context, index),
+      onTap: (index) {
+        onTap(index);  // প্রথমে parent-কে notify করবে
+        _go(context, index);  // তারপর navigation করবে
+      },
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.map_outlined),

@@ -32,6 +32,9 @@ dependencies:
   location: ^6.0.0
   flutter_polyline_points: ^2.0.0
 
+  # External Navigation
+  url_launcher: ^6.2.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

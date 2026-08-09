@@ -38,7 +38,7 @@ const photoStorage = diskStorage({
 @Controller('spaces')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SpacesController {
-  constructor(private spacesService: SpacesService) { y }
+  constructor(private spacesService: SpacesService) { }
 
   // POST /spaces  — create with optional photos
   @Post()

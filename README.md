@@ -45,7 +45,7 @@ project-499/
 └── README.md             # Project overview
 ```
 
-**Structure Updated:** 2026-06-18
+**Structure Updated:** 2026-08-09
 
 ---
 
@@ -81,16 +81,15 @@ project-499/
 - ⬜ Explore: fixed-camera CV challenges (lighting, angle, occlusion)
 - ⬜ Explore: model optimization & collect/annotate Dhaka parking images
 - ✅ Build: train & evaluate slot detection model on benchmark + local data
-- ⬜ Build: FastAPI AI service with RTSP ingestion & real-time slot status
+- ✅ Build: FastAPI AI service with RTSP ingestion & real-time slot status
 
 ### Sprint 5 (W9–10) — Mobile App, Map View & LPR Study
 
-- ⬜ Explore: mobile map integration, location-based search strategies
+- ✅ Explore: mobile map integration, location-based search strategies
 - ⬜ Explore: Bangla LPR approaches, available BD plate datasets
 - ⬜ Explore: collect 100–200 Bangladeshi plate images for initial study
-- ⬜ Build: Flutter app with map, nearby parking search, WebSocket updates
+- ✅ Build: Flutter app with map, nearby parking search, WebSocket updates
 - ⬜ Build: basic navigation to parking entrance
-- ⬜ Build: basic plate localization prototype from static image
 
 ### Sprint 6 (W11–12) — Integration, Testing & Final Demo
 

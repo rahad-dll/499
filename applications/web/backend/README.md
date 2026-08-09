@@ -138,4 +138,4 @@ CityPulse: Intelligent Parking & Traffic Control Platform
 
 ---
 
-**README Updated:** 2026-07-31
+**README Updated:** 2026-08-09

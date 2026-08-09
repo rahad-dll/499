@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Query,
   MaxFileSizeValidator,
   Param,
   ParseFilePipe,
@@ -37,7 +38,7 @@ const photoStorage = diskStorage({
 @Controller('spaces')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SpacesController {
-  constructor(private spacesService: SpacesService) {}
+  constructor(private spacesService: SpacesService) { y }
 
   // POST /spaces  — create with optional photos
   @Post()
@@ -61,6 +62,20 @@ export class SpacesController {
   @Get()
   findAll(@CurrentUser() user: JwtPayload) {
     return this.spacesService.findAll(user);
+  }
+
+  // GET /spaces/nearby?lat=...&lng=...&radiusKm=...
+  @Get('nearby')
+  nearby(
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+    @Query('radiusKm') radiusKm = '5',
+  ) {
+    return this.spacesService.searchNearby(
+      Number(lat),
+      Number(lng),
+      Number(radiusKm),
+    );
   }
 
   // GET /spaces/:id
@@ -121,6 +136,16 @@ export class SpacesController {
       user,
       files.map((f) => f.filename),
     );
+  }
+
+  // GET /spaces/:id/photos/:photoId/presign — get a full presigned photo URL
+  @Get(':id/photos/:photoId/presign')
+  presignPhoto(
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.spacesService.getPhotoPresignedUrl(id, photoId, user);
   }
 
   // DELETE /spaces/:id/photos/:photoId

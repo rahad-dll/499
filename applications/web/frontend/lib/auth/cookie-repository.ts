@@ -178,6 +178,11 @@ export class CookieAuthRepository implements AuthRepository {
     return { user: publicUser(user), token: payload.t, expiresAt: payload.e };
   }
 
+  async getAccessToken(): Promise<string | null> {
+    const session = await this.getSession();
+    return session?.token ?? null;
+  }
+
   async requestPasswordReset(email: string): Promise<{ token: string | null }> {
     const normalized = email.trim().toLowerCase();
     const user = readUsers().find((u) => u.email === normalized);

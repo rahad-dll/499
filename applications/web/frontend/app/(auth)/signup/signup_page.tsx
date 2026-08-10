@@ -9,6 +9,7 @@ import {
   Lock,
   Mail,
   ParkingCircle,
+  Phone,
   ShieldCheck,
   User,
   UserPlus,
@@ -24,6 +25,10 @@ import { PasswordField, TextField } from "@/components/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import {
+  isValidBangladeshPhone,
+  normalizeBangladeshPhone,
+} from "@/lib/auth/phone";
 import { AuthError, type Role } from "@/lib/auth/types";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +51,7 @@ export default function SignupPage() {
   const [role, setRole] = useState<Role>("driver");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +59,12 @@ export default function SignupPage() {
 
   const passwordValid = isPasswordValid(password);
   const matches = confirm.length > 0 && confirm === password;
+  const normalizedPhone = normalizeBangladeshPhone(phone);
+  const phoneValid = isValidBangladeshPhone(phone);
   const canSubmit =
     fullName.trim().length > 0 &&
     email.trim().length > 0 &&
+    phoneValid &&
     passwordValid &&
     matches &&
     !submitting;
@@ -71,9 +80,19 @@ export default function SignupPage() {
       setError("Passwords do not match");
       return;
     }
+    if (!phoneValid) {
+      setError("Enter a valid 11-digit Bangladeshi mobile number.");
+      return;
+    }
     setSubmitting(true);
     try {
-      await signup({ full_name: fullName, email, password, role });
+      await signup({
+        full_name: fullName,
+        email,
+        phone: normalizedPhone,
+        password,
+        role,
+      });
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof AuthError ? err.message : "Signup failed");
@@ -134,7 +153,7 @@ export default function SignupPage() {
             <div
               role="radiogroup"
               aria-label="Choose your role"
-              className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3"
+              className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3"
             >
               {ROLES.map((r) => {
                 const active = role === r.value;
@@ -192,7 +211,7 @@ export default function SignupPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 gap-x-7 sm:grid-cols-2">
+            <div>
               <TextField
                 label="Full Name"
                 name="full_name"
@@ -203,42 +222,71 @@ export default function SignupPage() {
                 onChange={(e) => setFullName(e.target.value)}
                 required
               />
-              <TextField
-                label="Email Address"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="Enter your email address"
-                icon={Mail}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <PasswordChecklistField
-                label="Password"
-                name="password"
-                autoComplete="new-password"
-                placeholder="Create a strong password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <PasswordField
-                label="Confirm Password"
-                name="confirm_password"
-                autoComplete="new-password"
-                placeholder="Confirm your password"
-                icon={Lock}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                valid={matches}
-                error={
-                  confirm.length > 0 && !matches
-                    ? "Passwords do not match"
-                    : undefined
-                }
-                required
-              />
+
+              <div className="grid grid-cols-1 gap-x-7 md:grid-cols-2">
+                <TextField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Enter your email address"
+                  icon={Mail}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                <TextField
+                  label="Mobile Number"
+                  name="phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  placeholder="01712345678"
+                  icon={Phone}
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  onBlur={(event) => {
+                    const nextPhone = normalizeBangladeshPhone(
+                      event.currentTarget.value,
+                    );
+                    if (isValidBangladeshPhone(nextPhone)) setPhone(nextPhone);
+                  }}
+                  error={
+                    phone.length > 0 && !phoneValid
+                      ? "Use a valid BD mobile number starting 013–019"
+                      : undefined
+                  }
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-x-7 md:grid-cols-2">
+                <PasswordChecklistField
+                  label="Password"
+                  name="password"
+                  autoComplete="new-password"
+                  placeholder="Create a strong password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <PasswordField
+                  label="Confirm Password"
+                  name="confirm_password"
+                  autoComplete="new-password"
+                  placeholder="Confirm your password"
+                  icon={Lock}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  valid={matches}
+                  error={
+                    confirm.length > 0 && !matches
+                      ? "Passwords do not match"
+                      : undefined
+                  }
+                  required
+                />
+              </div>
             </div>
 
             <Button

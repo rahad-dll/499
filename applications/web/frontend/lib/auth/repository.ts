@@ -1,11 +1,10 @@
-import { CookieAuthRepository } from "./cookie-repository";
+import { HttpAuthRepository } from "./http-repository";
 import type { AuthRepository } from "./types";
 
 /**
  * The single place that decides which backend the app talks to.
  *
- * Now: browser cookies + localStorage (no server needed).
- * Later: replace with `new HttpAuthRepository(process.env.NEXT_PUBLIC_API_URL)`
- * — implement the same `AuthRepository` interface and nothing else changes.
+ * The live NestJS API implementation is selected here so pages stay decoupled
+ * from transport and token-storage details.
  */
-export const authRepository: AuthRepository = new CookieAuthRepository();
+export const authRepository: AuthRepository = new HttpAuthRepository();

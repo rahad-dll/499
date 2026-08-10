@@ -63,12 +63,40 @@ export class InferenceSchedulerService implements OnModuleInit {
       });
 
       let updated = 0;
+      const now = new Date();
+
       for (const space of spaces) {
         if (space.photos.length === 0) continue;
         for (const photo of space.photos) {
           try {
-            const result = await this.inferPhoto(space.id, photo.s3_key);
             const slotLabel = parse(photo.s3_key).name; // e.g. "slot-1"
+
+            // Skip AI inference if slot has an active booking right now
+            const activeBooking = await this.prisma.bookings.findFirst({
+              where: {
+                space_id: space.id,
+                deleted_at: null,
+                status: { in: ['confirmed', 'pending'] },
+                scheduled_at: { lte: now },
+                hold_expires_at: { gte: now },
+                slot: { slot_label: slotLabel },
+              },
+              select: { id: true },
+            });
+
+            if (activeBooking) {
+              this.logger.debug(`Skipping AI for ${photo.s3_key} — slot is booked`);
+              // Mark as not_available in cache
+              await this.prisma.parking_slots.upsert({
+                where: { space_id_slot_label: { space_id: space.id, slot_label: slotLabel } },
+                update: { occupied: true, last_updated: now },
+                create: { space_id: space.id, slot_label: slotLabel, occupied: true, last_updated: now },
+              });
+              updated++;
+              continue;
+            }
+
+            const result = await this.inferPhoto(space.id, photo.s3_key);
             const occupied = result.status === 'not_available';
 
             await this.prisma.parking_slots.upsert({

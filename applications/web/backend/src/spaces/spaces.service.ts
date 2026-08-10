@@ -82,6 +82,9 @@ export class SpacesService {
 
     const deltaLat = radiusKm / 111;
     const deltaLng = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
+
+    const now = new Date();
+
     const spaces = await this.prisma.parking_spaces.findMany({
       where: {
         deleted_at: null,
@@ -93,25 +96,47 @@ export class SpacesService {
         cameras: { select: { id: true, rtsp_url: true, status: true } },
         slots: {
           where: { deleted_at: null },
-          select: { slot_label: true, occupied: true, confidence_score: true, last_updated: true },
+          select: {
+            id: true,
+            slot_label: true,
+            occupied: true,
+            confidence_score: true,
+            last_updated: true,
+            // Include active bookings that overlap NOW
+            bookings: {
+              where: {
+                deleted_at: null,
+                status: { in: ['confirmed', 'pending'] },
+                scheduled_at: { lte: now },
+                hold_expires_at: { gte: now },
+              },
+              select: { id: true },
+            },
+          },
         },
         _count: { select: { slots: true, bookings: true } },
       },
     });
 
-    const now = Date.now();
+    const nowMs = now.getTime();
 
     const results = spaces.map((space) => {
       const distanceKm = this.getDistanceKm(lat, lng, space.latitude, space.longitude);
 
-      // Read from cached parking_slots (updated by InferenceSchedulerService)
-      const slotStatuses = space.slots.map((slot) => ({
-        slot_id: `${space.id}-${slot.slot_label}`,
-        status: slot.occupied ? 'not_available' : 'available',
-        label: slot.occupied ? 'occupied' : 'empty',
-        confidence: slot.confidence_score ?? 0,
-        last_updated: slot.last_updated,
-      }));
+      // Build slot statuses — mark as booked if there's an active booking at NOW
+      const slotStatuses = space.slots.map((slot) => {
+        const isBookedNow = slot.bookings.length > 0;
+        const isOccupied = slot.occupied;
+        const status = (isBookedNow || isOccupied) ? 'not_available' : 'available';
+        return {
+          slot_id: `${space.id}-${slot.slot_label}`,
+          status,
+          label: isBookedNow ? 'booked' : (isOccupied ? 'occupied' : 'empty'),
+          confidence: slot.confidence_score ?? 0,
+          last_updated: slot.last_updated,
+          is_booked: isBookedNow,
+        };
+      });
 
       const availableCount = slotStatuses.filter((s) => s.status === 'available').length;
       const occupiedCount = slotStatuses.filter((s) => s.status === 'not_available').length;
@@ -120,9 +145,9 @@ export class SpacesService {
       // Stale if no slots cached or last update > 10 min ago
       const oldestUpdate = space.slots.reduce(
         (min, s) => (s.last_updated ? Math.min(min, s.last_updated.getTime()) : min),
-        now,
+        nowMs,
       );
-      const isStale = space.slots.length === 0 || now - oldestUpdate > 10 * 60 * 1000;
+      const isStale = space.slots.length === 0 || nowMs - oldestUpdate > 10 * 60 * 1000;
 
       return {
         id: space.id,

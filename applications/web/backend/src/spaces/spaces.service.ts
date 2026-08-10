@@ -7,12 +7,13 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { basename, join, parse } from 'path';
+import { basename, parse } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
+
+const SLOT_IMAGE_BUCKET = 'fixed-slot-image';
 
 @Injectable()
 export class SpacesService {
@@ -90,89 +91,117 @@ export class SpacesService {
       include: {
         photos: { select: { s3_bucket: true, s3_key: true } },
         cameras: { select: { id: true, rtsp_url: true, status: true } },
+        slots: {
+          where: { deleted_at: null },
+          select: { slot_label: true, occupied: true, confidence_score: true, last_updated: true },
+        },
         _count: { select: { slots: true, bookings: true } },
       },
     });
 
-    const backendUrl = this.config.get<string>('BACKEND_URL', 'http://localhost:3001').replace(/\/$/, '');
+    const now = Date.now();
 
-    const results = await Promise.all(
-      spaces.map(async (space) => {
-        const distanceKm = this.getDistanceKm(lat, lng, space.latitude, space.longitude);
-        const slotFiles = this.getLocalSlotFiles(space.id);
-        const slotStatuses = await Promise.all(
-          slotFiles.map(async (slotFile) => {
-            return this.inferSlotImage(space.id, slotFile);
-          }),
-        );
+    const results = spaces.map((space) => {
+      const distanceKm = this.getDistanceKm(lat, lng, space.latitude, space.longitude);
 
-        const availableCount = slotStatuses.filter((item) => item.status === 'available').length;
-        const occupiedCount = slotStatuses.filter((item) => item.status === 'not_available').length;
-        const unknownCount = slotStatuses.filter((item) => item.status === 'unknown').length;
+      // Read from cached parking_slots (updated by InferenceSchedulerService)
+      const slotStatuses = space.slots.map((slot) => ({
+        slot_id: `${space.id}-${slot.slot_label}`,
+        status: slot.occupied ? 'not_available' : 'available',
+        label: slot.occupied ? 'occupied' : 'empty',
+        confidence: slot.confidence_score ?? 0,
+        last_updated: slot.last_updated,
+      }));
 
-        return {
-          id: space.id,
-          name: space.name,
-          description: space.description,
-          address: space.address,
-          latitude: space.latitude,
-          longitude: space.longitude,
-          total_capacity: space.total_capacity,
-          status: space.status,
-          distance_km: distanceKm,
-          available_slots: availableCount,
-          occupied_slots: occupiedCount,
-          unknown_slots: unknownCount,
-          slot_statuses: slotStatuses,
-          photo_count: space.photos.length,
-          camera_count: space.cameras.length,
-          slot_count: space._count.slots,
-          booking_count: space._count.bookings,
-        };
-      }),
-    );
+      const availableCount = slotStatuses.filter((s) => s.status === 'available').length;
+      const occupiedCount = slotStatuses.filter((s) => s.status === 'not_available').length;
+      const unknownCount = space._count.slots - slotStatuses.length;
+
+      // Stale if no slots cached or last update > 10 min ago
+      const oldestUpdate = space.slots.reduce(
+        (min, s) => (s.last_updated ? Math.min(min, s.last_updated.getTime()) : min),
+        now,
+      );
+      const isStale = space.slots.length === 0 || now - oldestUpdate > 10 * 60 * 1000;
+
+      return {
+        id: space.id,
+        name: space.name,
+        description: space.description,
+        address: space.address,
+        latitude: space.latitude,
+        longitude: space.longitude,
+        total_capacity: space.total_capacity,
+        base_rate_unit: space.base_rate_unit,
+        amenities: space.amenities,
+        status: space.status,
+        distance_km: distanceKm,
+        available_slots: availableCount,
+        occupied_slots: occupiedCount,
+        unknown_slots: unknownCount,
+        slot_statuses: slotStatuses,
+        is_stale: isStale,
+        photo_count: space.photos.length,
+        camera_count: space.cameras.length,
+        slot_count: space._count.slots,
+        booking_count: space._count.bookings,
+      };
+    });
 
     return results
       .filter((space) => space.distance_km <= radiusKm)
       .sort((a, b) => a.distance_km - b.distance_km);
   }
 
-  private getLocalSlotFiles(spaceId: string) {
-    const folder = join(process.cwd(), 'uploads', 'spaces', spaceId);
-    if (!existsSync(folder) || !statSync(folder).isDirectory()) {
-      return [];
-    }
-
-    return readdirSync(folder)
-      .filter((entry) => !entry.startsWith('.') && !statSync(join(folder, entry)).isDirectory())
-      .map((entry) => join(folder, entry));
+  private getS3Client(): S3Client {
+    return new S3Client({
+      endpoint: this.config.get<string>('STORAGE_ENDPOINT', 'https://i3z8.sg03.idrivee2-95.com'),
+      region: this.config.get<string>('STORAGE_REGION', 'ap-southeast-1'),
+      credentials: {
+        accessKeyId: this.config.get<string>('STORAGE_ACCESS_KEY_ID', ''),
+        secretAccessKey: this.config.get<string>('STORAGE_SECRET_ACCESS_KEY', ''),
+      },
+      forcePathStyle: false, // virtual-hosted: bucket.endpoint.com/key
+    });
   }
 
-  private async inferSlotImage(spaceId: string, filePath: string) {
-    const aiBaseUrl = this.config.get<string>(
-      'AI_INFERENCE_URL',
-      'http://localhost:8001',
-    );
-    const aiToken = this.config.get<string>(
-      'AI_API_TOKEN',
-      'change-me-in-production',
-    );
+  private async inferSlotImageFromS3(spaceId: string, s3Key: string) {
+    const slotId = `${spaceId}-${parse(s3Key).name}`;
+    const aiBaseUrl = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001');
+    const aiToken = this.config.get<string>('AI_API_TOKEN', 'change-me-in-production');
+
     const endpoint = new URL(
       '/api/v1/inference/predict',
       aiBaseUrl.endsWith('/') ? aiBaseUrl : `${aiBaseUrl}/`,
     );
-    const slotId = `${spaceId}-${parse(filePath).name}`;
     endpoint.searchParams.set('space_id', spaceId);
     endpoint.searchParams.set('slot_id', slotId);
     endpoint.searchParams.set('model', 'occupancy');
 
     try {
-      const fileBuffer = readFileSync(filePath);
+      // Generate presigned URL (valid 5 min) — avoids SDK SSL issues
+      const s3 = this.getS3Client();
+      const presignedUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: SLOT_IMAGE_BUCKET, Key: s3Key }),
+        { expiresIn: 300 },
+      );
+
+      // Download image bytes via fetch using the presigned URL
+      const imgResponse = await fetch(presignedUrl, {
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!imgResponse.ok) {
+        throw new Error(`S3 download failed: ${imgResponse.status}`);
+      }
+      const imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+
+      // Send to AI inference API
       const formData = new FormData();
       formData.append(
         'file',
-        new Blob([fileBuffer], { type: 'image/jpeg' }),
-        basename(filePath),
+        new Blob([imageBuffer], { type: 'image/jpeg' }),
+        basename(s3Key),
       );
 
       const response = await fetch(endpoint.toString(), {
@@ -183,13 +212,7 @@ export class SpacesService {
       });
 
       if (!response.ok) {
-        return {
-          slot_id: slotId,
-          status: 'unknown',
-          label: 'unknown',
-          confidence: 0,
-          error: `AI inference failed with ${response.status}`,
-        };
+        return { slot_id: slotId, status: 'unknown', label: 'unknown', confidence: 0, error: `AI ${response.status}` };
       }
 
       const payload = (await response.json()) as {
@@ -198,33 +221,14 @@ export class SpacesService {
         confidence?: number;
       };
 
-      const label = (
-        payload.prediction?.label ??
-        payload.label ??
-        'unknown'
-      ).toLowerCase();
-      const confidence =
-        payload.prediction?.confidence ?? payload.confidence ?? 0;
-      const status =
-        label === 'empty'
-          ? 'available'
-          : label === 'occupied'
-            ? 'not_available'
-            : 'unknown';
+      const label = (payload.prediction?.label ?? payload.label ?? 'unknown').toLowerCase();
+      const confidence = payload.prediction?.confidence ?? payload.confidence ?? 0;
+      const status = (label === 'occupied' && confidence >= 0.9) ? 'not_available' : 'available';
 
-      return {
-        slot_id: slotId,
-        status,
-        label,
-        confidence,
-      };
-    } catch {
-      return {
-        slot_id: slotId,
-        status: 'unknown',
-        label: 'unknown',
-        confidence: 0,
-      };
+      return { slot_id: slotId, status, label, confidence };
+    } catch (err) {
+      console.error(`[inferSlotImageFromS3] spaceId=${spaceId} key=${s3Key} error:`, err instanceof Error ? err.message : err);
+      return { slot_id: slotId, status: 'unknown', label: 'unknown', confidence: 0 };
     }
   }
 

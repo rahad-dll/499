@@ -139,7 +139,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: var(--font-geist), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
 
   --animate-float: cp-float 6s ease-in-out infinite;
   --animate-pulse-dot: cp-pulse-dot 2s ease-in-out infinite;

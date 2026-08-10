@@ -1,10 +1,8 @@
 /**
  * Auth domain types + the repository contract.
  *
- * Everything the UI touches goes through `AuthRepository`. Today it's backed
- * by browser cookies + localStorage (see `cookie-repository.ts`). To switch to
- * the real NestJS backend later, write an `HttpAuthRepository` that implements
- * this same interface and swap the export in `repository.ts` — no page changes.
+ * Everything the UI touches goes through `AuthRepository`. The active
+ * implementation calls the deployed NestJS API and persists its JWT session.
  */
 
 export type Role = "driver" | "owner" | "authority";
@@ -31,6 +29,7 @@ export interface AuthSession {
 export interface SignupInput {
   full_name: string;
   email: string;
+  phone: string;
   password: string;
   role: Role;
 }
@@ -62,6 +61,8 @@ export interface AuthRepository {
   logout(): Promise<void>;
   /** current session from storage, or null */
   getSession(): Promise<AuthSession | null>;
+  /** a current access token, refreshing it when necessary */
+  getAccessToken(): Promise<string | null>;
   /** returns a reset token (in a real backend this is emailed, not returned) */
   requestPasswordReset(email: string): Promise<{ token: string | null }>;
   resetPassword(token: string, password: string): Promise<void>;

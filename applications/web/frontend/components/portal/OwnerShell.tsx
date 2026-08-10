@@ -11,6 +11,7 @@ import {
   Gauge,
   LayoutGrid,
   LogOut,
+  ParkingCircle,
   Search,
   Settings,
   type LucideIcon,
@@ -22,10 +23,11 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
-export type OwnerNavKey = "dashboard" | "cameras" | "revenue" | "settings";
+export type OwnerNavKey = "dashboard" | "register" | "cameras" | "revenue" | "settings";
 
 const NAV_ITEMS: { key: OwnerNavKey; icon: LucideIcon; label: string; href: string }[] = [
   { key: "dashboard", icon: LayoutGrid, label: "Dashboard", href: "/owner" },
+  { key: "register", icon: ParkingCircle, label: "Register Lot", href: "/owner/spaces/new" },
   { key: "cameras", icon: Cctv, label: "Cameras", href: "/owner/cameras" },
   { key: "revenue", icon: BarChart3, label: "Revenue", href: "/owner/revenue" },
   { key: "settings", icon: Settings, label: "Settings", href: "/owner/settings" },
@@ -46,7 +48,9 @@ export function OwnerShell({
   const { user, loading, logout } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (loading) return;
+    if (!user) router.replace("/login");
+    else if (user.role !== "owner") router.replace("/dashboard");
   }, [loading, user, router]);
 
   async function onLogout() {
@@ -54,7 +58,7 @@ export function OwnerShell({
     router.replace("/login");
   }
 
-  if (loading || !user) {
+  if (loading || !user || user.role !== "owner") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background">
         <DigitalHeartbeatLoader />
@@ -168,7 +172,7 @@ export function OwnerShell({
 
       {/* mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4">
+        <div className="mx-auto grid max-w-xl grid-cols-5">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.key}

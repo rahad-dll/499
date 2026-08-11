@@ -9,11 +9,31 @@ class BookingService {
   static const String _baseUrl = 'https://four99-b6wg.onrender.com';
 
   Future<String> _getToken() async {
-    // Was reading the user's id from SessionService.getSession() and
-    // sending THAT as the bearer token — the JWT guard rejects anything
-    // that isn't a real signed access token, so every call 401'd.
+    // Real JWT access token — NOT the user id. The backend's JwtAuthGuard
+    // rejects anything that isn't a signed token, which is what was
+    // causing every request here to 401.
     final token = await SessionService.getAccessToken();
     return token ?? '';
+  }
+
+  Map<String, String> _headers(String token) => {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+  /// Pulls a readable message out of a NestJS error body,
+  /// e.g. { "message": "Slot not found in this space", "statusCode": 404 }
+  String _extractError(http.Response response) {
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['message'] != null) {
+        final msg = decoded['message'];
+        return msg is List ? msg.join(', ') : msg.toString();
+      }
+    } catch (_) {
+      // not JSON, fall through
+    }
+    return 'Something went wrong (status ${response.statusCode})';
   }
 
   Future<List<BookingModel>> getBookings() async {
@@ -21,37 +41,29 @@ class BookingService {
       final token = await _getToken();
       final response = await http.get(
         Uri.parse('$_baseUrl/bookings'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: _headers(token),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-        // Handle both List and Map responses
+
         List<dynamic> bookingsData = [];
         if (data is List) {
           bookingsData = data;
         } else if (data is Map && data['data'] != null) {
           bookingsData = data['data'] is List ? data['data'] : [];
         } else if (data is Map) {
-          // If it's a single booking object
           bookingsData = [data];
         }
-        
-        return bookingsData.map((json) {
-          // Convert Map<dynamic, dynamic> to Map<String, dynamic>
-          final Map<String, dynamic> convertedJson = {};
-          json.forEach((key, value) {
-            convertedJson[key.toString()] = value;
-          });
-          return BookingModel.fromJson(convertedJson);
-        }).toList();
+
+        return bookingsData
+            .whereType<Map<String, dynamic>>()
+            .map((json) => BookingModel.fromJson(json))
+            .toList();
       }
       return [];
     } catch (e) {
+      // ignore: avoid_print
       print('Error fetching bookings: $e');
       return [];
     }
@@ -64,102 +76,77 @@ class BookingService {
     String? vehiclePlate,
   }) async {
     final token = await _getToken();
-    
-    final payload = {
-      'space_id': space.id,
-      'slot_id': space.id,
-      'scheduled_at': startTime.toIso8601String(),
-      'duration_hours': durationHours,
-      'vehicle_plate': vehiclePlate ?? '',
-    };
+    if (token.isEmpty) {
+      throw Exception('You need to sign in again before booking.');
+    }
+
+    // No slot_id here on purpose — the nearby-spaces list only gives us
+    // counts, not individual slot ids, and sending the space's own id as
+    // slot_id was the "Slot not found" bug. Leaving it out lets the
+    // backend auto-pick the first free slot in this space.
+    final payload = BookingModel.createPayload(
+      spaceId: space.id,
+      scheduledAt: startTime,
+      durationHours: durationHours,
+      vehiclePlate: vehiclePlate,
+    );
 
     final response = await http.post(
       Uri.parse('$_baseUrl/bookings'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+      headers: _headers(token),
       body: jsonEncode(payload),
     );
 
     if (response.statusCode == 201 || response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      // Convert Map<dynamic, dynamic> to Map<String, dynamic>
-      final Map<String, dynamic> convertedJson = {};
-      data.forEach((key, value) {
-        convertedJson[key.toString()] = value;
-      });
-      
-      // যদি response এ booking data আসে
-      if (convertedJson['id'] != null) {
-        return BookingModel.fromJson(convertedJson);
+      if (data is Map<String, dynamic>) {
+        return BookingModel.fromJson(data);
       }
-      
-      // যদি response এ শুধু success message আসে
-      return BookingModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        spaceId: space.id,
-        slotId: space.id,
-        spaceName: space.name,
-        spaceAddress: space.address,
-        latitude: space.latitude,
-        longitude: space.longitude,
-        scheduledAt: startTime,
-        durationHours: durationHours,
-        pricePerHour: space.rate ?? 0,
-        totalPrice: (space.rate ?? 0) * durationHours,
-        status: BookingStatus.confirmed,
-        vehiclePlate: vehiclePlate,
-        createdAt: DateTime.now(),
-      );
-    } else {
-      throw Exception('Failed to create booking: ${response.statusCode}');
+      throw Exception('Unexpected response from server');
     }
+
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    if (response.statusCode == 400 &&
+        _extractError(response).toLowerCase().contains('driver profile')) {
+      throw Exception('Complete your driver profile before booking.');
+    }
+
+    throw Exception(_extractError(response));
   }
 
+  /// Cancels a booking. The backend only supports cancellation — there's
+  /// no generic "set any status" endpoint — so this throws for anything
+  /// other than BookingStatus.cancelled.
   Future<BookingModel> updateStatus(String bookingId, BookingStatus status) async {
+    if (status != BookingStatus.cancelled) {
+      throw Exception(
+        'Only cancelling a booking is supported right now.',
+      );
+    }
+
     final token = await _getToken();
-    
     final response = await http.patch(
-      Uri.parse('$_baseUrl/bookings/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'status': bookingStatusToString(status),
-      }),
+      Uri.parse('$_baseUrl/bookings/$bookingId/cancel'),
+      headers: _headers(token),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      // Convert Map<dynamic, dynamic> to Map<String, dynamic>
-      final Map<String, dynamic> convertedJson = {};
-      data.forEach((key, value) {
-        convertedJson[key.toString()] = value;
-      });
-      
-      return BookingModel.fromJson(convertedJson);
-    } else {
-      throw Exception('Failed to update booking status');
+      if (data is Map<String, dynamic>) {
+        return BookingModel.fromJson(data);
+      }
     }
+    throw Exception(_extractError(response));
   }
 
+  /// NOTE: the backend has no DELETE /bookings/:id route — only
+  /// PATCH /bookings/:id/cancel exists. There's no hard-delete of booking
+  /// history today, so this cancels instead of removing. If you want a
+  /// real "remove from my list" action, that needs a new endpoint from
+  /// Rahad first — worth flagging to him.
   Future<void> deleteBooking(String bookingId) async {
-    final token = await _getToken();
-    
-    final response = await http.delete(
-      Uri.parse('$_baseUrl/bookings/$bookingId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode != 200 && response.statusCode != 204) {
-      throw Exception('Failed to delete booking');
-    }
+    await updateStatus(bookingId, BookingStatus.cancelled);
   }
 }

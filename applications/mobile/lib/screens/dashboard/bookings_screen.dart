@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
+import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'booking_details_screen.dart';
 import 'dashboard_screen.dart';
+import 'profile_screen.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -135,6 +137,28 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     },
                   ),
                 ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 1, // Bookings tab selected
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardScreen()),
+              );
+              break;
+            case 1:
+              // Already on bookings
+              break;
+            case 2:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+              break;
+          }
+        },
+      ),
     );
   }
 

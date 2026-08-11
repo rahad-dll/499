@@ -39,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final LocationService _locationService = LocationService();
   final PlacesService _placesService = PlacesService();
 
+  // Search related
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   List<PlaceSuggestion> _suggestions = [];
@@ -103,6 +104,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     });
   }
+
+  // ============= SEARCH FUNCTIONS =============
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      setState(() => _searchLoading = true);
+      final bias = _currentPosition != null
+          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
+          : null;
+      final results = await _placesService.autocomplete(value, bias: bias);
+      if (!mounted) return;
+      setState(() {
+        _suggestions = results;
+        _searchLoading = false;
+      });
+    });
+  }
+
+  Future<void> _onSuggestionSelected(PlaceSuggestion suggestion) async {
+    setState(() {
+      _searchLoading = true;
+      _suggestions = [];
+      _searchController.text = suggestion.description;
+    });
+    FocusScope.of(context).unfocus();
+
+    final place = await _placesService.getPlaceDetails(suggestion.placeId);
+    setState(() => _searchLoading = false);
+    if (place == null || !mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not fetch that location, try again.')),
+      );
+      return;
+    }
+
+    final target = LatLng(place.lat, place.lng);
+    setState(() {
+      _searchedLocation = target;
+      _searchedLocationLabel = place.name.isNotEmpty ? place.name : place.address;
+    });
+
+    _mapController?.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(target: target, zoom: 15),
+    ));
+
+    await _loadNearbyParkings(center: target);
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchController.clear();
+      _suggestions = [];
+      _searchedLocation = null;
+      _searchedLocationLabel = null;
+    });
+    if (_currentPosition != null) {
+      final here = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+      _mapController?.animateCamera(CameraUpdate.newCameraPosition(
+        CameraPosition(target: here, zoom: 15),
+      ));
+      _loadNearbyParkings(center: here);
+    }
+  }
+  // ===========================================
 
   Future<void> _loadNearbyParkings({required LatLng center}) async {
     if (_isFetching) return;
@@ -223,72 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (mounted) setState(() {});
   }
 
-  void _onSearchChanged(String value) {
-    _debounce?.cancel();
-    if (value.trim().isEmpty) {
-      setState(() => _suggestions = []);
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 400), () async {
-      setState(() => _searchLoading = true);
-      final bias = _currentPosition != null
-          ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude)
-          : null;
-      final results = await _placesService.autocomplete(value, bias: bias);
-      if (!mounted) return;
-      setState(() {
-        _suggestions = results;
-        _searchLoading = false;
-      });
-    });
-  }
-
-  Future<void> _onSuggestionSelected(PlaceSuggestion suggestion) async {
-    setState(() {
-      _searchLoading = true;
-      _suggestions = [];
-      _searchController.text = suggestion.description;
-    });
-    FocusScope.of(context).unfocus();
-
-    final place = await _placesService.getPlaceDetails(suggestion.placeId);
-    setState(() => _searchLoading = false);
-    if (place == null || !mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not fetch that location, try again.')),
-      );
-      return;
-    }
-
-    final target = LatLng(place.lat, place.lng);
-    setState(() {
-      _searchedLocation = target;
-      _searchedLocationLabel = place.name.isNotEmpty ? place.name : place.address;
-    });
-
-    _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(target: target, zoom: 15),
-    ));
-
-    await _loadNearbyParkings(center: target);
-  }
-
-  void _clearSearch() {
-    setState(() {
-      _searchController.clear();
-      _suggestions = [];
-      _searchedLocation = null;
-      _searchedLocationLabel = null;
-    });
-    if (_currentPosition != null) {
-      final here = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
-      _mapController?.animateCamera(CameraUpdate.newCameraPosition(
-        CameraPosition(target: here, zoom: 15),
-      ));
-      _loadNearbyParkings(center: here);
-    }
-  }
-
+  // ============= FIXED NAVIGATION METHOD =============
   Future<void> _navigateToParking(ParkingModel parking) async {
     if (_currentPosition == null) return;
     final origin = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
@@ -305,21 +309,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _routeDestination = parking;
       _routeDistanceKm = distanceKm;
       _polylines.clear();
-      if (directions != null) {
+      if (directions != null && directions.isNotEmpty) {
         _polylines.add(Polyline(
           polylineId: const PolylineId('active_route'),
           color: const Color(0xFF18D6C0),
           width: 5,
-          points: directions.points,
+          points: directions, // FIXED: সরাসরি directions ব্যবহার করুন
         ));
       }
     });
 
-    if (directions != null && directions.points.isNotEmpty) {
-      final bounds = _boundsFromPoints([origin, destination, ...directions.points]);
+    if (directions != null && directions.isNotEmpty) {
+      final bounds = _boundsFromPoints([origin, destination, ...directions]); // FIXED: সরাসরি directions
       _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
     }
   }
+  // ================================================
 
   LatLngBounds _boundsFromPoints(List<LatLng> points) {
     double minLat = points.first.latitude, maxLat = points.first.latitude;
@@ -636,7 +641,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ============= EXIT DIALOG =============
   Future<bool> _showExitDialog() async {
     return await showDialog(
       context: context,
@@ -659,14 +663,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     ) ?? false;
   }
-  // =======================================
 
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
 
     return WillPopScope(
-      onWillPop: () => _showExitDialog(),
+      onWillPop: _showExitDialog,
       child: Scaffold(
         body: Stack(
           children: [
@@ -697,7 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
 
-            // Search Bar
+            // Search Bar with Suggestions
             Positioned(
               top: 0,
               left: 0,
@@ -795,6 +798,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
+                      // Search Suggestions
                       if (_suggestions.isNotEmpty)
                         Container(
                           margin: const EdgeInsets.only(top: 6),

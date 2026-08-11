@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/currency_formatter.dart';
 
 class SlotStatus {
   final String slotId;
@@ -75,6 +76,10 @@ class ParkingModel {
       rateValue = (json['hourlyRate'] as num).toDouble();
     } else if (json['base_rate_unit'] != null) {
       rateValue = (json['base_rate_unit'] as num).toDouble();
+    }
+    // Backend sends the rate in poisha (smallest unit), e.g. 5000 -> ৳50.
+    if (rateValue != null) {
+      rateValue = rateValue / 100;
     }
 
     double? ratingValue;
@@ -204,7 +209,7 @@ class ParkingModel {
 
   String get formattedRate {
     if (rate == null) return 'Rate not available';
-    return '\$${rate!.toStringAsFixed(2)}/hr';
+    return formatTakaPerHour(rate!);
   }
 
   bool get hasRate => rate != null;

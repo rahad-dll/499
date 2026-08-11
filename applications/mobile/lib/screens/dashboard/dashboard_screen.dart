@@ -13,6 +13,7 @@ import '../../models/parking_model.dart';
 import '../../services/location_service.dart';
 import '../../services/places_service.dart';
 import '../../theme/map_style.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'bookings_screen.dart';
 import 'profile_screen.dart';
@@ -646,7 +647,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         icon: Icons.attach_money_rounded,
                         label: 'Price/Hour',
                         value: parking.hasRate
-                            ? '\$${parking.rate!.toStringAsFixed(2)}'
+                            ? formatTaka(parking.rate!)
                             : 'N/A',
                         isDark: isDark,
                       ),

@@ -5,6 +5,17 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../models/parking_model.dart';
 import '../../services/booking_service.dart';
+import '../../utils/currency_formatter.dart';
+
+const Color _kAccent = Color(0xFF18D6C0);
+
+const List<String> _kWeekdayNames = [
+  'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+];
+const List<String> _kMonthNames = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
 Future<BookingModel?> showNewBookingSheet(
     BuildContext context, ParkingModel space) {
@@ -168,38 +179,113 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             
             const SizedBox(height: 16),
             
-            Text(
-              'Scheduled Time',
-              style: TextStyle(
-                fontSize: 13,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _pickDateTime,
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF0F1728) : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
+            Row(
+              children: [
+                Text(
+                  'Scheduled Time',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.schedule, size: 18, color: Color(0xFF18D6C0)),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_scheduledAt.day}/${_scheduledAt.month}/${_scheduledAt.year} • '
-                      '${TimeOfDay.fromDateTime(_scheduledAt).format(context)}',
-                      style: TextStyle(
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
+                const SizedBox(width: 6),
+                Icon(Icons.edit_rounded,
+                    size: 12, color: isDark ? Colors.grey[500] : Colors.grey[500]),
+                const SizedBox(width: 3),
+                Text(
+                  'tap to change',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                    color: isDark ? Colors.grey[500] : Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Dashed-look, teal-accented "editable field" — visually distinct
+            // from the read-only rows below it so it's obvious this can be
+            // tapped to reschedule, not just a static summary.
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _pickDateTime,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? _kAccent.withValues(alpha: 0.08)
+                        : _kAccent.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _kAccent.withValues(alpha: 0.5),
+                      width: 1.4,
+                      style: BorderStyle.solid,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: _kAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.event_rounded,
+                            size: 18, color: _kAccent),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${_kWeekdayNames[_scheduledAt.weekday - 1]}, '
+                              '${_scheduledAt.day} ${_kMonthNames[_scheduledAt.month - 1]} '
+                              '${_scheduledAt.year}',
+                              style: TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              TimeOfDay.fromDateTime(_scheduledAt).format(context),
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: _kAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _kAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit_rounded, size: 12, color: _kAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: _kAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -236,7 +322,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   ),
                 ),
                 Text(
-                  _hasRate ? '\$${widget.space.rate!.toStringAsFixed(2)}/hr' : 'N/A',
+                  _hasRate ? formatTakaPerHour(widget.space.rate!) : 'N/A',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -257,7 +343,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   ),
                 ),
                 Text(
-                  _hasRate ? '\$${_total.toStringAsFixed(2)}' : 'N/A',
+                  _hasRate ? formatTaka(_total) : 'N/A',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

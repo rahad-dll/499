@@ -9,8 +9,11 @@ class BookingService {
   static const String _baseUrl = 'https://four99-b6wg.onrender.com';
 
   Future<String> _getToken() async {
-    final user = await SessionService.getSession();
-    return user?.id ?? '';
+    // Was reading the user's id from SessionService.getSession() and
+    // sending THAT as the bearer token — the JWT guard rejects anything
+    // that isn't a real signed access token, so every call 401'd.
+    final token = await SessionService.getAccessToken();
+    return token ?? '';
   }
 
   Future<List<BookingModel>> getBookings() async {

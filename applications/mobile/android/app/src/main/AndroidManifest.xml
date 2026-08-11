@@ -3,6 +3,12 @@
         android:label="citypulse"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <!-- Google Maps SDK API Key — এটাই ছিল না, তাই crash হচ্ছিল -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDUZluioZrDAGqMQsZormAVCrUFKEEyerg" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

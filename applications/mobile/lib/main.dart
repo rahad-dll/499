@@ -4,10 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
-import 'screens/dashboard/dashboard_screen.dart';
-import 'services/session_service.dart';
+import 'screens/dashboard/dashboard_shell.dart';   // dashboard_screen.dart এর বদলে এইটা import করোimport 'services/session_service.dart';
 import 'widgets/landing/landing_screen.dart'; // ← LandingScreen import করুন
-
+import 'services/session_service.dart';  // এই import ঠিক আছে
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -54,7 +53,7 @@ class AuthWrapper extends StatelessWidget {
         
         // ✅ যদি User Logged In থাকে → Dashboard দেখাবে
         if (snapshot.data == true) {
-          return const DashboardScreen();
+          return const DashboardShell();
         }
         
         // ❌ যদি User Logged Out থাকে → Landing Page দেখাবে

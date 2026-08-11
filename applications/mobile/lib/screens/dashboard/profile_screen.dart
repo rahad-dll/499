@@ -219,7 +219,7 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ============= LOGOUT BUTTON (Redesigned) =============
+                // Logout Button
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -238,7 +238,6 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      // Logout Icon
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -252,7 +251,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Logout Text
                       const Text(
                         'Logout',
                         style: TextStyle(
@@ -270,7 +268,6 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Logout Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
@@ -299,11 +296,10 @@ class ProfileScreen extends StatelessWidget {
                             if (confirm == true) {
                               await SessionService.clearSession();
                               if (context.mounted) {
-                                // ✅ লগআউট করলে Landing Screen এ যাবে, SignIn এ নয়
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const LandingScreen(), // ← পরিবর্তন করা হয়েছে
+                                    builder: (_) => const LandingScreen(),
                                   ),
                                   (route) => false,
                                 );
@@ -338,7 +334,6 @@ class ProfileScreen extends StatelessWidget {
                     ],
                   ),
                 ),
-                // =====================================================
 
                 const SizedBox(height: 10),
               ],
@@ -346,27 +341,8 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: 2, // Profile tab selected
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const DashboardScreen()),
-              );
-              break;
-            case 1:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const BookingsScreen()),
-              );
-              break;
-            case 2:
-              // Already on profile
-              break;
-          }
-        },
+      bottomNavigationBar: const AppBottomNav(
+        currentIndex: 2,
       ),
     );
   }

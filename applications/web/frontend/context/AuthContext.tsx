@@ -68,7 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await authRepository.logout();
+    try {
+      await authRepository.logout();
+    } catch {
+      // Local session removal is authoritative even if the API is unavailable.
+    }
     setUser(null);
   }, []);
 

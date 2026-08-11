@@ -5,8 +5,10 @@ import '../../main.dart';
 import '../../models/user_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/session_service.dart';
+import '../../widgets/dashboard/app_bottom_nav.dart';
 import '../auth/sign_in_screen.dart';
 import 'bookings_screen.dart';
+import 'dashboard_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -217,52 +219,152 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Logout Button
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Logout'),
-                        content: const Text('Are you sure you want to logout?'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
-                            child: const Text('Logout'),
-                          ),
-                        ],
+                // ============= LOGOUT BUTTON (Redesigned) =============
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.red.withOpacity(0.1),
+                        Colors.red.withOpacity(0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.red.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // Logout Icon
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.logout_rounded,
+                          size: 40,
+                          color: Colors.red,
+                        ),
                       ),
-                    );
+                      const SizedBox(height: 16),
+                      // Logout Text
+                      const Text(
+                        'Logout',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sign out from your account',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Logout Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Logout'),
+                                content: const Text('Are you sure you want to logout?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: Colors.red,
+                                    ),
+                                    child: const Text('Logout'),
+                                  ),
+                                ],
+                              ),
+                            );
 
-                    if (confirm == true) {
-                      await SessionService.clearSession();
-                      if (context.mounted) {
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SignInScreen()),
-                          (route) => false,
-                        );
-                      }
-                    }
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    minimumSize: const Size(double.infinity, 50),
+                            if (confirm == true) {
+                              await SessionService.clearSession();
+                              if (context.mounted) {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const SignInScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.logout, size: 20),
+                              SizedBox(width: 10),
+                              Text(
+                                'Sign Out',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                // =====================================================
+
+                const SizedBox(height: 10),
               ],
             ),
           );
+        },
+      ),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: 2, // Profile tab selected
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardScreen()),
+              );
+              break;
+            case 1:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const BookingsScreen()),
+              );
+              break;
+            case 2:
+              // Already on profile
+              break;
+          }
         },
       ),
     );

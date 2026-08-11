@@ -11,13 +11,15 @@ export function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.25fr_1fr]">
+    <div className="grid min-h-dvh lg:h-dvh lg:grid-cols-[minmax(0,1.25fr)_minmax(410px,1fr)] lg:overflow-hidden">
       {brand}
-      <div className="relative flex flex-col items-center justify-center bg-background px-4 py-20 sm:px-8">
-        <div className="absolute right-5 top-6 z-10">
-          <ThemeToggle />
-        </div>
-        {children}
+      <div className="min-w-0 bg-background lg:min-h-0 lg:overflow-y-auto">
+        <main className="relative flex min-h-dvh flex-col items-center justify-center px-4 py-5 sm:px-8 sm:py-8 lg:min-h-full lg:px-5 lg:py-5 xl:px-6 xl:py-6 2xl:px-8">
+          <div className="absolute right-4 top-4 z-10 sm:right-5 sm:top-5">
+            <ThemeToggle />
+          </div>
+          {children}
+        </main>
       </div>
     </div>
   );

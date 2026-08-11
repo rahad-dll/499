@@ -7,9 +7,11 @@ import { cn } from "@/lib/utils";
 export function Logo({
   tagline = true,
   className,
+  taglineClassName,
 }: {
   tagline?: boolean;
   className?: string;
+  taglineClassName?: string;
 }) {
   return (
     <Link
@@ -21,7 +23,7 @@ export function Logo({
         City<span className="text-brand">Pulse</span>
       </span>
       {tagline && (
-        <span className="mt-0.5 text-xs text-muted-foreground">
+        <span className={cn("mt-0.5 text-xs text-muted-foreground", taglineClassName)}>
           Intelligent Parking &amp; Traffic Control
         </span>
       )}

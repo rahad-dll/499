@@ -5,8 +5,6 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 
-/// Pop with `true` if the booking was changed (cancelled/deleted) so the
-/// caller (BookingsScreen) knows to refresh its list.
 class BookingDetailsScreen extends StatefulWidget {
   final BookingModel booking;
   const BookingDetailsScreen({super.key, required this.booking});
@@ -157,9 +155,10 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                           child: Text(
                             statusText,
                             style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: statusColor),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
                           ),
                         ),
                       ],
@@ -167,15 +166,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.location_on,
-                            size: 16, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                        Icon(
+                          Icons.location_on,
+                          size: 16,
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             _booking.spaceAddress,
                             style: TextStyle(
-                                fontSize: 14,
-                                color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                              fontSize: 14,
+                              color: isDark ? Colors.grey[400] : Colors.grey[600],
+                            ),
                           ),
                         ),
                       ],
@@ -184,18 +187,51 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _detailRow(isDark, Icons.calendar_today, 'Start',
-                  '${_booking.startTime.day}/${_booking.startTime.month}/${_booking.startTime.year} • '
-                  '${TimeOfDay.fromDateTime(_booking.startTime).format(context)}'),
-              _detailRow(isDark, Icons.timelapse, 'Duration', '${_booking.durationHours} hour(s)'),
-              _detailRow(isDark, Icons.event_available, 'Ends',
-                  '${_booking.endTime.day}/${_booking.endTime.month}/${_booking.endTime.year} • '
-                  '${TimeOfDay.fromDateTime(_booking.endTime).format(context)}'),
-              _detailRow(isDark, Icons.attach_money, 'Rate', '\$${_booking.pricePerHour}/hr'),
-              _detailRow(isDark, Icons.payments, 'Total', '\$${_booking.totalPrice.toStringAsFixed(2)}'),
+              _detailRow(
+                isDark,
+                Icons.calendar_today,
+                'Scheduled',
+                '${_booking.scheduledAt.day}/${_booking.scheduledAt.month}/${_booking.scheduledAt.year} • '
+                '${TimeOfDay.fromDateTime(_booking.scheduledAt).format(context)}',
+              ),
+              _detailRow(
+                isDark,
+                Icons.timelapse,
+                'Duration',
+                '${_booking.durationHours} hour(s)',
+              ),
+              _detailRow(
+                isDark,
+                Icons.event_available,
+                'Ends',
+                '${_booking.endTime.day}/${_booking.endTime.month}/${_booking.endTime.year} • '
+                '${TimeOfDay.fromDateTime(_booking.endTime).format(context)}',
+              ),
+              _detailRow(
+                isDark,
+                Icons.attach_money,
+                'Rate',
+                '\$${_booking.pricePerHour}/hr',
+              ),
+              _detailRow(
+                isDark,
+                Icons.payments,
+                'Total',
+                '\$${_booking.totalPrice.toStringAsFixed(2)}',
+              ),
               if (_booking.vehiclePlate != null)
-                _detailRow(isDark, Icons.directions_car, 'Vehicle', _booking.vehiclePlate!),
-              _detailRow(isDark, Icons.receipt_long, 'Booking ID', _booking.id),
+                _detailRow(
+                  isDark,
+                  Icons.directions_car,
+                  'Vehicle',
+                  _booking.vehiclePlate!,
+                ),
+              _detailRow(
+                isDark,
+                Icons.receipt_long,
+                'Booking ID',
+                _booking.id,
+              ),
               const SizedBox(height: 24),
               if (canCancel)
                 SizedBox(
@@ -208,7 +244,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -223,7 +261,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -250,15 +290,22 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
           children: [
             Icon(icon, size: 18, color: const Color(0xFF18D6C0)),
             const SizedBox(width: 10),
-            Text(label,
-                style: TextStyle(
-                    fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
             const Spacer(),
-            Text(value,
-                style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : Colors.black87)),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
           ],
         ),
       ),

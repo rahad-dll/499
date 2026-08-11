@@ -1,12 +1,11 @@
-﻿// lib/main.dart
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
-import 'screens/dashboard/dashboard_shell.dart';   // dashboard_screen.dart এর বদলে এইটা import করোimport 'services/session_service.dart';
-import 'widgets/landing/landing_screen.dart'; // ← LandingScreen import করুন
-import 'services/session_service.dart';  // এই import ঠিক আছে
+import 'screens/dashboard/dashboard_screen.dart';
+import 'services/session_service.dart';
+import 'widgets/landing/landing_screen.dart';
+
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -44,19 +43,16 @@ class AuthWrapper extends StatelessWidget {
     return FutureBuilder<bool>(
       future: _checkAuth(),
       builder: (context, snapshot) {
-        // লোডিং অবস্থায় CircularProgressIndicator দেখাবে
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
         
-        // ✅ যদি User Logged In থাকে → Dashboard দেখাবে
         if (snapshot.data == true) {
-          return const DashboardShell();
+          return const DashboardScreen();
         }
         
-        // ❌ যদি User Logged Out থাকে → Landing Page দেখাবে
         return const LandingScreen();
       },
     );

@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
-import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'booking_details_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -45,6 +44,26 @@ class _BookingsScreenState extends State<BookingsScreen> {
   }
 
   Future<void> _cancelBooking(BookingModel booking) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Booking?'),
+        content: Text('Are you sure you want to cancel booking for "${booking.spaceName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep it'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    
     await _service.updateStatus(booking.id, BookingStatus.cancelled);
     _loadBookings();
   }
@@ -116,7 +135,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     },
                   ),
                 ),
-      // bottomNavigationBar: const AppBottomNav(currentIndex: 1),
     );
   }
 
@@ -232,7 +250,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                   ),
                   child: Text(
                     statusText,
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
                   ),
                 ),
               ],
@@ -240,12 +262,19 @@ class _BookingsScreenState extends State<BookingsScreen> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.location_on, size: 14, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                Icon(
+                  Icons.location_on,
+                  size: 14,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     booking.spaceAddress,
-                    style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
                   ),
                 ),
               ],
@@ -256,10 +285,14 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 _buildInfoChip(
                   isDark: isDark,
                   icon: Icons.calendar_today,
-                  label: '${booking.startTime.day}/${booking.startTime.month}/${booking.startTime.year}',
+                  label: '${booking.scheduledAt.day}/${booking.scheduledAt.month}/${booking.scheduledAt.year}',
                 ),
                 const SizedBox(width: 8),
-                _buildInfoChip(isDark: isDark, icon: Icons.access_time, label: '${booking.durationHours}h'),
+                _buildInfoChip(
+                  isDark: isDark,
+                  icon: Icons.access_time,
+                  label: '${booking.durationHours}h',
+                ),
                 const SizedBox(width: 8),
                 _buildInfoChip(
                   isDark: isDark,
@@ -277,7 +310,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF18D6C0),
                       side: const BorderSide(color: Color(0xFF18D6C0)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     child: const Text('View Details'),
                   ),
@@ -290,7 +325,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                         side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       child: const Text('Cancel'),
                     ),
@@ -304,7 +341,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
-  Widget _buildInfoChip({required bool isDark, required IconData icon, required String label}) {
+  Widget _buildInfoChip({
+    required bool isDark,
+    required IconData icon,
+    required String label,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -315,7 +356,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
         children: [
           Icon(icon, size: 14, color: const Color(0xFF18D6C0)),
           const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 13, color: isDark ? Colors.grey[300] : Colors.grey[600])),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.grey[300] : Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );

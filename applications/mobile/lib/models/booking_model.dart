@@ -1,9 +1,5 @@
 // lib/models/booking_model.dart
-//
-// Field names + toJson()/fromJson() are written in the same snake_case
-// shape as the Spaces API (space_id, start_time, total_price, ...), so
-// when the real /bookings endpoints exist you only need to change
-// BookingService (below) — this model won't need to change.
+import 'package:flutter/material.dart';
 
 enum BookingStatus { pending, confirmed, active, completed, cancelled }
 
@@ -28,11 +24,12 @@ String bookingStatusToString(BookingStatus status) => status.name;
 class BookingModel {
   final String id;
   final String spaceId;
+  final String slotId;
   final String spaceName;
   final String spaceAddress;
   final double latitude;
   final double longitude;
-  final DateTime startTime;
+  final DateTime scheduledAt;  // startTime এর পরিবর্তে scheduledAt
   final int durationHours;
   final double pricePerHour;
   final double totalPrice;
@@ -43,11 +40,12 @@ class BookingModel {
   const BookingModel({
     required this.id,
     required this.spaceId,
+    required this.slotId,
     required this.spaceName,
     required this.spaceAddress,
     required this.latitude,
     required this.longitude,
-    required this.startTime,
+    required this.scheduledAt,
     required this.durationHours,
     required this.pricePerHour,
     required this.totalPrice,
@@ -56,23 +54,27 @@ class BookingModel {
     required this.createdAt,
   });
 
-  DateTime get endTime => startTime.add(Duration(hours: durationHours));
+  // startTime getter for backward compatibility
+  DateTime get startTime => scheduledAt;
+  
+  DateTime get endTime => scheduledAt.add(Duration(hours: durationHours));
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     return BookingModel(
-      id: json['id'].toString(),
+      id: json['id']?.toString() ?? '',
       spaceId: json['space_id']?.toString() ?? '',
-      spaceName: json['space_name'] ?? '',
-      spaceAddress: json['space_address'] ?? '',
+      slotId: json['slot_id']?.toString() ?? '',
+      spaceName: json['space_name'] ?? json['spaceName'] ?? '',
+      spaceAddress: json['space_address'] ?? json['spaceAddress'] ?? '',
       latitude: (json['latitude'] ?? 0.0).toDouble(),
       longitude: (json['longitude'] ?? 0.0).toDouble(),
-      startTime: DateTime.parse(json['start_time']),
-      durationHours: json['duration_hours'] ?? 1,
-      pricePerHour: (json['price_per_hour'] ?? 0.0).toDouble(),
-      totalPrice: (json['total_price'] ?? 0.0).toDouble(),
+      scheduledAt: DateTime.parse(json['scheduled_at'] ?? json['start_time'] ?? DateTime.now().toIso8601String()),
+      durationHours: json['duration_hours'] ?? json['durationHours'] ?? 1,
+      pricePerHour: (json['price_per_hour'] ?? json['pricePerHour'] ?? 0.0).toDouble(),
+      totalPrice: (json['total_price'] ?? json['totalPrice'] ?? 0.0).toDouble(),
       status: bookingStatusFromString(json['status'] ?? 'confirmed'),
-      vehiclePlate: json['vehicle_plate'],
-      createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      vehiclePlate: json['vehicle_plate'] ?? json['vehiclePlate'],
+      createdAt: DateTime.tryParse(json['created_at'] ?? json['createdAt'] ?? '') ?? DateTime.now(),
     );
   }
 
@@ -80,11 +82,12 @@ class BookingModel {
     return {
       'id': id,
       'space_id': spaceId,
+      'slot_id': slotId,
       'space_name': spaceName,
       'space_address': spaceAddress,
       'latitude': latitude,
       'longitude': longitude,
-      'start_time': startTime.toIso8601String(),
+      'scheduled_at': scheduledAt.toIso8601String(),
       'duration_hours': durationHours,
       'price_per_hour': pricePerHour,
       'total_price': totalPrice,
@@ -94,15 +97,26 @@ class BookingModel {
     };
   }
 
+  Map<String, dynamic> toCreatePayload() {
+    return {
+      'space_id': spaceId,
+      'slot_id': slotId,
+      'scheduled_at': scheduledAt.toIso8601String(),
+      'duration_hours': durationHours,
+      'vehicle_plate': vehiclePlate ?? '',
+    };
+  }
+
   BookingModel copyWith({BookingStatus? status}) {
     return BookingModel(
       id: id,
       spaceId: spaceId,
+      slotId: slotId,
       spaceName: spaceName,
       spaceAddress: spaceAddress,
       latitude: latitude,
       longitude: longitude,
-      startTime: startTime,
+      scheduledAt: scheduledAt,
       durationHours: durationHours,
       pricePerHour: pricePerHour,
       totalPrice: totalPrice,

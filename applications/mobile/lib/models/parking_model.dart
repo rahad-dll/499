@@ -1,5 +1,4 @@
-// lib/models/parking_model.dart
-import 'package:flutter/material.dart'; // ← এই লাইন যোগ করুন
+import 'package:flutter/material.dart';
 
 class ParkingModel {
   final String id;
@@ -9,7 +8,7 @@ class ParkingModel {
   final double longitude;
   final int availableSpots;
   final int totalSpots;
-  final double pricePerHour;
+  final double? rate; // Changed from pricePerHour to rate (nullable)
   final double distance;
   final bool isOpen;
   final double rating;
@@ -23,7 +22,7 @@ class ParkingModel {
     required this.longitude,
     required this.availableSpots,
     required this.totalSpots,
-    required this.pricePerHour,
+    this.rate, // Made nullable
     required this.distance,
     required this.isOpen,
     required this.rating,
@@ -31,6 +30,18 @@ class ParkingModel {
   });
 
   factory ParkingModel.fromJson(Map<String, dynamic> json) {
+    // Try to get rate from multiple possible field names
+    double? rateValue;
+    if (json['rate'] != null) {
+      rateValue = (json['rate'] as num).toDouble();
+    } else if (json['pricePerHour'] != null) {
+      rateValue = (json['pricePerHour'] as num).toDouble();
+    } else if (json['price'] != null) {
+      rateValue = (json['price'] as num).toDouble();
+    } else if (json['hourlyRate'] != null) {
+      rateValue = (json['hourlyRate'] as num).toDouble();
+    }
+
     return ParkingModel(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
@@ -39,7 +50,7 @@ class ParkingModel {
       longitude: (json['longitude'] ?? 0.0).toDouble(),
       availableSpots: json['availableSpots'] ?? 0,
       totalSpots: json['totalSpots'] ?? 0,
-      pricePerHour: (json['pricePerHour'] ?? 0.0).toDouble(),
+      rate: rateValue,
       distance: (json['distance'] ?? 0.0).toDouble(),
       isOpen: json['isOpen'] ?? false,
       rating: (json['rating'] ?? 0.0).toDouble(),
@@ -56,7 +67,7 @@ class ParkingModel {
       'longitude': longitude,
       'availableSpots': availableSpots,
       'totalSpots': totalSpots,
-      'pricePerHour': pricePerHour,
+      'rate': rate,
       'distance': distance,
       'isOpen': isOpen,
       'rating': rating,
@@ -72,7 +83,7 @@ class ParkingModel {
     double? longitude,
     int? availableSpots,
     int? totalSpots,
-    double? pricePerHour,
+    double? rate,
     double? distance,
     bool? isOpen,
     double? rating,
@@ -86,7 +97,7 @@ class ParkingModel {
       longitude: longitude ?? this.longitude,
       availableSpots: availableSpots ?? this.availableSpots,
       totalSpots: totalSpots ?? this.totalSpots,
-      pricePerHour: pricePerHour ?? this.pricePerHour,
+      rate: rate ?? this.rate,
       distance: distance ?? this.distance,
       isOpen: isOpen ?? this.isOpen,
       rating: rating ?? this.rating,
@@ -108,4 +119,13 @@ class ParkingModel {
     if (availableSpots > 0) return const Color(0xFFF59E0B);
     return const Color(0xFFEF4444);
   }
+
+  // Helper to get formatted rate
+  String get formattedRate {
+    if (rate == null) return 'Rate not available';
+    return '\$${rate!.toStringAsFixed(2)}/hr';
+  }
+
+  // Helper to check if rate exists
+  bool get hasRate => rate != null;
 }

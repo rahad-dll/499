@@ -1,12 +1,3 @@
-// lib/services/booking_service.dart
-//
-// Same pattern as auth_service.dart's `useLocalMock` toggle:
-// right now bookings live in SharedPreferences on the phone. When Rahad
-// gives you real /bookings endpoints, flip `useLocalMock = false` and
-// fill in the 4 TODOs below with http calls (same shape as ApiService
-// is already used for /auth/*). Nothing in the UI screens needs to change
-// because they only ever talk to BookingService, never to storage directly.
-
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
@@ -53,6 +44,9 @@ class BookingService {
     required int durationHours,
     String? vehiclePlate,
   }) async {
+    // Use rate from parking model with null check
+    final rate = space.rate ?? 0.0;
+    
     final booking = BookingModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       spaceId: space.id,
@@ -62,8 +56,8 @@ class BookingService {
       longitude: space.longitude,
       startTime: startTime,
       durationHours: durationHours,
-      pricePerHour: space.pricePerHour,
-      totalPrice: space.pricePerHour * durationHours,
+      pricePerHour: rate, // Store rate in the booking
+      totalPrice: rate * durationHours,
       status: BookingStatus.confirmed,
       vehiclePlate: vehiclePlate,
       createdAt: DateTime.now(),

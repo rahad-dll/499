@@ -13,7 +13,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "node --experimental-strip-types --test --experimental-test-coverage lib/api/client.test.ts lib/auth/api-session.test.ts lib/auth/phone.test.ts"
+    "test:unit": "node --experimental-strip-types --test --experimental-test-coverage lib/api/client.test.ts lib/auth/api-session.test.ts lib/auth/destination.test.ts lib/auth/phone.test.ts"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.7",

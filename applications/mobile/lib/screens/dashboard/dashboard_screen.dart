@@ -1,14 +1,18 @@
 // lib/screens/dashboard/dashboard_screen.dart
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../../main.dart';
 import '../../models/parking_model.dart';
 import '../../models/user_model.dart';
 import '../../services/location_service.dart';
 import '../../services/session_service.dart';
+import '../../services/api_service.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'bookings_screen.dart';
 import 'new_booking_sheet.dart';
@@ -30,6 +34,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<ParkingModel> _nearbyParkings = [];
   bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMessage = '';
   CameraPosition? _cameraPosition;
   final LocationService _locationService = LocationService();
   User? _currentUser;
@@ -57,11 +63,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           target: LatLng(position.latitude, position.longitude),
           zoom: 15,
         );
-        _isLoading = false;
       });
-      _loadNearbyParkings();
+      await _loadNearbyParkings();
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Failed to get location: $e';
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -76,84 +85,138 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadNearbyParkings() async {
     if (_currentPosition == null) return;
 
+    setState(() {
+      _isLoading = true;
+      _hasError = false;
+    });
+
     try {
-      // TODO real API: replace with GET /spaces (nearby by lat/lng) once
-      // driver-facing endpoints are confirmed. ParkingModel.fromJson()
-      // already matches a plausible response shape, so this is a
-      // drop-in swap later.
-      final mockParkings = _getMockParkings(
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
+      // Get token from session
+      final user = await SessionService.getSession();
+      final token = user?.id;
+      
+      // Real API call to get nearby parking spaces
+      final response = await http.get(
+        Uri.parse(
+          '${ApiService.baseUrl}/spaces/nearby?lat=${_currentPosition!.latitude}&lng=${_currentPosition!.longitude}&radius=5000',
+        ),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
       );
 
-      setState(() {
-        _nearbyParkings = mockParkings;
-        _updateMarkers(mockParkings);
-      });
+      debugPrint('API Response Status: ${response.statusCode}');
+      debugPrint('API Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        // Check if data is empty or null
+        if (data == null || (data is List && data.isEmpty) || (data is Map && data['data'] == null)) {
+          // Empty response - show coming soon
+          setState(() {
+            _nearbyParkings = [];
+            _isLoading = false;
+            _markers.clear();
+          });
+          return;
+        }
+        
+        // Handle both list and object responses
+        List<dynamic> spaces = [];
+        if (data is List) {
+          spaces = data;
+        } else if (data is Map && data['data'] != null) {
+          spaces = data['data'] is List ? data['data'] : [];
+        }
+        
+        List<ParkingModel> parkings = [];
+        for (var item in spaces) {
+          // Skip if item is null
+          if (item == null) continue;
+          
+          try {
+            // Add distance calculation if not provided by API
+            double distance = 0;
+            if (item['distance'] != null) {
+              distance = (item['distance'] as num).toDouble();
+            } else {
+              // Calculate approximate distance
+              final lat = (item['latitude'] ?? 0.0).toDouble();
+              final lng = (item['longitude'] ?? 0.0).toDouble();
+              distance = _calculateDistance(
+                _currentPosition!.latitude,
+                _currentPosition!.longitude,
+                lat,
+                lng,
+              );
+            }
+            
+            final parking = ParkingModel(
+              id: item['id']?.toString() ?? '',
+              name: item['name'] ?? 'Unknown Parking',
+              address: item['address'] ?? '',
+              latitude: (item['latitude'] ?? 0.0).toDouble(),
+              longitude: (item['longitude'] ?? 0.0).toDouble(),
+              availableSpots: item['availableSpots'] ?? 0,
+              totalSpots: item['totalSpots'] ?? 0,
+              rate: (item['rate'] ?? item['pricePerHour'] ?? item['price'] ?? 0.0).toDouble(),
+              distance: distance,
+              isOpen: item['isOpen'] ?? true,
+              rating: (item['rating'] ?? 0.0).toDouble(),
+              amenities: List<String>.from(item['amenities'] ?? []),
+            );
+            parkings.add(parking);
+          } catch (e) {
+            debugPrint('Error parsing parking item: $e');
+            continue;
+          }
+        }
+
+        // Sort by distance
+        parkings.sort((a, b) => a.distance.compareTo(b.distance));
+
+        setState(() {
+          _nearbyParkings = parkings;
+          _isLoading = false;
+          if (parkings.isNotEmpty) {
+            _updateMarkers(parkings);
+          } else {
+            _markers.clear();
+          }
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = 'Failed to load parking spaces (Status: ${response.statusCode})';
+        });
+      }
     } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = 'Error loading parking spaces: $e';
+      });
       debugPrint('Error loading parkings: $e');
     }
   }
 
-  List<ParkingModel> _getMockParkings(double lat, double lng) {
-    return [
-      ParkingModel(
-        id: '1',
-        name: 'City Center Parking',
-        address: '123 Main Street, Downtown',
-        latitude: lat + 0.002,
-        longitude: lng + 0.003,
-        availableSpots: 12,
-        totalSpots: 50,
-        pricePerHour: 2.50,
-        distance: 0.3,
-        isOpen: true,
-        rating: 4.5,
-        amenities: const ['CCTV', 'EV Charging', '24/7'],
-      ),
-      ParkingModel(
-        id: '2',
-        name: 'Mall Parking',
-        address: '456 Shopping Mall',
-        latitude: lat - 0.003,
-        longitude: lng + 0.002,
-        availableSpots: 8,
-        totalSpots: 30,
-        pricePerHour: 3.00,
-        distance: 0.5,
-        isOpen: true,
-        rating: 4.2,
-        amenities: const ['CCTV', 'Covered'],
-      ),
-      ParkingModel(
-        id: '3',
-        name: 'Station Parking',
-        address: '789 Railway Station',
-        latitude: lat + 0.004,
-        longitude: lng - 0.003,
-        availableSpots: 3,
-        totalSpots: 20,
-        pricePerHour: 1.50,
-        distance: 0.8,
-        isOpen: true,
-        rating: 3.8,
-        amenities: const ['CCTV'],
-      ),
-      ParkingModel(
-        id: '4',
-        name: 'Hospital Parking',
-        address: '101 Medical Center',
-        latitude: lat - 0.002,
-        longitude: lng - 0.004,
-        availableSpots: 0,
-        totalSpots: 40,
-        pricePerHour: 2.00,
-        distance: 1.2,
-        isOpen: false,
-        rating: 4.0,
-        amenities: const ['CCTV', 'Covered', '24/7'],
-      ),
-    ];
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Earth's radius in km
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+    final a = 
+      sin(dLat / 2) * sin(dLat / 2) +
+      cos(_toRadians(lat1)) * cos(_toRadians(lat2)) * 
+      sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c; // Distance in km
+  }
+
+  double _toRadians(double degree) {
+    return degree * pi / 180.0;
   }
 
   void _updateMarkers(List<ParkingModel> parkings) {
@@ -174,7 +237,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
 
-      for (var parking in parkings) {
+      for (var i = 0; i < parkings.length; i++) {
+        final parking = parkings[i];
+        
         BitmapDescriptor markerIcon;
         if (parking.availableSpots > 5) {
           markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
@@ -184,18 +249,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           markerIcon = BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
         }
 
+        final rateDisplay = parking.hasRate 
+            ? '\$${parking.rate!.toStringAsFixed(2)}/hr' 
+            : 'Rate N/A';
+
         _markers.add(
           Marker(
-            markerId: MarkerId('parking_${parking.id}'),
+            markerId: MarkerId('parking_${i}_${parking.id}'),
             position: LatLng(parking.latitude, parking.longitude),
             icon: markerIcon,
-            // Tapping the marker itself now opens the details sheet too,
-            // not just the tiny info-window snippet — much easier to hit
-            // on a phone screen.
             onTap: () => _showParkingDetails(parking),
             infoWindow: InfoWindow(
               title: parking.name,
-              snippet: '${parking.availableSpots} spots • \$${parking.pricePerHour}/hr',
+              snippet: '${parking.availableSpots} spots • $rateDisplay',
               onTap: () => _showParkingDetails(parking),
             ),
           ),
@@ -215,6 +281,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildParkingDetailsSheet(ParkingModel parking) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    final rateDisplay = parking.hasRate 
+        ? '\$${parking.rate!.toStringAsFixed(2)}' 
+        : 'N/A';
 
     return Container(
       decoration: BoxDecoration(
@@ -284,9 +353,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               _buildStatItem(icon: Icons.local_parking, label: 'Available', value: '${parking.availableSpots}', isDark: isDark),
               const SizedBox(width: 12),
-              _buildStatItem(icon: Icons.attach_money, label: 'Price/Hour', value: '\$${parking.pricePerHour}', isDark: isDark),
+              _buildStatItem(icon: Icons.attach_money, label: 'Rate/Hour', value: rateDisplay, isDark: isDark),
               const SizedBox(width: 12),
-              _buildStatItem(icon: Icons.star, label: 'Rating', value: parking.rating.toString(), isDark: isDark),
+              _buildStatItem(icon: Icons.star, label: 'Rating', value: parking.rating.toStringAsFixed(1), isDark: isDark),
             ],
           ),
           if (parking.amenities.isNotEmpty) ...[
@@ -330,14 +399,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: parking.hasAvailableSpots
+                  onPressed: (parking.hasAvailableSpots && parking.hasRate)
                       ? () {
                           Navigator.pop(context);
                           _bookParking(parking);
                         }
                       : null,
                   icon: const Icon(Icons.book_online),
-                  label: const Text('Book Now'),
+                  label: Text(parking.hasRate ? 'Book Now' : 'Rate N/A'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF18D6C0),
                     side: const BorderSide(color: Color(0xFF18D6C0)),
@@ -392,12 +461,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Now actually creates a booking (mock-backed today, same call shape
-  // works once BookingService.useLocalMock is flipped to false) instead
-  // of just showing a snackbar.
   Future<void> _bookParking(ParkingModel parking) async {
     final booking = await showNewBookingSheet(context, parking);
-    if (booking == null || !mounted) return; // user cancelled the sheet
+    if (booking == null || !mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -429,6 +495,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildComingSoonCard() {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: (isDark ? const Color(0xFF1A2740) : const Color(0xFF18D6C0)).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.local_parking_rounded,
+                size: 60,
+                color: const Color(0xFF18D6C0),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Text(
+              'Parking Spaces Coming Soon!',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'We are currently onboarding parking spaces in your area. \nStay tuned for updates!',
+              style: TextStyle(
+                fontSize: 16,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 30),
+            GestureDetector(
+              onTap: () {
+                // TODO: Implement notification subscription
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('You will be notified when parking spaces are available!'),
+                    backgroundColor: Color(0xFF18D6C0),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF18D6C0).withOpacity(0.1),
+                      const Color(0xFF18D6C0).withOpacity(0.05),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF18D6C0).withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.notifications_active,
+                      color: const Color(0xFF18D6C0),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Notify me when available',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF18D6C0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
@@ -436,7 +596,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          if (_cameraPosition != null)
+          // Map or Error/Coming Soon overlay
+          if (_cameraPosition != null && !_hasError && _nearbyParkings.isNotEmpty)
             GoogleMap(
               onMapCreated: _onMapCreated,
               initialCameraPosition: _cameraPosition!,
@@ -448,9 +609,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
               zoomControlsEnabled: false,
               mapType: MapType.normal,
             )
+          else if (_hasError)
+            Container(
+              color: isDark ? const Color(0xFF0A0F1F) : Colors.grey[50],
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red[300],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Something went wrong',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        _errorMessage,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadNearbyParkings,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Try Again'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF18D6C0),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_nearbyParkings.isEmpty && !_isLoading)
+            _buildComingSoonCard()
           else
             const Center(child: CircularProgressIndicator()),
 
+          // Top Search Bar
           Positioned(
             top: 0,
             left: 0,
@@ -508,8 +722,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Quick theme toggle, right on the map bar — no need
-                    // to dig into Profile just to flip light/dark.
                     GestureDetector(
                       onTap: () => Provider.of<ThemeProvider>(context, listen: false).toggleTheme(),
                       child: Container(
@@ -532,6 +744,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
+          // Loading overlay
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
@@ -601,6 +814,29 @@ class ParkingSearchDelegate extends SearchDelegate<ParkingModel?> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    if (query.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Search for parking spaces',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final results = parkings
         .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || p.address.toLowerCase().contains(query.toLowerCase()))
         .toList();

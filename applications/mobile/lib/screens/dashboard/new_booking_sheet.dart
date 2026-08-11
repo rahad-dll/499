@@ -1,4 +1,3 @@
-// lib/screens/dashboard/new_booking_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
@@ -30,7 +29,14 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   final _plateController = TextEditingController();
   bool _isSaving = false;
 
-  double get _total => widget.space.pricePerHour * _durationHours;
+  // Calculate total with null check
+  double get _total {
+    if (widget.space.rate == null) return 0;
+    return widget.space.rate! * _durationHours;
+  }
+
+  // Check if rate is available
+  bool get _hasRate => widget.space.rate != null;
 
   @override
   void dispose() {
@@ -58,6 +64,16 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   }
 
   Future<void> _confirm() async {
+    if (!_hasRate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Rate information not available for this parking'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final booking = await BookingService().createBooking(
@@ -193,16 +209,35 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Text('Rate',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                Text(
+                  _hasRate ? '\$${widget.space.rate!.toStringAsFixed(2)}/hr' : 'N/A',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _hasRate ? const Color(0xFF18D6C0) : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text('Total',
                     style: TextStyle(
                         fontSize: 14,
                         color: isDark ? Colors.grey[400] : Colors.grey[600])),
                 Text(
-                  '\$${_total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF18D6C0)),
+                  _hasRate ? '\$${_total.toStringAsFixed(2)}' : 'N/A',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _hasRate ? const Color(0xFF18D6C0) : Colors.grey,
+                  ),
                 ),
               ],
             ),
@@ -210,7 +245,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isSaving ? null : _confirm,
+                onPressed: (_isSaving || !_hasRate) ? null : _confirm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF18D6C0),
                   foregroundColor: Colors.white,
@@ -226,9 +261,21 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : const Text('Confirm Booking'),
+                    : Text(_hasRate ? 'Confirm Booking' : 'Rate Unavailable'),
               ),
             ),
+            if (!_hasRate)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Rate information not available for this parking',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

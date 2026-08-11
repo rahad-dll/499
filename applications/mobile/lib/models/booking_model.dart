@@ -80,8 +80,22 @@ class BookingModel {
   DateTime get startTime => scheduledAt;
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
-    final scheduledAt = DateTime.tryParse(json['scheduled_at']?.toString() ?? '') ??
-        DateTime.now();
+    // Backend sends timestamps in UTC (ISO strings with a trailing 'Z').
+    // DateTime.tryParse correctly flags those as UTC, but without
+    // .toLocal() the raw UTC clock values get shown to the user as if
+    // they were already local — e.g. a 6:00 PM booking would render as
+    // 12:00 PM for someone in UTC+6. Converting here once means every
+    // screen that reads scheduledAt/holdExpiresAt/createdAt automatically
+    // shows the real, correct local time.
+    final rawScheduledAt =
+        DateTime.tryParse(json['scheduled_at']?.toString() ?? '') ??
+            DateTime.now();
+    final rawHoldExpiresAt = json['hold_expires_at'] != null
+        ? DateTime.tryParse(json['hold_expires_at'].toString())
+        : null;
+    final rawCreatedAt =
+        DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+            DateTime.now();
 
     return BookingModel(
       id: json['id']?.toString() ?? '',
@@ -92,18 +106,15 @@ class BookingModel {
       longitude: (json['longitude'] ?? 0.0).toDouble(),
       slotId: json['slot_id']?.toString() ?? '',
       slotLabel: json['slot_label']?.toString() ?? '',
-      scheduledAt: scheduledAt,
-      holdExpiresAt: json['hold_expires_at'] != null
-          ? DateTime.tryParse(json['hold_expires_at'].toString())
-          : null,
+      scheduledAt: rawScheduledAt.toLocal(),
+      holdExpiresAt: rawHoldExpiresAt?.toLocal(),
       durationHours: json['duration_hours'] ?? 1,
       pricePerHour: (json['price_per_hour'] ?? 0).toDouble(),
       totalPrice: (json['total_price'] ?? 0).toDouble(),
       status: bookingStatusFromString(json['status']?.toString() ?? 'confirmed'),
       cancellationReason: json['cancellation_reason']?.toString(),
       vehiclePlate: json['vehicle_plate']?.toString(),
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: rawCreatedAt.toLocal(),
     );
   }
 

@@ -5,6 +5,7 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/deleted_bookings_service.dart';
+import '../../utils/currency_formatter.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
   final BookingModel booking;
@@ -432,7 +433,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             isDark: isDark,
                             icon: Icons.attach_money_rounded,
                             label: 'Hourly Rate',
-                            value: '\$${_booking.pricePerHour.toStringAsFixed(2)}',
+                            value: formatTaka(_booking.pricePerHour),
                             iconBg: const Color(0xFF18D6C0),
                           ),
                         ),
@@ -442,7 +443,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                             isDark: isDark,
                             icon: Icons.payments_rounded,
                             label: 'Total Amount',
-                            value: '\$${_booking.totalPrice.toStringAsFixed(2)}',
+                            value: formatTaka(_booking.totalPrice),
                             iconBg: const Color(0xFF8B5CF6),
                           ),
                         ),

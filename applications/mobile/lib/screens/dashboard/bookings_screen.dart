@@ -5,6 +5,7 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/deleted_bookings_service.dart';
+import '../../utils/currency_formatter.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'booking_details_screen.dart';
 import 'dashboard_screen.dart';
@@ -550,7 +551,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 _buildInfoChip(
                   isDark: isDark,
                   icon: Icons.attach_money_rounded,
-                  label: '\$${booking.totalPrice.toStringAsFixed(2)}',
+                  label: formatTaka(booking.totalPrice),
                 ),
               ],
             ),

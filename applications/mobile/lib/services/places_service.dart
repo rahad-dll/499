@@ -7,34 +7,32 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 class PlaceSuggestion {
   final String placeId;
   final String description;
+  final double lat;
+  final double lng;
 
-  PlaceSuggestion({required this.placeId, required this.description});
+  PlaceSuggestion({
+    required this.placeId,
+    required this.description,
+    required this.lat,
+    required this.lng,
+  });
 
-  factory PlaceSuggestion.fromJson(Map<String, dynamic> json) {
+  factory PlaceSuggestion.fromNominatim(Map<String, dynamic> json) {
     return PlaceSuggestion(
-      placeId: json['place_id'] ?? '',
-      description: json['description'] ?? '',
+      placeId: json['place_id']?.toString() ?? '',
+      description: json['display_name'] ?? '',
+      lat: double.tryParse(json['lat']?.toString() ?? '') ?? 0.0,
+      lng: double.tryParse(json['lon']?.toString() ?? '') ?? 0.0,
     );
   }
 }
 
-class PlaceDetails {
-  final String name;
-  final String address;
-  final double lat;
-  final double lng;
-
-  PlaceDetails({
-    required this.name,
-    required this.address,
-    required this.lat,
-    required this.lng,
-  });
-}
-
 class PlacesService {
-  static const String _apiKey = 'AIzaSyDUZluioZrDAGqMQsZormAVCrUFKEEyerg';
-  static const String _baseUrl = 'https://maps.googleapis.com/maps/api/place';
+  static const String _userAgent =
+      'CityPulseApp/1.0 (NSU Capstone Project CSE499)';
+
+  // Debounce mechanism - cancel previous requests
+  http.Client? _client;
 
   Future<List<PlaceSuggestion>> autocomplete(
     String input, {
@@ -42,77 +40,78 @@ class PlacesService {
   }) async {
     if (input.trim().isEmpty) return [];
 
-    final url = Uri.parse(
-      '$_baseUrl/autocomplete/json?input=$input&key=$_apiKey'
-      '${bias != null ? '&location=${bias.latitude},${bias.longitude}&radius=50000' : ''}'
-    );
+    // Cancel previous request if any
+    _client?.close();
+    _client = http.Client();
 
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'OK' || data['status'] == 'ZERO_RESULTS') {
-          final predictions = data['predictions'] as List? ?? [];
-          return predictions
-              .map((json) => PlaceSuggestion.fromJson(json))
-              .toList();
-        }
-      }
-      return [];
-    } catch (e) {
-      debugPrint('Places autocomplete error: $e');
-      return [];
+    final params = <String, String>{
+      'format': 'json',
+      'q': input.trim(),
+      'limit': '6',
+      'addressdetails': '0',
+      'countrycodes': 'bd',
+    };
+
+    if (bias != null) {
+      const delta = 0.6;
+      params['viewbox'] =
+          '${bias.longitude - delta},${bias.latitude + delta},'
+          '${bias.longitude + delta},${bias.latitude - delta}';
+      params['bounded'] = '0';
     }
-  }
 
-  Future<PlaceDetails?> getPlaceDetails(String placeId) async {
-    final url = Uri.parse(
-      '$_baseUrl/details/json?place_id=$placeId&key=$_apiKey'
-    );
+    final url = Uri.https('nominatim.openstreetmap.org', '/search', params);
 
     try {
-      final response = await http.get(url);
+      // Use timeout to prevent hanging
+      final response = await _client!
+          .get(url, headers: {'User-Agent': _userAgent})
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'OK') {
-          final result = data['result'];
-          final location = result['geometry']['location'];
-          return PlaceDetails(
-            name: result['name'] ?? '',
-            address: result['formatted_address'] ?? '',
-            lat: location['lat'] ?? 0.0,
-            lng: location['lng'] ?? 0.0,
-          );
-        }
+        final List<dynamic> data = jsonDecode(response.body);
+        return data
+            .map((json) => PlaceSuggestion.fromNominatim(json))
+            .toList();
       }
-      return null;
+      debugPrint(
+        'Nominatim search failed — HTTP ${response.statusCode}: ${response.body}',
+      );
+      return [];
     } catch (e) {
-      debugPrint('Place details error: $e');
-      return null;
+      debugPrint('Nominatim search error: $e');
+      return [];
+    } finally {
+      _client?.close();
+      _client = null;
     }
   }
 
   Future<List<LatLng>> getDirections(LatLng origin, LatLng destination) async {
     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/directions/json?'
-      'origin=${origin.latitude},${origin.longitude}'
-      '&destination=${destination.latitude},${destination.longitude}'
-      '&key=$_apiKey'
+      'https://router.project-osrm.org/route/v1/driving/'
+      '${origin.longitude},${origin.latitude};'
+      '${destination.longitude},${destination.latitude}'
+      '?overview=full&geometries=polyline',
     );
 
     try {
-      final response = await http.get(url);
+      final response = await http
+          .get(url, headers: {'User-Agent': _userAgent})
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['status'] == 'OK') {
-          final route = data['routes'][0];
-          final overviewPolyline = route['overview_polyline']['points'];
-          return _decodePolyline(overviewPolyline);
+        if (data['code'] == 'Ok' &&
+            (data['routes'] as List).isNotEmpty) {
+          final geometry = data['routes'][0]['geometry'] as String;
+          return _decodePolyline(geometry);
         }
       }
+      debugPrint('OSRM directions failed — HTTP ${response.statusCode}: ${response.body}');
       return [];
     } catch (e) {
-      debugPrint('Directions error: $e');
+      debugPrint('OSRM directions error: $e');
       return [];
     }
   }
@@ -145,5 +144,10 @@ class PlacesService {
       points.add(LatLng(lat / 1E5, lng / 1E5));
     }
     return points;
+  }
+
+  void dispose() {
+    _client?.close();
+    _client = null;
   }
 }

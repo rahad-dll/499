@@ -40,7 +40,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
       final bookings = await _service.getBookings();
       if (!mounted) return;
       
-      // Filter out deleted bookings using the singleton service
       final filteredBookings = _deletedService.filterBookings(bookings);
       
       setState(() {
@@ -64,7 +63,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
       ),
     );
     
-    // If booking was deleted, refresh the list
     if (result == true) {
       _loadBookings();
     }
@@ -167,10 +165,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
     
     if (confirm == true) {
-      // Add to deleted service
       _deletedService.addDeletedId(booking.id);
       
-      // Remove from local list
       setState(() {
         _bookings.removeWhere((b) => b.id == booking.id);
       });
@@ -280,26 +276,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
                         },
                       ),
                     ),
-      bottomNavigationBar: AppBottomNav(
+      bottomNavigationBar: const AppBottomNav(
         currentIndex: 1,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const DashboardScreen()),
-              );
-              break;
-            case 1:
-              break;
-            case 2:
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-              break;
-          }
-        },
       ),
     );
   }

@@ -1,10 +1,4 @@
 // lib/screens/dashboard/dashboard_shell.dart
-//
-// Root shell after login. Back button behavior:
-// - কোনো screen push করা থাকলে (booking details ইত্যাদি) → normal back কাজ করে (Flutter default)
-// - Bookings/Profile ট্যাবে থাকলে → back চাপলে প্রথমে Map ট্যাবে ফিরে আসবে
-// - Map ট্যাবে (একদম শেষ page) থাকলে → back চাপলে "app থেকে বের হতে চান?" জিজ্ঞেস করবে
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dashboard_screen.dart';
@@ -31,19 +25,78 @@ class _DashboardShellState extends State<DashboardShell> {
   Future<bool> _confirmExit() async {
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('App থেকে বের হবেন?'),
-        content: const Text('আপনি কি সত্যিই CityPulse থেকে বের হতে চান?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('না'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.exit_to_app_rounded,
+                  color: Colors.red,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Exit CityPulse?',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Are you sure you want to exit the app?',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.grey,
+                        side: const BorderSide(color: Colors.grey, width: 1.2),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Exit'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('হ্যাঁ, বের হও'),
-          ),
-        ],
+        ),
       ),
     );
     return result ?? false;
@@ -66,7 +119,6 @@ class _DashboardShellState extends State<DashboardShell> {
         body: IndexedStack(index: _currentIndex, children: _tabs),
         bottomNavigationBar: AppBottomNav(
           currentIndex: _currentIndex,
-          onTap: (i) => setState(() => _currentIndex = i),
         ),
       ),
     );

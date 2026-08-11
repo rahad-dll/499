@@ -6,7 +6,7 @@ import '../../models/user_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/session_service.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
-import '../auth/sign_in_screen.dart';
+import '../../widgets/landing/landing_screen.dart';
 import 'bookings_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -299,10 +299,11 @@ class ProfileScreen extends StatelessWidget {
                             if (confirm == true) {
                               await SessionService.clearSession();
                               if (context.mounted) {
+                                // ✅ লগআউট করলে Landing Screen এ যাবে, SignIn এ নয়
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const SignInScreen(),
+                                    builder: (_) => const LandingScreen(), // ← পরিবর্তন করা হয়েছে
                                   ),
                                   (route) => false,
                                 );

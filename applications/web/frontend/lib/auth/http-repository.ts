@@ -113,6 +113,12 @@ export class HttpAuthRepository implements AuthRepository {
     return session?.token ?? null;
   }
 
+  updateCachedUser(user: AuthSession["user"]): void {
+    const session = readApiSession();
+    if (!session) return;
+    saveApiSession({ ...session, user });
+  }
+
   async requestPasswordReset(): Promise<{ token: string | null }> {
     throw new AuthError("Password reset is not available in the current API.");
   }

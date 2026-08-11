@@ -63,6 +63,8 @@ export interface AuthRepository {
   getSession(): Promise<AuthSession | null>;
   /** a current access token, refreshing it when necessary */
   getAccessToken(): Promise<string | null>;
+  /** replace the public user snapshot stored with the active session */
+  updateCachedUser(user: User): void;
   /** returns a reset token (in a real backend this is emailed, not returned) */
   requestPasswordReset(email: string): Promise<{ token: string | null }>;
   resetPassword(token: string, password: string): Promise<void>;

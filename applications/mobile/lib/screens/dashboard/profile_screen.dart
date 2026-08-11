@@ -5,8 +5,8 @@ import '../../main.dart';
 import '../../models/user_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/session_service.dart';
-import '../../widgets/dashboard/app_bottom_nav.dart';
 import '../auth/sign_in_screen.dart';
+import 'bookings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -198,8 +198,9 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.history,
                   title: 'Booking History',
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Booking History - Coming Soon!')),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BookingsScreen()),
                     );
                   },
                 ),
@@ -264,7 +265,6 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       ),
-      // bottomNavigationBar: const AppBottomNav(currentIndex: 2),
     );
   }
 

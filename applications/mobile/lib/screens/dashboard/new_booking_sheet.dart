@@ -1,3 +1,4 @@
+// lib/screens/dashboard/new_booking_sheet.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
@@ -25,17 +26,15 @@ class _NewBookingSheet extends StatefulWidget {
 
 class _NewBookingSheetState extends State<_NewBookingSheet> {
   int _durationHours = 1;
-  DateTime _startTime = DateTime.now();
+  DateTime _scheduledAt = DateTime.now().add(const Duration(hours: 1));
   final _plateController = TextEditingController();
   bool _isSaving = false;
 
-  // Calculate total with null check
   double get _total {
     if (widget.space.rate == null) return 0;
     return widget.space.rate! * _durationHours;
   }
 
-  // Check if rate is available
   bool get _hasRate => widget.space.rate != null;
 
   @override
@@ -44,22 +43,26 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
     super.dispose();
   }
 
-  Future<void> _pickStartTime() async {
+  Future<void> _pickDateTime() async {
     final date = await showDatePicker(
       context: context,
-      initialDate: _startTime,
+      initialDate: _scheduledAt,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
     );
     if (date == null || !mounted) return;
+    
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(_startTime),
+      initialTime: TimeOfDay.fromDateTime(_scheduledAt),
     );
     if (time == null) return;
+    
     setState(() {
-      _startTime =
-          DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _scheduledAt = DateTime(
+        date.year, date.month, date.day, 
+        time.hour, time.minute,
+      );
     });
   }
 
@@ -78,7 +81,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
     try {
       final booking = await BookingService().createBooking(
         space: widget.space,
-        startTime: _startTime,
+        startTime: _scheduledAt,
         durationHours: _durationHours,
         vehiclePlate: _plateController.text.trim().isEmpty
             ? null
@@ -90,8 +93,9 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Booking failed: $e'),
-              backgroundColor: Colors.red),
+            content: Text('Booking failed: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -133,10 +137,14 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Text('Duration',
-                style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            
+            Text(
+              'Duration',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -147,24 +155,29 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   label: Text('${h}h'),
                   selected: selected,
                   selectedColor: const Color(0xFF18D6C0),
-                  backgroundColor:
-                      isDark ? const Color(0xFF0F1728) : Colors.grey[100],
+                  backgroundColor: isDark ? const Color(0xFF0F1728) : Colors.grey[100],
                   labelStyle: TextStyle(
-                      color: selected
-                          ? Colors.white
-                          : (isDark ? Colors.grey[300] : Colors.grey[700])),
+                    color: selected
+                        ? Colors.white
+                        : (isDark ? Colors.grey[300] : Colors.grey[700]),
+                  ),
                   onSelected: (_) => setState(() => _durationHours = h),
                 );
               }).toList(),
             ),
+            
             const SizedBox(height: 16),
-            Text('Start time',
-                style: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600])),
+            
+            Text(
+              'Scheduled Time',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+              ),
+            ),
             const SizedBox(height: 8),
             InkWell(
-              onTap: _pickStartTime,
+              onTap: _pickDateTime,
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -172,9 +185,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   color: isDark ? const Color(0xFF0F1728) : Colors.grey[50],
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF2A3B57)
-                        : const Color(0xFFE2E8F0),
+                    color: isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0),
                   ),
                 ),
                 child: Row(
@@ -182,21 +193,27 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                     const Icon(Icons.schedule, size: 18, color: Color(0xFF18D6C0)),
                     const SizedBox(width: 8),
                     Text(
-                      '${_startTime.day}/${_startTime.month}/${_startTime.year} • '
-                      '${TimeOfDay.fromDateTime(_startTime).format(context)}',
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      '${_scheduledAt.day}/${_scheduledAt.month}/${_scheduledAt.year} • '
+                      '${TimeOfDay.fromDateTime(_scheduledAt).format(context)}',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+            
             const SizedBox(height: 16),
+            
             TextField(
               controller: _plateController,
               style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
                 labelText: 'Vehicle plate (optional)',
-                labelStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                labelStyle: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
                 filled: true,
                 fillColor: isDark ? const Color(0xFF0F1728) : Colors.grey[50],
                 border: OutlineInputBorder(
@@ -205,14 +222,19 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                 ),
               ),
             ),
+            
             const SizedBox(height: 20),
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Rate',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                Text(
+                  'Rate',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
                 Text(
                   _hasRate ? '\$${widget.space.rate!.toStringAsFixed(2)}/hr' : 'N/A',
                   style: TextStyle(
@@ -227,10 +249,13 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total',
-                    style: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600])),
+                Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
                 Text(
                   _hasRate ? '\$${_total.toStringAsFixed(2)}' : 'N/A',
                   style: TextStyle(
@@ -241,7 +266,9 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                 ),
               ],
             ),
+            
             const SizedBox(height: 16),
+            
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -250,7 +277,9 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   backgroundColor: const Color(0xFF18D6C0),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 child: _isSaving
                     ? const SizedBox(

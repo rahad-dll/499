@@ -1,40 +1,56 @@
+// lib/services/booking_service.dart
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import '../models/booking_model.dart';
 import '../models/parking_model.dart';
+import 'session_service.dart';
 
 class BookingService {
-  static bool useLocalMock = true;
-
-  // ignore: unused_field
   static const String _baseUrl = 'https://four99-b6wg.onrender.com';
-  static const String _storageKey = 'cp_bookings_v1';
 
-  Future<List<BookingModel>> getBookings() async {
-    if (useLocalMock) {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw == null) return [];
-      final List decoded = jsonDecode(raw);
-      final bookings =
-          decoded.map((e) => BookingModel.fromJson(e)).toList();
-      bookings.sort((a, b) => b.startTime.compareTo(a.startTime));
-      return bookings;
-    }
-
-    // TODO(real API): GET $_baseUrl/bookings  (send Authorization header)
-    // final res = await http.get(Uri.parse('$_baseUrl/bookings'), headers: authHeaders);
-    // return (jsonDecode(res.body) as List).map((e) => BookingModel.fromJson(e)).toList();
-    throw UnimplementedError(
-        'Real bookings API not wired yet — set useLocalMock = false once the endpoint exists.');
+  Future<String> _getToken() async {
+    final user = await SessionService.getSession();
+    return user?.id ?? '';
   }
 
-  Future<BookingModel?> getBookingById(String id) async {
-    final all = await getBookings();
+  Future<List<BookingModel>> getBookings() async {
     try {
-      return all.firstWhere((b) => b.id == id);
-    } catch (_) {
-      return null;
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/bookings'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        // Handle both List and Map responses
+        List<dynamic> bookingsData = [];
+        if (data is List) {
+          bookingsData = data;
+        } else if (data is Map && data['data'] != null) {
+          bookingsData = data['data'] is List ? data['data'] : [];
+        } else if (data is Map) {
+          // If it's a single booking object
+          bookingsData = [data];
+        }
+        
+        return bookingsData.map((json) {
+          // Convert Map<dynamic, dynamic> to Map<String, dynamic>
+          final Map<String, dynamic> convertedJson = {};
+          json.forEach((key, value) {
+            convertedJson[key.toString()] = value;
+          });
+          return BookingModel.fromJson(convertedJson);
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching bookings: $e');
+      return [];
     }
   }
 
@@ -44,66 +60,103 @@ class BookingService {
     required int durationHours,
     String? vehiclePlate,
   }) async {
-    // Use rate from parking model with null check
-    final rate = space.rate ?? 0.0;
+    final token = await _getToken();
     
-    final booking = BookingModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      spaceId: space.id,
-      spaceName: space.name,
-      spaceAddress: space.address,
-      latitude: space.latitude,
-      longitude: space.longitude,
-      startTime: startTime,
-      durationHours: durationHours,
-      pricePerHour: rate, // Store rate in the booking
-      totalPrice: rate * durationHours,
-      status: BookingStatus.confirmed,
-      vehiclePlate: vehiclePlate,
-      createdAt: DateTime.now(),
+    final payload = {
+      'space_id': space.id,
+      'slot_id': space.id,
+      'scheduled_at': startTime.toIso8601String(),
+      'duration_hours': durationHours,
+      'vehicle_plate': vehiclePlate ?? '',
+    };
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/bookings'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
     );
 
-    if (useLocalMock) {
-      final all = await getBookings();
-      all.insert(0, booking);
-      await _saveAll(all);
-      return booking;
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      
+      // Convert Map<dynamic, dynamic> to Map<String, dynamic>
+      final Map<String, dynamic> convertedJson = {};
+      data.forEach((key, value) {
+        convertedJson[key.toString()] = value;
+      });
+      
+      // যদি response এ booking data আসে
+      if (convertedJson['id'] != null) {
+        return BookingModel.fromJson(convertedJson);
+      }
+      
+      // যদি response এ শুধু success message আসে
+      return BookingModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        spaceId: space.id,
+        slotId: space.id,
+        spaceName: space.name,
+        spaceAddress: space.address,
+        latitude: space.latitude,
+        longitude: space.longitude,
+        scheduledAt: startTime,
+        durationHours: durationHours,
+        pricePerHour: space.rate ?? 0,
+        totalPrice: (space.rate ?? 0) * durationHours,
+        status: BookingStatus.confirmed,
+        vehiclePlate: vehiclePlate,
+        createdAt: DateTime.now(),
+      );
+    } else {
+      throw Exception('Failed to create booking: ${response.statusCode}');
     }
-
-    // TODO(real API): POST $_baseUrl/bookings  body: booking.toJson()
-    throw UnimplementedError('Real bookings API not wired yet.');
   }
 
-  Future<void> deleteBooking(String id) async {
-    if (useLocalMock) {
-      final all = await getBookings();
-      all.removeWhere((b) => b.id == id);
-      await _saveAll(all);
-      return;
-    }
+  Future<BookingModel> updateStatus(String bookingId, BookingStatus status) async {
+    final token = await _getToken();
+    
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/bookings/$bookingId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'status': bookingStatusToString(status),
+      }),
+    );
 
-    // TODO(real API): DELETE $_baseUrl/bookings/$id
-    throw UnimplementedError('Real bookings API not wired yet.');
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      
+      // Convert Map<dynamic, dynamic> to Map<String, dynamic>
+      final Map<String, dynamic> convertedJson = {};
+      data.forEach((key, value) {
+        convertedJson[key.toString()] = value;
+      });
+      
+      return BookingModel.fromJson(convertedJson);
+    } else {
+      throw Exception('Failed to update booking status');
+    }
   }
 
-  Future<BookingModel> updateStatus(String id, BookingStatus status) async {
-    if (useLocalMock) {
-      final all = await getBookings();
-      final index = all.indexWhere((b) => b.id == id);
-      if (index == -1) throw Exception('Booking not found');
-      final updated = all[index].copyWith(status: status);
-      all[index] = updated;
-      await _saveAll(all);
-      return updated;
+  Future<void> deleteBooking(String bookingId) async {
+    final token = await _getToken();
+    
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/bookings/$bookingId'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete booking');
     }
-
-    // TODO(real API): PATCH $_baseUrl/bookings/$id  body: {"status": status.name}
-    throw UnimplementedError('Real bookings API not wired yet.');
-  }
-
-  Future<void> _saveAll(List<BookingModel> bookings) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = jsonEncode(bookings.map((b) => b.toJson()).toList());
-    await prefs.setString(_storageKey, raw);
   }
 }

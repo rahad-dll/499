@@ -1,3 +1,4 @@
+// lib/services/auth_service.dart
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
@@ -20,14 +21,7 @@ class AuthResult {
 }
 
 class AuthService {
-  // ============================================================
-  // 🔧 SWITCH HERE — set to false once backend /auth/register
-  // and /auth/login are working properly (role seed fixed etc.)
-  // true  = data saved locally on the phone (SharedPreferences)
-  // false = real API calls to ApiService.baseUrl
-  // ============================================================
   static const bool useLocalMock = false;
-
   static const _keyLocalUsers = 'cp_local_users';
 
   // ---------------- REGISTER ----------------
@@ -87,7 +81,6 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/register', body);
-      // ignore: avoid_print
       print('REGISTER ${response.statusCode}: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -124,7 +117,6 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/login', body);
-      // ignore: avoid_print
       print('LOGIN ${response.statusCode}: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -140,8 +132,10 @@ class AuthService {
     }
   }
 
+  // ---------------- REFRESH ----------------
+
   static Future<bool> refresh() async {
-    if (useLocalMock) return true; // nothing to refresh locally
+    if (useLocalMock) return true;
 
     final refreshToken = await SessionService.getRefreshToken();
     if (refreshToken == null) return false;
@@ -202,8 +196,7 @@ class AuthService {
   }
 
   // ============================================================
-  // LOCAL MOCK IMPLEMENTATION — saves everything on the phone
-  // via SharedPreferences under key `cp_local_users`.
+  // LOCAL MOCK IMPLEMENTATION
   // ============================================================
 
   static Future<List<Map<String, dynamic>>> _loadLocalUsers() async {
@@ -239,7 +232,7 @@ class AuthService {
     final newUser = {
       'id': id,
       'email': email,
-      'password': password, // local-only mock storage, not for production
+      'password': password,
       'phone': phone,
       'role': role,
       'full_name': fullName,

@@ -1,49 +1,71 @@
 // lib/services/booking_service.dart
-//
-// Same pattern as auth_service.dart's `useLocalMock` toggle:
-// right now bookings live in SharedPreferences on the phone. When Rahad
-// gives you real /bookings endpoints, flip `useLocalMock = false` and
-// fill in the 4 TODOs below with http calls (same shape as ApiService
-// is already used for /auth/*). Nothing in the UI screens needs to change
-// because they only ever talk to BookingService, never to storage directly.
-
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import '../models/booking_model.dart';
 import '../models/parking_model.dart';
+import 'session_service.dart';
 
 class BookingService {
-  static bool useLocalMock = true;
-
-  // ignore: unused_field
   static const String _baseUrl = 'https://four99-b6wg.onrender.com';
-  static const String _storageKey = 'cp_bookings_v1';
 
-  Future<List<BookingModel>> getBookings() async {
-    if (useLocalMock) {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_storageKey);
-      if (raw == null) return [];
-      final List decoded = jsonDecode(raw);
-      final bookings =
-          decoded.map((e) => BookingModel.fromJson(e)).toList();
-      bookings.sort((a, b) => b.startTime.compareTo(a.startTime));
-      return bookings;
-    }
-
-    // TODO(real API): GET $_baseUrl/bookings  (send Authorization header)
-    // final res = await http.get(Uri.parse('$_baseUrl/bookings'), headers: authHeaders);
-    // return (jsonDecode(res.body) as List).map((e) => BookingModel.fromJson(e)).toList();
-    throw UnimplementedError(
-        'Real bookings API not wired yet — set useLocalMock = false once the endpoint exists.');
+  Future<String> _getToken() async {
+    // Real JWT access token — NOT the user id. The backend's JwtAuthGuard
+    // rejects anything that isn't a signed token, which is what was
+    // causing every request here to 401.
+    final token = await SessionService.getAccessToken();
+    return token ?? '';
   }
 
-  Future<BookingModel?> getBookingById(String id) async {
-    final all = await getBookings();
+  Map<String, String> _headers(String token) => {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+  /// Pulls a readable message out of a NestJS error body,
+  /// e.g. { "message": "Slot not found in this space", "statusCode": 404 }
+  String _extractError(http.Response response) {
     try {
-      return all.firstWhere((b) => b.id == id);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['message'] != null) {
+        final msg = decoded['message'];
+        return msg is List ? msg.join(', ') : msg.toString();
+      }
     } catch (_) {
-      return null;
+      // not JSON, fall through
+    }
+    return 'Something went wrong (status ${response.statusCode})';
+  }
+
+  Future<List<BookingModel>> getBookings() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$_baseUrl/bookings'),
+        headers: _headers(token),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        List<dynamic> bookingsData = [];
+        if (data is List) {
+          bookingsData = data;
+        } else if (data is Map && data['data'] != null) {
+          bookingsData = data['data'] is List ? data['data'] : [];
+        } else if (data is Map) {
+          bookingsData = [data];
+        }
+
+        return bookingsData
+            .whereType<Map<String, dynamic>>()
+            .map((json) => BookingModel.fromJson(json))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error fetching bookings: $e');
+      return [];
     }
   }
 
@@ -53,63 +75,78 @@ class BookingService {
     required int durationHours,
     String? vehiclePlate,
   }) async {
-    final booking = BookingModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+    final token = await _getToken();
+    if (token.isEmpty) {
+      throw Exception('You need to sign in again before booking.');
+    }
+
+    // No slot_id here on purpose — the nearby-spaces list only gives us
+    // counts, not individual slot ids, and sending the space's own id as
+    // slot_id was the "Slot not found" bug. Leaving it out lets the
+    // backend auto-pick the first free slot in this space.
+    final payload = BookingModel.createPayload(
       spaceId: space.id,
-      spaceName: space.name,
-      spaceAddress: space.address,
-      latitude: space.latitude,
-      longitude: space.longitude,
-      startTime: startTime,
+      scheduledAt: startTime,
       durationHours: durationHours,
-      pricePerHour: space.pricePerHour,
-      totalPrice: space.pricePerHour * durationHours,
-      status: BookingStatus.confirmed,
       vehiclePlate: vehiclePlate,
-      createdAt: DateTime.now(),
     );
 
-    if (useLocalMock) {
-      final all = await getBookings();
-      all.insert(0, booking);
-      await _saveAll(all);
-      return booking;
+    final response = await http.post(
+      Uri.parse('$_baseUrl/bookings'),
+      headers: _headers(token),
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        return BookingModel.fromJson(data);
+      }
+      throw Exception('Unexpected response from server');
     }
 
-    // TODO(real API): POST $_baseUrl/bookings  body: booking.toJson()
-    throw UnimplementedError('Real bookings API not wired yet.');
-  }
-
-  Future<void> deleteBooking(String id) async {
-    if (useLocalMock) {
-      final all = await getBookings();
-      all.removeWhere((b) => b.id == id);
-      await _saveAll(all);
-      return;
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    if (response.statusCode == 400 &&
+        _extractError(response).toLowerCase().contains('driver profile')) {
+      throw Exception('Complete your driver profile before booking.');
     }
 
-    // TODO(real API): DELETE $_baseUrl/bookings/$id
-    throw UnimplementedError('Real bookings API not wired yet.');
+    throw Exception(_extractError(response));
   }
 
-  Future<BookingModel> updateStatus(String id, BookingStatus status) async {
-    if (useLocalMock) {
-      final all = await getBookings();
-      final index = all.indexWhere((b) => b.id == id);
-      if (index == -1) throw Exception('Booking not found');
-      final updated = all[index].copyWith(status: status);
-      all[index] = updated;
-      await _saveAll(all);
-      return updated;
+  /// Cancels a booking. The backend only supports cancellation — there's
+  /// no generic "set any status" endpoint — so this throws for anything
+  /// other than BookingStatus.cancelled.
+  Future<BookingModel> updateStatus(String bookingId, BookingStatus status) async {
+    if (status != BookingStatus.cancelled) {
+      throw Exception(
+        'Only cancelling a booking is supported right now.',
+      );
     }
 
-    // TODO(real API): PATCH $_baseUrl/bookings/$id  body: {"status": status.name}
-    throw UnimplementedError('Real bookings API not wired yet.');
+    final token = await _getToken();
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/bookings/$bookingId/cancel'),
+      headers: _headers(token),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        return BookingModel.fromJson(data);
+      }
+    }
+    throw Exception(_extractError(response));
   }
 
-  Future<void> _saveAll(List<BookingModel> bookings) async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = jsonEncode(bookings.map((b) => b.toJson()).toList());
-    await prefs.setString(_storageKey, raw);
+  /// NOTE: the backend has no DELETE /bookings/:id route — only
+  /// PATCH /bookings/:id/cancel exists. There's no hard-delete of booking
+  /// history today, so this cancels instead of removing. If you want a
+  /// real "remove from my list" action, that needs a new endpoint from
+  /// Rahad first — worth flagging to him.
+  Future<void> deleteBooking(String bookingId) async {
+    await updateStatus(bookingId, BookingStatus.cancelled);
   }
 }

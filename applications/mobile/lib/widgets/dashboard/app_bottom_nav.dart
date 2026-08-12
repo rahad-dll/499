@@ -1,11 +1,7 @@
 // lib/widgets/dashboard/app_bottom_nav.dart
-//
-// The old bug: Map/Bookings/Profile each built their own bottom bar (or
-// none at all — BookingsScreen and ProfileScreen had no bottomNavigationBar
-// at all before), so the highlight never matched the page you were on.
-// Fix: one shared widget, each screen just tells it which index IT is.
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../main.dart';
 import '../../screens/dashboard/dashboard_screen.dart';
 import '../../screens/dashboard/bookings_screen.dart';
 import '../../screens/dashboard/profile_screen.dart';
@@ -13,53 +9,158 @@ import '../../screens/dashboard/profile_screen.dart';
 class AppBottomNav extends StatelessWidget {
   final int currentIndex;
 
-  const AppBottomNav({super.key, required this.currentIndex});
+  const AppBottomNav({
+    Key? key,
+    this.currentIndex = 0,
+  }) : super(key: key);
 
-  void _go(BuildContext context, int index) {
+  void _onTabTap(BuildContext context, int index) {
     if (index == currentIndex) return;
 
-    late final Widget target;
+    Widget page;
     switch (index) {
       case 0:
-        target = const DashboardScreen();
+        page = const DashboardScreen();
         break;
       case 1:
-        target = const BookingsScreen();
+        page = const BookingsScreen();
         break;
       case 2:
-      default:
-        target = const ProfileScreen();
+        page = const ProfileScreen();
         break;
+      default:
+        page = const DashboardScreen();
     }
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => target),
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => page,
+        transitionDuration: const Duration(milliseconds: 200),
+        transitionsBuilder: (_, animation, __, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      onTap: (index) => _go(context, index),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.map_outlined),
-          activeIcon: Icon(Icons.map),
-          label: 'Map',
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1A2740), const Color(0xFF0F1728)]
+              : [Colors.white, const Color(0xFFF5F7FA)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.book_online_outlined),
-          activeIcon: Icon(Icons.book_online),
-          label: 'Bookings',
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: 68,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context,
+                icon: Icons.home,
+                label: 'Home',
+                index: 0,
+                isSelected: currentIndex == 0,
+                isDark: isDark,
+              ),
+              _buildNavItem(
+                context,
+                icon: Icons.book_online,
+                label: 'Bookings',
+                index: 1,
+                isSelected: currentIndex == 1,
+                isDark: isDark,
+              ),
+              _buildNavItem(
+                context,
+                icon: Icons.person,
+                label: 'Profile',
+                index: 2,
+                isSelected: currentIndex == 2,
+                isDark: isDark,
+              ),
+            ],
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: 'Profile',
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required int index,
+    required bool isSelected,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: () => _onTabTap(context, index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    const Color(0xFF18D6C0).withValues(alpha: 0.12),
+                    const Color(0xFF0AA6C4).withValues(alpha: 0.04),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF18D6C0).withValues(alpha: 0.30)
+                : Colors.transparent,
+            width: 1.2,
+          ),
         ),
-      ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? const Color(0xFF18D6C0)
+                  : (isDark ? Colors.grey[500] : Colors.grey[400]),
+              size: 26,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? const Color(0xFF18D6C0)
+                    : (isDark ? Colors.grey[500] : Colors.grey[400]),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

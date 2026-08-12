@@ -8,11 +8,13 @@ class SessionService {
   static const _keyRememberMe = 'cp_remember_me';
   static const _keyAccessToken = 'cp_access_token';
   static const _keyRefreshToken = 'cp_refresh_token';
+  static const _keyIsLoggedIn = 'cp_is_logged_in';
 
   static Future<void> saveSession(User user, bool rememberMe) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUser, jsonEncode(user.toJson()));
     await prefs.setBool(_keyRememberMe, rememberMe);
+    await prefs.setBool(_keyIsLoggedIn, true);
   }
 
   static Future<void> saveTokens(String accessToken, String? refreshToken) async {
@@ -50,11 +52,17 @@ class SessionService {
     return prefs.getString(_keyRefreshToken);
   }
 
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsLoggedIn) ?? false;
+  }
+
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyUser);
     await prefs.remove(_keyAccessToken);
     await prefs.remove(_keyRefreshToken);
     await prefs.remove(_keyRememberMe);
+    await prefs.remove(_keyIsLoggedIn);
   }
 }

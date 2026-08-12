@@ -69,8 +69,8 @@ export function PasswordChecklistField({
   const showMeta = showChecklistWhenEmpty || value.length > 0;
 
   return (
-    <div className="mt-5">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="mt-3 sm:mt-5">
+      <div className="mb-1.5 flex items-center justify-between sm:mb-2">
         <Label htmlFor={inputId}>{label}</Label>
         {labelEnd && <span className="text-sm">{labelEnd}</span>}
       </div>
@@ -81,7 +81,7 @@ export function PasswordChecklistField({
           id={inputId}
           type={visible ? "text" : "password"}
           value={value}
-          className={cn("h-[50px] pl-11 pr-11", className)}
+          className={cn("h-12 pl-11 pr-11 sm:h-[50px]", className)}
           {...props}
         />
         <button

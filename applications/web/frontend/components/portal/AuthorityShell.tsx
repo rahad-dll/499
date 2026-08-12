@@ -18,9 +18,20 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
-export type AuthorityNavKey = "command" | "zones" | "enforcement" | "analytics";
+export type AuthorityNavKey =
+  | "command"
+  | "zones"
+  | "enforcement"
+  | "analytics"
+  | "profile";
 
-const NAV_ITEMS: { key: AuthorityNavKey; icon: LucideIcon; label: string; short: string; href: string }[] = [
+const NAV_ITEMS: {
+  key: Exclude<AuthorityNavKey, "profile">;
+  icon: LucideIcon;
+  label: string;
+  short: string;
+  href: string;
+}[] = [
   { key: "command", icon: LayoutGrid, label: "Command Center", short: "Command", href: "/command-center" },
   { key: "zones", icon: Map, label: "Zones", short: "Zones", href: "/command-center/zones" },
   { key: "enforcement", icon: Shield, label: "Enforcement", short: "Enforce", href: "/command-center/enforcement" },
@@ -42,10 +53,12 @@ export function AuthorityShell({
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (loading) return;
+    if (!user) router.replace("/login");
+    else if (user.role !== "authority") router.replace("/dashboard");
   }, [loading, user, router]);
 
-  if (loading || !user) {
+  if (loading || !user || user.role !== "authority") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background">
         <DigitalHeartbeatLoader />
@@ -53,6 +66,15 @@ export function AuthorityShell({
       </div>
     );
   }
+
+  const displayName = user.full_name ?? "Authority";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   return (
     <div
@@ -70,6 +92,7 @@ export function AuthorityShell({
             <Link
               key={item.key}
               href={item.href}
+              aria-current={item.key === active ? "page" : undefined}
               className={cn(
                 "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors",
                 item.key === active
@@ -97,7 +120,23 @@ export function AuthorityShell({
             <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-destructive" />
           </button>
           <ThemeToggle />
-          <span className="hidden size-10 rounded-full bg-gradient-to-br from-[#18d6c0] via-[#4d7cf5] to-[#8b6cff] sm:block" />
+          <Link
+            href="/command-center/profile"
+            aria-label="Open traffic authority profile"
+            aria-current={active === "profile" ? "page" : undefined}
+            title={displayName}
+            className={cn(
+              "flex items-center gap-2 rounded-full ring-offset-2 ring-offset-background transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              active === "profile" && "ring-2 ring-brand",
+            )}
+          >
+            <span className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] via-[#4d7cf5] to-[#8b6cff] text-xs font-extrabold text-white shadow-sm">
+              {initials}
+            </span>
+            <span className="hidden max-w-28 truncate text-sm font-bold 2xl:block">
+              {displayName}
+            </span>
+          </Link>
         </div>
       </header>
 
@@ -110,6 +149,7 @@ export function AuthorityShell({
             <Link
               key={item.key}
               href={item.href}
+              aria-current={item.key === active ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold",
                 item.key === active ? "text-teal-600 dark:text-brand" : "text-muted-foreground",

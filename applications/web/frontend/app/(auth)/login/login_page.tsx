@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/AuthContext";
+import { roleDestination } from "@/lib/auth/destination";
 import { AuthError } from "@/lib/auth/types";
 
 export default function LoginPage() {
@@ -30,8 +31,8 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login({ email, password, remember });
-      router.push("/dashboard");
+      const user = await login({ email, password, remember });
+      router.replace(roleDestination(user.role, "login"));
     } catch (err) {
       setError(err instanceof AuthError ? err.message : "Login failed");
       setSubmitting(false);
@@ -54,16 +55,20 @@ export default function LoginPage() {
         />
       }
     >
-      <div className="mb-6 flex flex-col items-center text-center lg:hidden">
-        <Logo tagline={false} />
+      <div className="mb-4 flex flex-col items-center text-center sm:mb-5 lg:hidden">
+        <Logo tagline taglineClassName="mt-1" />
+        <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-semibold text-emerald-500 shadow-sm">
+          <span className="size-1.5 animate-pulse-dot rounded-full bg-current motion-reduce:animate-none" />
+          All city systems operational
+        </span>
       </div>
 
-      <div className="w-full max-w-[440px] rounded-3xl border border-border bg-card p-9 text-card-foreground shadow-[0_24px_60px_-20px_rgba(23,32,51,0.18)] dark:shadow-[0_24px_60px_-18px_rgba(0,0,0,0.55)]">
-        <span className="flex size-12 items-center justify-center rounded-full border-2 border-brand bg-brand/10 text-brand">
+      <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-[0_24px_60px_-20px_rgba(23,32,51,0.18)] sm:rounded-3xl sm:p-7 xl:p-8 2xl:max-w-[500px] 2xl:p-10 [@media(max-height:760px)]:p-5">
+        <span className="flex size-10 items-center justify-center rounded-full border-2 border-brand bg-brand/10 text-brand sm:size-12">
           <Activity className="size-[22px]" />
         </span>
-        <h2 className="mt-5 text-3xl font-extrabold tracking-tight">Log In</h2>
-        <p className="mt-1.5 text-[15px] text-muted-foreground">
+        <h2 className="mt-3 text-2xl font-extrabold tracking-tight sm:mt-4 sm:text-3xl">Log In</h2>
+        <p className="mt-1 text-sm text-muted-foreground sm:mt-1.5 sm:text-[15px]">
           Enter your credentials to access your account
         </p>
 
@@ -101,7 +106,7 @@ export default function LoginPage() {
             required
           />
 
-          <Label className="mt-[18px] cursor-pointer font-normal text-muted-foreground">
+          <Label className="mt-4 cursor-pointer font-normal text-muted-foreground sm:mt-[18px]">
             <Checkbox
               checked={remember}
               onCheckedChange={(v) => setRemember(v === true)}
@@ -113,7 +118,7 @@ export default function LoginPage() {
             type="submit"
             variant="brand"
             size="lg"
-            className="mt-5 w-full"
+            className="mt-4 w-full sm:mt-5"
             disabled={submitting}
           >
             {submitting ? "Logging in…" : "Log In"}
@@ -121,7 +126,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="my-6 flex items-center gap-3.5 text-[13px] text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
+        <div className="my-4 flex items-center gap-3 text-[13px] text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border sm:my-5 sm:gap-3.5">
           Or continue with
         </div>
 
@@ -134,7 +139,7 @@ export default function LoginPage() {
           </Button>
         </div>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-4 text-center text-sm text-muted-foreground sm:mt-5">
           Don&apos;t have an account?{" "}
           <Link href="/signup" className="text-brand hover:underline">
             Sign Up
@@ -142,7 +147,7 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-6 flex items-center gap-2 text-[13px] text-muted-foreground">
+      <div className="mt-3 flex items-center gap-2 px-3 text-center text-[11px] text-muted-foreground sm:mt-5 sm:text-[13px] [@media(max-height:700px)]:mt-2">
         <ShieldCheck className="size-4" />
         Your data is protected with enterprise-grade security.
       </div>

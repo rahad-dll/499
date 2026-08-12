@@ -20,8 +20,8 @@ function FieldShell({
   children: ReactNode;
 }) {
   return (
-    <div className="mt-5">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="mt-3 sm:mt-5">
+      <div className="mb-1.5 flex items-center justify-between sm:mb-2">
         <Label htmlFor={htmlFor}>{label}</Label>
         {labelEnd && <span className="text-sm">{labelEnd}</span>}
       </div>
@@ -54,7 +54,7 @@ export function TextField({
       <Input
         id={inputId}
         aria-invalid={error ? true : undefined}
-        className={cn("h-[50px] pl-11", className)}
+        className={cn("h-12 pl-11 sm:h-[50px]", className)}
         {...props}
       />
     </FieldShell>
@@ -83,7 +83,7 @@ export function PasswordField({
         type={visible ? "text" : "password"}
         aria-invalid={error ? true : undefined}
         className={cn(
-          "h-[50px] pl-11 pr-11",
+          "h-12 pl-11 pr-11 sm:h-[50px]",
           valid && "border-emerald-500 pr-[74px] focus-visible:ring-emerald-500/25",
           className,
         )}

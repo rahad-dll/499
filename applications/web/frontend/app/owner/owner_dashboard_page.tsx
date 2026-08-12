@@ -1,10 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   Cctv,
   CircleDollarSign,
   Gauge,
   Layers,
+  MapPin,
+  Plus,
   TrendingDown,
   TrendingUp,
   Video,
@@ -12,6 +16,13 @@ import {
 } from "lucide-react";
 import { OwnerShell } from "@/components/portal/OwnerShell";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import {
+  ParkingSpaceError,
+  parkingSpacesRepository,
+} from "@/lib/spaces/repository";
+import type { ParkingSpace } from "@/lib/spaces/types";
 import { cn } from "@/lib/utils";
 
 /* ---------------- mock data ---------------- */
@@ -81,14 +92,109 @@ function TrendChart() {
 /* ---------------- page ---------------- */
 
 export default function OwnerDashboardPage() {
+  const { user, loading: authLoading } = useAuth();
+  const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
+  const [spacesLoading, setSpacesLoading] = useState(true);
+  const [spacesError, setSpacesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading || user?.role !== "owner") return;
+    let active = true;
+    parkingSpacesRepository
+      .list()
+      .then((data) => {
+        if (active) setSpaces(data);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setSpacesError(
+            error instanceof ParkingSpaceError
+              ? error.message
+              : "Could not load parking lots",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setSpacesLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, user]);
+
+  const totalCapacity = useMemo(
+    () => spaces.reduce((total, space) => total + space.total_capacity, 0),
+    [spaces],
+  );
+
   return (
     <OwnerShell active="dashboard" breadcrumb="Dashboard">
-      <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-        Dashboard Overview
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Real-time occupancy, revenue and AI camera insights.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
+            Dashboard Overview
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your registered parking facilities and operations.
+          </p>
+        </div>
+        <Button asChild variant="brand" className="h-11 rounded-xl">
+          <Link href="/owner/spaces/new">
+            <Plus className="size-4" /> Register Parking Lot
+          </Link>
+        </Button>
+      </div>
+
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-extrabold tracking-tight">Your Parking Lots</h2>
+            <p className="text-[13px] text-muted-foreground">
+              Live data from the CityPulse API · {spaces.length} facilities · {totalCapacity} spaces
+            </p>
+          </div>
+        </div>
+
+        {spacesError ? (
+          <div className="mt-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {spacesError}
+          </div>
+        ) : spacesLoading ? (
+          <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+            Loading parking lots…
+          </div>
+        ) : spaces.length === 0 ? (
+          <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center">
+            <p className="text-sm text-muted-foreground">No parking lots registered yet.</p>
+            <Button asChild variant="outline" className="mt-4">
+              <Link href="/owner/spaces/new">Register your first parking lot</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {spaces.map((space) => (
+              <article key={space.id} className="rounded-xl border border-border bg-muted/40 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-bold">{space.name}</h3>
+                    <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                      <MapPin className="size-3.5 shrink-0" />
+                      {space.address || `${space.latitude}, ${space.longitude}`}
+                    </p>
+                  </div>
+                  <Badge variant={space.is_active === false ? "secondary" : "success"}>
+                    {space.is_active === false ? "Inactive" : "Active"}
+                  </Badge>
+                </div>
+                <div className="mt-4 flex items-center justify-between text-sm">
+                  <span className="capitalize text-muted-foreground">{space.space_type}</span>
+                  <span className="font-bold">{space.total_capacity} spaces</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* metric cards */}
       <div className="mt-6 grid grid-cols-2 gap-3.5 sm:gap-4 xl:grid-cols-4">

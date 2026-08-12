@@ -11,6 +11,7 @@ import {
   Gauge,
   LayoutGrid,
   LogOut,
+  ParkingCircle,
   Search,
   Settings,
   type LucideIcon,
@@ -22,10 +23,22 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
-export type OwnerNavKey = "dashboard" | "cameras" | "revenue" | "settings";
+export type OwnerNavKey =
+  | "dashboard"
+  | "register"
+  | "cameras"
+  | "revenue"
+  | "settings"
+  | "profile";
 
-const NAV_ITEMS: { key: OwnerNavKey; icon: LucideIcon; label: string; href: string }[] = [
+const NAV_ITEMS: {
+  key: Exclude<OwnerNavKey, "profile">;
+  icon: LucideIcon;
+  label: string;
+  href: string;
+}[] = [
   { key: "dashboard", icon: LayoutGrid, label: "Dashboard", href: "/owner" },
+  { key: "register", icon: ParkingCircle, label: "Register Lot", href: "/owner/spaces/new" },
   { key: "cameras", icon: Cctv, label: "Cameras", href: "/owner/cameras" },
   { key: "revenue", icon: BarChart3, label: "Revenue", href: "/owner/revenue" },
   { key: "settings", icon: Settings, label: "Settings", href: "/owner/settings" },
@@ -46,7 +59,9 @@ export function OwnerShell({
   const { user, loading, logout } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login");
+    if (loading) return;
+    if (!user) router.replace("/login");
+    else if (user.role !== "owner") router.replace("/dashboard");
   }, [loading, user, router]);
 
   async function onLogout() {
@@ -54,7 +69,7 @@ export function OwnerShell({
     router.replace("/login");
   }
 
-  if (loading || !user) {
+  if (loading || !user || user.role !== "owner") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background">
         <DigitalHeartbeatLoader />
@@ -87,6 +102,7 @@ export function OwnerShell({
             <Link
               key={item.key}
               href={item.href}
+              aria-current={item.key === active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-[14.5px] font-semibold transition-colors",
                 item.key === active
@@ -113,21 +129,30 @@ export function OwnerShell({
           </p>
         </div>
 
-        <div className="mt-4 flex items-center gap-3 border-t border-border px-1 pt-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] to-[#8b6cff] text-xs font-bold text-white">
-            {initials}
-          </span>
-          <span className="min-w-0">
-            <div className="truncate text-sm font-bold">{displayName}</div>
-            <div className="text-xs capitalize text-muted-foreground">
-              {user.role === "owner" ? "Owner" : user.role}
-            </div>
-          </span>
+        <div className="mt-4 flex items-center gap-2 border-t border-border px-1 pt-4">
+          <Link
+            href="/owner/profile"
+            aria-label="Open owner profile"
+            aria-current={active === "profile" ? "page" : undefined}
+            className={cn(
+              "flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-muted",
+              active === "profile" && "bg-brand/10",
+            )}
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] to-[#8b6cff] text-xs font-bold text-white">
+              {initials}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold">{displayName}</span>
+              <span className="block text-xs text-muted-foreground">Parking Owner</span>
+            </span>
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
           <button
             type="button"
             onClick={onLogout}
             aria-label="Log out"
-            className="ml-auto text-muted-foreground transition-colors hover:text-destructive"
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="size-[18px]" />
           </button>
@@ -160,7 +185,18 @@ export function OwnerShell({
             <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-destructive" />
           </button>
           <ThemeToggle />
-          <span className="hidden size-10 rounded-full bg-gradient-to-br from-[#18d6c0] via-[#4d7cf5] to-[#8b6cff] sm:block" />
+          <Link
+            href="/owner/profile"
+            aria-label="Open owner profile"
+            aria-current={active === "profile" ? "page" : undefined}
+            title={displayName}
+            className={cn(
+              "flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] via-[#4d7cf5] to-[#8b6cff] text-xs font-extrabold text-white shadow-sm ring-offset-2 ring-offset-background transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+              active === "profile" && "ring-2 ring-brand",
+            )}
+          >
+            {initials}
+          </Link>
         </header>
 
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
@@ -168,11 +204,12 @@ export function OwnerShell({
 
       {/* mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid max-w-md grid-cols-4">
+        <div className="mx-auto grid max-w-xl grid-cols-5">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.key}
               href={item.href}
+              aria-current={item.key === active ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center gap-1 py-2.5 text-[11px] font-semibold",
                 item.key === active ? "text-teal-600 dark:text-brand" : "text-muted-foreground",

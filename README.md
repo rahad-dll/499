@@ -6,7 +6,7 @@
 
 > Connecting Drivers, Parking Owners & Authorities for Smarter Cities
 
-**CSE499A — Section 15 — Project Group 03**
+**CSE499A / CSE499B — Section 15 — Project Group 03**
 
 </div>
 
@@ -24,7 +24,9 @@ Parking owners register their spaces and connect existing CCTV cameras. The syst
 
 - [Overview](#overview)
 - [Project Structure](#project-structure)
-- [Work Plan](#work-plan)
+- [CSE499A Summary](#cse499a-summary)
+- [CSE499B Work Plan](#cse499b-work-plan)
+- [Deliverables](#deliverables)
 - [Team Structure](#team-structure)
 
 ---
@@ -42,62 +44,83 @@ project-499/
 │   │   └── data/         # Datasets
 │   └── support/          # Shared utilities & helpers
 ├── others/               # Deliverables & documentation
+│   └── 499A/             # CSE499A reports, presentations, demo video, paper reviews
 └── README.md             # Project overview
 ```
 
-**Structure Updated:** 2026-08-09
+**Structure Updated:** 2026-10-07
 
 ---
 
-## Work Plan
+## CSE499A Summary
 
-![Project Gantt Chart](applications/support/work-plan/gantt-chart.png)
+**Completed**
 
-### Sprint 1 (W1–2) — Literature Review & Problem Analysis
+- Literature review, Dhaka field visit, legal review, system architecture, and database schema.
+- MobileNetV2 occupancy model: **99.18%** validation accuracy on an unseen parking lot (808,991 training images from PKLot and CNRPark+EXT); VPS-Net occupancy stage reproduced at **98.53%**.
+- NestJS backend with role-based access, parking spaces, and bookings; FastAPI inference service.
+- Flutter driver app: map search, booking, booking history, and profile on the live backend.
+- Next.js owner and authority portals with role-based routing.
 
-- ✅ Study smart parking systems & urban traffic literature
-- ✅ Review parking slot detection datasets (PKLot, CNRPark, BD)
-- ✅ Field visit to Dhaka parking lots — observe CCTV setups
-- ✅ Study BD legal & regulatory framework for surveillance data
-- ✅ Document findings and identify knowledge gaps
+**Carried into CSE499B:** live camera streams, Dhaka data, Bangla LPR, live authority and owner data, notifications, navigation to the parking entrance, and end-to-end testing.
 
-### Sprint 2 (W3–4) — System Design & Architecture
+---
 
-- ✅ Explore: geospatial queries, WebSocket patterns, RTSP strategies
-- ✅ Build: finalize system architecture & data flow diagrams
-- ✅ Build: design full DB schema (PostgreSQL + MongoDB) & API contracts
-- ✅ Build: prepare UI/UX wireframes for all three client interfaces
+## CSE499B Work Plan
 
-### Sprint 3 (W5–6) — Authentication & Owner Registration
+![CSE499B Gantt Chart](applications/support/work-plan/gantt-chart-499b.png)
 
-- ✅ Explore: RBAC patterns and token-based auth strategies
-- ✅ Build: role-based auth — driver, owner, authority (JWT + NestJS)
-- ✅ Build: parking space registration (location, capacity, photos, RTSP)
-- ⬜ Build: owner portal UI (Next.js) + S3-compatible file storage
+### Sprint 1 (W1–2) — Review & Data Collection
 
-### Sprint 4 (W7–8) — Computer Vision & Slot Detection
+- [ ] Explore: RTSP access at Dhaka parking sites
+- [ ] Explore: public Bangla licence plate datasets
+- [ ] Build: CSE499B review report and presentation
+- [ ] Build: start Dhaka parking footage collection
+- [ ] Build: stream worker reading one camera
 
-- ✅ Explore: object detection & CV approaches for parking occupancy
-- ⬜ Explore: fixed-camera CV challenges (lighting, angle, occlusion)
-- ⬜ Explore: model optimization & collect/annotate Dhaka parking images
-- ✅ Build: train & evaluate slot detection model on benchmark + local data
-- ✅ Build: FastAPI AI service with RTSP ingestion & real-time slot status
+### Sprint 2 (W3–4) — Dhaka Dataset & Live Stream
 
-### Sprint 5 (W9–10) — Mobile App, Map View & LPR Study
+- [ ] Explore: labelling tools, frame sampling rate
+- [ ] Build: labelled Dhaka slot images; transfer test of the CSE499A model
+- [ ] Build: Redis-to-WebSocket push of slot changes
+- [ ] Build: pricing endpoints
 
-- ✅ Explore: mobile map integration, location-based search strategies
-- ⬜ Explore: Bangla LPR approaches, available BD plate datasets
-- ⬜ Explore: collect 100–200 Bangladeshi plate images for initial study
-- ✅ Build: Flutter app with map, nearby parking search, WebSocket updates
-- ⬜ Build: basic navigation to parking entrance
+### Sprint 3 (W5–6) — Phase 3 & Platform Completion
 
-### Sprint 6 (W11–12) — Integration, Testing & Final Demo
+- [ ] Explore: fine-tuning on a small local dataset
+- [ ] Build: Phase 3 fine-tuning on a held-out Dhaka site
+- [ ] Build: booking lifecycle and account recovery
+- [ ] Build: web and mobile views on live backend data
 
-- ⬜ Explore: end-to-end testing strategies for distributed systems
-- ⬜ Explore: jam detection approaches — vehicle density, optical flow
-- ⬜ Build: integrate all components into a working end-to-end prototype
-- ⬜ Build: basic authority view — live parking occupancy
-- ⬜ Build: system testing, bug fixes, and demo preparation
+### Sprint 4 (W7–8) — Bangla LPR
+
+- [ ] Explore: Bangla OCR models (ViT + BanglaBERT, TrOCR baseline)
+- [ ] Build: YOLOv8 plate detector
+- [ ] Build: two-line Bangla OCR
+- [ ] Build: LPR running on live streams
+
+### Sprint 5 (W9–10) — Authority, Pricing & Pending Features
+
+- [ ] Explore: bKash/Nagad sandbox APIs, notification delivery
+- [ ] Build: live authority views with privacy controls
+- [ ] Build: peak and surge pricing; owner revenue view
+- [ ] Build: sandbox payments and notifications
+- [ ] Build: Google sign-in and in-app route guidance
+
+### Sprint 6 (W11–12) — Evaluation & Final Demo
+
+- [ ] Explore: end-to-end and load testing strategies
+- [ ] Build: full evaluation (metrics, latency, load test)
+- [ ] Build: bug fixes and demo preparation
+- [ ] Build: one-minute demo video, final report and presentation
+
+---
+
+## Deliverables
+
+**CSE499B** — [Review report](others/CSE499B-review-report.pdf) · [Review presentation](others/CSE499B-project-review-presentation.pptx)
+
+**CSE499A** — [Proposal report](others/499A/CSE499A-project-proposal-report.pdf) · [Final report](others/499A/CSE499A-project-final-report.pdf) · [Final presentation](others/499A/CSE499A-project-final-presentation.pptx) · [Demo video](others/499A/demo-1min.mp4) · [All CSE499A files](others/499A)
 
 ---
 
@@ -132,8 +155,15 @@ project-499/
 <td>rokib.oli@northsouth.edu</td>
 <td><a href="https://github.com/Rokib-Hasan-Oli">Rokib</a></td>
 </tr>
+<tr>
+<td>Safayat Ibrahim</td>
+<td>Joined in CSE499B</td>
+<td>ECE</td>
+<td></></td>
+<td></></td>
+</tr>
 </table>
 
 ---
 
-**README Updated:** 2026-07-14
+**README Updated:** 2026-10-07

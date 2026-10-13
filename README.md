@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="../support/logo/logo.png" alt="CityPulse Logo" width="110"/>
+<img src="../499/applications/mobile/assets/icons/logo.png" alt="CityPulse Logo" width="110"/>
 
 # CityPulse Mobile
 

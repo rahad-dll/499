@@ -2,9 +2,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 
@@ -42,8 +40,6 @@ class ParkingDetailsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return DraggableScrollableSheet(
       initialChildSize: 0.58,
       minChildSize: 0.30,
@@ -56,7 +52,7 @@ class ParkingDetailsSheet extends StatelessWidget {
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Container(
               decoration: BoxDecoration(
-                color: DashColors.card(isDark).withValues(alpha: 0.97),
+                color: DashColors.card.withValues(alpha: 0.97),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(32)),
                 border: Border.all(
@@ -67,7 +63,7 @@ class ParkingDetailsSheet extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _DragHandle(isDark: isDark),
+                  const _DragHandle(),
                   Expanded(
                     child: SingleChildScrollView(
                       controller: scrollController,
@@ -75,16 +71,16 @@ class ParkingDetailsSheet extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _SheetHeader(parking: parking, isDark: isDark),
+                          _SheetHeader(parking: parking),
                           const SizedBox(height: 18),
-                          _StatsRow(parking: parking, isDark: isDark),
+                          _StatsRow(parking: parking),
                           if (parking.totalSpots > 0) ...[
                             const SizedBox(height: 18),
-                            _OccupancyBar(parking: parking, isDark: isDark),
+                            _OccupancyBar(parking: parking),
                           ],
                           if (parking.amenities.isNotEmpty) ...[
                             const SizedBox(height: 18),
-                            _AmenitiesSection(parking: parking, isDark: isDark),
+                            _AmenitiesSection(parking: parking),
                           ],
                           const SizedBox(height: 20),
                           _ActionButtons(
@@ -111,9 +107,7 @@ class ParkingDetailsSheet extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _DragHandle extends StatelessWidget {
-  const _DragHandle({required this.isDark});
-
-  final bool isDark;
+  const _DragHandle();
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +117,7 @@ class _DragHandle extends StatelessWidget {
         width: 48,
         height: 4,
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey[700] : Colors.grey[300],
+          color: DashColors.handle,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -132,10 +126,9 @@ class _DragHandle extends StatelessWidget {
 }
 
 class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.parking, required this.isDark});
+  const _SheetHeader({required this.parking});
 
   final ParkingModel parking;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -148,20 +141,20 @@ class _SheetHeader extends StatelessWidget {
             children: [
               Text(
                 parking.name,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
-                  color: DashColors.title(isDark),
+                  color: DashColors.title,
                   letterSpacing: -0.3,
                 ),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.location_on_rounded,
                     size: 16,
-                    color: DashColors.muted(isDark),
+                    color: DashColors.muted,
                   ),
                   const SizedBox(width: 4),
                   Expanded(
@@ -169,9 +162,9 @@ class _SheetHeader extends StatelessWidget {
                       parking.address.isNotEmpty
                           ? parking.address
                           : 'Location unavailable',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        color: DashColors.subtle,
                         height: 1.3,
                       ),
                       maxLines: 2,
@@ -241,10 +234,9 @@ class _StatusPill extends StatelessWidget {
 }
 
 class _StatsRow extends StatelessWidget {
-  const _StatsRow({required this.parking, required this.isDark});
+  const _StatsRow({required this.parking});
 
   final ParkingModel parking;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +246,6 @@ class _StatsRow extends StatelessWidget {
           icon: Icons.local_parking_rounded,
           value: '${parking.availableSpots}',
           label: 'Available',
-          isDark: isDark,
           color: parking.availabilityColor,
         ),
         const SizedBox(width: 8),
@@ -262,14 +253,12 @@ class _StatsRow extends StatelessWidget {
           icon: Icons.timer_rounded,
           value: parking.formattedRate,
           label: 'Per Hour',
-          isDark: isDark,
         ),
         const SizedBox(width: 8),
         _DetailChip(
           icon: Icons.near_me_rounded,
           value: parking.formattedDistance,
           label: 'Distance',
-          isDark: isDark,
         ),
       ],
     );
@@ -281,14 +270,12 @@ class _DetailChip extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
-    required this.isDark,
     this.color,
   });
 
   final IconData icon;
   final String value;
   final String label;
-  final bool isDark;
   final Color? color;
 
   @override
@@ -297,12 +284,9 @@ class _DetailChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         decoration: BoxDecoration(
-          color: isDark ? DashColors.darkBg : Colors.grey[50],
+          color: DashColors.cardAlt,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? DashColors.darkBorder : Colors.grey[200]!,
-            width: 1,
-          ),
+          border: Border.all(color: DashColors.border, width: 1),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -314,18 +298,18 @@ class _DetailChip extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: DashColors.title(isDark),
+                color: DashColors.title,
               ),
             ),
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: DashColors.muted(isDark),
+                color: DashColors.muted,
               ),
             ),
           ],
@@ -336,10 +320,9 @@ class _DetailChip extends StatelessWidget {
 }
 
 class _OccupancyBar extends StatelessWidget {
-  const _OccupancyBar({required this.parking, required this.isDark});
+  const _OccupancyBar({required this.parking});
 
   final ParkingModel parking;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -351,20 +334,20 @@ class _OccupancyBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
+              const Text(
                 'Occupancy',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  color: DashColors.subtle,
                 ),
               ),
               Text(
                 '${(parking.occupancyRatio * 100).round()}%',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  color: DashColors.label,
                 ),
               ),
             ],
@@ -375,7 +358,7 @@ class _OccupancyBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: parking.occupancyRatio,
               minHeight: 8,
-              backgroundColor: isDark ? DashColors.darkBg : Colors.grey[200],
+              backgroundColor: DashColors.border,
               valueColor: AlwaysStoppedAnimation<Color>(
                 parking.availabilityColor,
               ),
@@ -388,22 +371,21 @@ class _OccupancyBar extends StatelessWidget {
 }
 
 class _AmenitiesSection extends StatelessWidget {
-  const _AmenitiesSection({required this.parking, required this.isDark});
+  const _AmenitiesSection({required this.parking});
 
   final ParkingModel parking;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Amenities',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: isDark ? Colors.grey[300] : Colors.grey[700],
+            color: DashColors.label,
           ),
         ),
         const SizedBox(height: 8),
@@ -429,10 +411,10 @@ class _AmenitiesSection extends StatelessWidget {
               ),
               child: Text(
                 amenity,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.grey[300] : DashColors.textDark,
+                  color: DashColors.title,
                 ),
               ),
             );

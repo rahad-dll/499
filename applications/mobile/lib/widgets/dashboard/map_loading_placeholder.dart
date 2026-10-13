@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/map_loading_placeholder.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import 'dashboard_colors.dart';
 
 class MapLoadingPlaceholder extends StatelessWidget {
@@ -10,10 +8,8 @@ class MapLoadingPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return Container(
-      color: isDark ? Colors.grey[900] : Colors.grey[100],
+      color: const Color(0xFFF5F5F5),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

@@ -1,7 +1,10 @@
 // lib/widgets/dashboard/exit_dialog.dart
 import 'package:flutter/material.dart';
 
+import 'dashboard_colors.dart';
+
 /// "Exit CityPulse?" dialog। Exit চাপলে true, Cancel বা বাইরে চাপলে false।
+/// App-এর theme যা-ই হোক, এই dialog সবসময় light।
 Future<bool> showExitDialog(BuildContext context) async {
   final result = await showDialog<bool>(
     context: context,
@@ -16,10 +19,11 @@ class _ExitDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Container(
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(24)),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -38,7 +42,11 @@ class _ExitDialog extends StatelessWidget {
             const SizedBox(height: 16),
             const Text(
               'Exit CityPulse?',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: DashColors.title,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(

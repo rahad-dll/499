@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/booking_confirmation_dialog.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 
@@ -38,18 +36,14 @@ class _BookingConfirmationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [DashColors.darkCard, DashColors.darkBg]
-                : [Colors.white, const Color(0xFFF8FAFC)],
+          gradient: const LinearGradient(
+            colors: [Colors.white, Color(0xFFF8FAFC)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -75,12 +69,12 @@ class _BookingConfirmationDialog extends StatelessWidget {
               child: const Icon(Icons.check_rounded, color: Colors.white, size: 40),
             ),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Booking Confirmed!',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: DashColors.title(isDark),
+                color: DashColors.title,
                 letterSpacing: -0.3,
               ),
             ),
@@ -94,7 +88,7 @@ class _BookingConfirmationDialog extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _SummaryRow(parking: parking, hours: hours, isDark: isDark),
+            _SummaryRow(parking: parking, hours: hours),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -147,60 +141,39 @@ class _BookingConfirmationDialog extends StatelessWidget {
 }
 
 class _SummaryRow extends StatelessWidget {
-  const _SummaryRow({
-    required this.parking,
-    required this.hours,
-    required this.isDark,
-  });
+  const _SummaryRow({required this.parking, required this.hours});
 
   final ParkingModel parking;
   final int hours;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.grey[300] : Colors.grey[700];
+    const textStyle = TextStyle(
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: DashColors.label,
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? DashColors.darkBg : Colors.grey[50],
+        color: DashColors.cardAlt,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? DashColors.darkBorder : Colors.grey[200]!,
-        ),
+        border: Border.all(color: DashColors.border),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.access_time_rounded, color: DashColors.teal, size: 18),
           const SizedBox(width: 8),
-          Text(
-            '$hours hour${hours > 1 ? 's' : ''} booked',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
+          Text('$hours hour${hours > 1 ? 's' : ''} booked', style: textStyle),
           const SizedBox(width: 16),
-          Container(
-            width: 1,
-            height: 20,
-            color: isDark ? Colors.grey[700] : Colors.grey[300],
-          ),
+          Container(width: 1, height: 20, color: DashColors.handle),
           const SizedBox(width: 16),
           const Icon(Icons.location_on_rounded, color: DashColors.teal, size: 18),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              parking.formattedDistance,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
+            child: Text(parking.formattedDistance, style: textStyle),
           ),
         ],
       ),

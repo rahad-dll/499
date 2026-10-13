@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/parking_strip.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 import 'parking_card.dart';
@@ -26,8 +24,6 @@ class ParkingStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return SafeArea(
       top: false,
       child: Column(
@@ -57,9 +53,9 @@ class ParkingStrip extends StatelessWidget {
                 if (searchedLocationLabel != null)
                   Text(
                     searchedLocationLabel!,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
-                      color: DashColors.muted(isDark),
+                      color: DashColors.muted,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

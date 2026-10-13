@@ -5,10 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import '../../services/location_service.dart';
 import '../../services/parking_api_service.dart';
@@ -450,9 +448,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    final bgColor = isDark ? DashColors.darkBg : DashColors.lightBg;
-
     final canShowStrip =
         _filteredParkings.isNotEmpty && !_isLoading && !_isFetching;
     final canShowNoResults = _filteredParkings.isEmpty &&
@@ -468,7 +463,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (shouldExit) await SystemNavigator.pop();
       },
       child: Scaffold(
-        backgroundColor: bgColor,
+        backgroundColor: DashColors.background,
         body: Stack(
           children: [
             // Map

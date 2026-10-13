@@ -1,10 +1,6 @@
 // lib/widgets/dashboard/dashboard_map.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:provider/provider.dart';
-
-import '../../main.dart';
-import '../../theme/map_style.dart';
 
 class DashboardMap extends StatelessWidget {
   const DashboardMap({
@@ -24,8 +20,6 @@ class DashboardMap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return GoogleMap(
       onMapCreated: onMapCreated,
       initialCameraPosition: initialCameraPosition,
@@ -36,7 +30,6 @@ class DashboardMap extends StatelessWidget {
       compassEnabled: true,
       zoomControlsEnabled: false,
       mapType: MapType.normal,
-      style: isDark ? MapStyles.dark : null,
       onTap: (_) => onTap(),
     );
   }

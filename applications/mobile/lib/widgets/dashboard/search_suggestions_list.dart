@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/search_suggestions_list.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../services/places_service.dart';
 import 'dashboard_colors.dart';
 
@@ -18,20 +16,16 @@ class SearchSuggestionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return Container(
       margin: const EdgeInsets.only(top: 8),
       constraints: const BoxConstraints(maxHeight: 240),
       decoration: BoxDecoration(
-        color: DashColors.card(isDark),
+        color: DashColors.card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? DashColors.darkBorder : Colors.grey[200]!,
-        ),
+        border: Border.all(color: DashColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -41,9 +35,9 @@ class SearchSuggestionsList extends StatelessWidget {
         shrinkWrap: true,
         padding: EdgeInsets.zero,
         itemCount: suggestions.length,
-        separatorBuilder: (_, __) => Divider(
+        separatorBuilder: (_, __) => const Divider(
           height: 1,
-          color: DashColors.border(isDark),
+          color: DashColors.border,
         ),
         itemBuilder: (context, index) {
           final s = suggestions[index];
@@ -65,10 +59,10 @@ class SearchSuggestionsList extends StatelessWidget {
               s.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: DashColors.title(isDark),
+                color: DashColors.title,
               ),
             ),
             onTap: () => onSelected(s),

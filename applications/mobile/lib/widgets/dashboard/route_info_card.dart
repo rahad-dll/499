@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/route_info_card.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 
@@ -21,14 +19,12 @@ class RouteInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: DashColors.card(isDark),
+          color: DashColors.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: DashColors.teal.withValues(alpha: 0.20),
@@ -63,10 +59,10 @@ class RouteInfoCard extends StatelessWidget {
                 children: [
                   Text(
                     destination.name,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 14,
-                      color: DashColors.title(isDark),
+                      color: DashColors.title,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -74,9 +70,9 @@ class RouteInfoCard extends StatelessWidget {
                   if (distanceKm != null)
                     Text(
                       '${distanceKm!.toStringAsFixed(1)} km away',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: DashColors.muted(isDark),
+                        color: DashColors.muted,
                       ),
                     ),
                 ],
@@ -84,10 +80,10 @@ class RouteInfoCard extends StatelessWidget {
             ),
             IconButton(
               onPressed: onClose,
-              icon: Icon(
+              icon: const Icon(
                 Icons.close_rounded,
                 size: 20,
-                color: DashColors.muted(isDark),
+                color: DashColors.muted,
               ),
             ),
           ],

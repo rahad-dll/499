@@ -1,8 +1,6 @@
 // lib/widgets/dashboard/parking_card.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 
@@ -21,8 +19,6 @@ class ParkingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -41,19 +37,17 @@ class ParkingCard extends StatelessWidget {
                   end: Alignment.bottomRight,
                 )
               : null,
-          color: DashColors.card(isDark),
+          color: DashColors.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? DashColors.teal
-                : (isDark ? DashColors.darkBorder : Colors.grey[200]!),
+            color: isSelected ? DashColors.teal : DashColors.border,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected
                   ? DashColors.teal.withValues(alpha: 0.20)
-                  : Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: isSelected ? 16 : 8,
               offset: const Offset(0, 4),
             ),
@@ -70,10 +64,10 @@ class ParkingCard extends StatelessWidget {
                     parking.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: DashColors.title(isDark),
+                      color: DashColors.title,
                       letterSpacing: -0.2,
                     ),
                   ),
@@ -97,18 +91,18 @@ class ParkingCard extends StatelessWidget {
             const SizedBox(height: 3),
             Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.location_on_rounded,
                   size: 12,
-                  color: DashColors.muted(isDark),
+                  color: DashColors.muted,
                 ),
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
                     parking.formattedDistance,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
-                      color: DashColors.muted(isDark),
+                      color: DashColors.muted,
                     ),
                   ),
                 ),
@@ -152,19 +146,19 @@ class ParkingCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     parking.formattedRate,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: DashColors.muted(isDark),
+                      color: DashColors.muted,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(
+                const Icon(
                   Icons.chevron_right_rounded,
                   size: 16,
-                  color: isDark ? Colors.grey[500] : Colors.grey[400],
+                  color: DashColors.chevron,
                 ),
               ],
             ),

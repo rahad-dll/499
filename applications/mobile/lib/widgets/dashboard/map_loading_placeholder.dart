@@ -1,0 +1,46 @@
+// lib/widgets/dashboard/map_loading_placeholder.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../main.dart';
+import 'dashboard_colors.dart';
+
+class MapLoadingPlaceholder extends StatelessWidget {
+  const MapLoadingPlaceholder({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    return Container(
+      color: isDark ? Colors.grey[900] : Colors.grey[100],
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [DashColors.teal, DashColors.blue],
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.local_parking_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(DashColors.teal),
+              strokeWidth: 2.6,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

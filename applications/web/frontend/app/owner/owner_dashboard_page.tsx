@@ -1,131 +1,111 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo } from "react";
 import {
+  CheckCircle2,
   Cctv,
   CircleDollarSign,
   Gauge,
   Layers,
   MapPin,
   Plus,
-  TrendingDown,
-  TrendingUp,
+  Settings,
   Video,
   type LucideIcon,
 } from "lucide-react";
 import { OwnerShell } from "@/components/portal/OwnerShell";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
 import {
-  ParkingSpaceError,
-  parkingSpacesRepository,
-} from "@/lib/spaces/repository";
-import type { ParkingSpace } from "@/lib/spaces/types";
+  CameraStatusBadge,
+  LotStatusBadge,
+  SlotGrid,
+  SlotLegend,
+} from "@/components/portal/owner-widgets";
+import { Button } from "@/components/ui/button";
+import { useBookings } from "@/lib/bookings/use-bookings";
+import {
+  bookingRevenue,
+  cityOccupancy,
+  formatTaka,
+  isSameLocalDay,
+  lastUpdated,
+  occupancyPct,
+  timeAgo,
+} from "@/lib/insights/metrics";
+import { useLotOccupancy, useOwnerSpaces } from "@/lib/spaces/use-owner-spaces";
 import { cn } from "@/lib/utils";
-
-/* ---------------- mock data ---------------- */
 
 interface Metric {
   icon: LucideIcon;
   iconClass: string;
   value: string;
   label: string;
-  shortLabel: string;
-  delta: string;
-  up: boolean;
-  spark: string;
+  caption: string;
 }
 
-const METRICS: Metric[] = [
-  { icon: Layers, iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400", value: "2,400", label: "Total Capacity", shortLabel: "Total Capacity", delta: "+3.2%", up: true, spark: "#14b8a6" },
-  { icon: Gauge, iconClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400", value: "89.9%", label: "Current Occupancy", shortLabel: "Occupancy", delta: "+5.1%", up: true, spark: "#8b5cf6" },
-  { icon: CircleDollarSign, iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", value: "৳84,200", label: "Today's Revenue", shortLabel: "Revenue", delta: "+12%", up: true, spark: "#22c55e" },
-  { icon: Cctv, iconClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400", value: "328", label: "Active AI Cameras", shortLabel: "AI Cameras", delta: "-2", up: false, spark: "#38bdf8" },
-];
-
-const CAMERAS = [
-  { name: "Gate A — North", cars: 4, boxes: [{ l: "8%", t: "38%", w: 74, h: 48, c: "#22c55e" }, { l: "48%", t: "52%", w: 86, h: 52, c: "#18d6c0" }, { l: "82%", t: "24%", w: 52, h: 40, c: "#8b6cff" }] },
-  { name: "Level 2 — East", cars: 7, boxes: [{ l: "12%", t: "40%", w: 78, h: 52, c: "#22c55e" }, { l: "52%", t: "56%", w: 88, h: 50, c: "#18d6c0" }, { l: "80%", t: "22%", w: 50, h: 42, c: "#8b6cff" }] },
-  { name: "Exit B — South", cars: 2, boxes: [{ l: "10%", t: "32%", w: 76, h: 50, c: "#22c55e" }, { l: "50%", t: "54%", w: 90, h: 48, c: "#18d6c0" }, { l: "81%", t: "26%", w: 52, h: 42, c: "#8b6cff" }] },
-];
-
-const TREND = [62, 60, 63, 58, 54, 44, 34, 28, 30, 24, 26, 22, 28, 24, 18, 16, 22, 26, 20, 24, 34, 46, 56, 60, 64];
-
-/* ---------------- tiny chart helpers ---------------- */
-
-function Sparkline({ color }: { color: string }) {
-  const pts = [14, 10, 13, 8, 11, 7, 10, 6, 9, 5, 8, 4, 7]
-    .map((y, i) => `${(i * 100) / 12},${y}`)
-    .join(" ");
+function RegisteredNotice() {
+  const params = useSearchParams();
+  if (params.get("registered") !== "1") return null;
   return (
-    <svg viewBox="0 0 100 18" className="h-5 w-full" preserveAspectRatio="none" aria-hidden>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
+    <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+      <CheckCircle2 className="size-4" />
+      Parking lot registered. New lots appear on the live map once they are active and have AI-monitored slots.
+    </div>
   );
 }
-
-function TrendChart() {
-  const W = 1000;
-  const H = 230;
-  const pts = TREND.map((y, i) => [(i * W) / (TREND.length - 1), 30 + (y / 70) * (H - 60)] as const);
-  const line = pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
-  const area = `0,${H} ${line} ${W},${H}`;
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-48 w-full sm:h-56 lg:h-64" preserveAspectRatio="none" role="img" aria-label="Occupancy trend over the last 24 hours">
-      <defs>
-        <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#18d6c0" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#18d6c0" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75].map((f) => (
-        <line key={f} x1="0" x2={W} y1={H * f} y2={H * f} stroke="var(--border)" strokeDasharray="4 6" strokeWidth="1" />
-      ))}
-      <polygon points={area} fill="url(#trendFill)" />
-      <polyline points={line} fill="none" stroke="#14d3b2" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/* ---------------- page ---------------- */
 
 export default function OwnerDashboardPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [spaces, setSpaces] = useState<ParkingSpace[]>([]);
-  const [spacesLoading, setSpacesLoading] = useState(true);
-  const [spacesError, setSpacesError] = useState<string | null>(null);
+  const { spaces, loading: spacesLoading, error: spacesError } = useOwnerSpaces();
+  const occupancy = useLotOccupancy(spaces);
+  const { bookings, error: bookingsError, loadedAt } = useBookings();
 
-  useEffect(() => {
-    if (authLoading || user?.role !== "owner") return;
-    let active = true;
-    parkingSpacesRepository
-      .list()
-      .then((data) => {
-        if (active) setSpaces(data);
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setSpacesError(
-            error instanceof ParkingSpaceError
-              ? error.message
-              : "Could not load parking lots",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setSpacesLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [authLoading, user]);
+  const metrics = useMemo<Metric[]>(() => {
+    const totalCapacity = spaces.reduce((total, space) => total + space.total_capacity, 0);
+    const live = Object.values(occupancy.byId);
+    const cameras = spaces.flatMap((space) => space.cameras ?? []);
+    const activeCameras = cameras.filter((camera) => camera.status === "active").length;
+    const ownLotIds = new Set(spaces.map((s) => s.id));
+    const today = loadedAt ? new Date(loadedAt) : null;
+    const todays = today
+      ? bookings.filter((b) => ownLotIds.has(b.space_id) && isSameLocalDay(b.scheduled_at, today))
+      : [];
+    const revenue = todays.reduce((total, b) => total + bookingRevenue(b), 0);
 
-  const totalCapacity = useMemo(
-    () => spaces.reduce((total, space) => total + space.total_capacity, 0),
-    [spaces],
-  );
+    return [
+      {
+        icon: Layers,
+        iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
+        value: totalCapacity.toLocaleString(),
+        label: "Total Capacity",
+        caption: `${spaces.length} parking lot${spaces.length === 1 ? "" : "s"}`,
+      },
+      {
+        icon: Gauge,
+        iconClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
+        value: live.length ? `${cityOccupancy(live)}%` : "—",
+        label: "Live Occupancy",
+        caption: `${live.length} of ${spaces.length} lots reporting AI data`,
+      },
+      {
+        icon: CircleDollarSign,
+        iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+        value: bookingsError ? "—" : formatTaka(revenue),
+        label: "Today's Revenue",
+        caption: bookingsError ? "Bookings unavailable" : `${todays.length} booking${todays.length === 1 ? "" : "s"} today`,
+      },
+      {
+        icon: Cctv,
+        iconClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
+        value: `${activeCameras}/${cameras.length}`,
+        label: "Active AI Cameras",
+        caption: cameras.length ? `${cameras.length - activeCameras} offline or in setup` : "No cameras connected",
+      },
+    ];
+  }, [spaces, occupancy.byId, bookings, bookingsError, loadedAt]);
+
+  const now = occupancy.updatedAt ?? 0;
+  const cameras = spaces.flatMap((space) => (space.cameras ?? []).map((camera) => ({ camera, space })));
 
   return (
     <OwnerShell active="dashboard" breadcrumb="Dashboard">
@@ -145,14 +125,37 @@ export default function OwnerDashboardPage() {
         </Button>
       </div>
 
+      <Suspense fallback={null}>
+        <RegisteredNotice />
+      </Suspense>
+
+      {/* metric cards */}
+      <div className="mt-6 grid grid-cols-2 gap-3.5 sm:gap-4 xl:grid-cols-4">
+        {metrics.map((m) => (
+          <div key={m.label} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+            <span className={cn("flex size-10 items-center justify-center rounded-xl", m.iconClass)}>
+              <m.icon className="size-5" />
+            </span>
+            <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[28px]">
+              {spacesLoading ? "…" : m.value}
+            </div>
+            <div className="mt-0.5 text-[13px] font-semibold">{m.label}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{m.caption}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* parking lots with live slots */}
       <section className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-extrabold tracking-tight">Your Parking Lots</h2>
             <p className="text-[13px] text-muted-foreground">
-              Live data from the CityPulse API · {spaces.length} facilities · {totalCapacity} spaces
+              Live slot status from CityPulse AI cameras
+              {occupancy.updatedAt && <> · updated {new Date(occupancy.updatedAt).toLocaleTimeString()}</>}
             </p>
           </div>
+          <SlotLegend />
         </div>
 
         {spacesError ? (
@@ -172,114 +175,99 @@ export default function OwnerDashboardPage() {
           </div>
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {spaces.map((space) => (
-              <article key={space.id} className="rounded-xl border border-border bg-muted/40 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="truncate font-bold">{space.name}</h3>
-                    <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-                      <MapPin className="size-3.5 shrink-0" />
-                      {space.address || `${space.latitude}, ${space.longitude}`}
-                    </p>
+            {spaces.map((space) => {
+              const live = occupancy.byId[space.id];
+              return (
+                <article key={space.id} className="flex flex-col rounded-xl border border-border bg-muted/40 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-bold">{space.name}</h3>
+                      <p className="mt-1 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+                        <MapPin className="size-3.5 shrink-0" />
+                        {space.address || `${space.latitude}, ${space.longitude}`}
+                      </p>
+                    </div>
+                    <LotStatusBadge space={space} />
                   </div>
-                  <Badge variant={space.is_active === false ? "secondary" : "success"}>
-                    {space.is_active === false ? "Inactive" : "Active"}
-                  </Badge>
-                </div>
-                <div className="mt-4 flex items-center justify-between text-sm">
-                  <span className="capitalize text-muted-foreground">{space.space_type}</span>
-                  <span className="font-bold">{space.total_capacity} spaces</span>
-                </div>
-              </article>
-            ))}
+
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-card px-2 py-2">
+                      <div className="text-sm font-extrabold">{space.total_capacity}</div>
+                      <div className="text-[11px] text-muted-foreground">Capacity</div>
+                    </div>
+                    <div className="rounded-lg bg-card px-2 py-2">
+                      <div className="text-sm font-extrabold">{live ? live.available_slots : "—"}</div>
+                      <div className="text-[11px] text-muted-foreground">Free now</div>
+                    </div>
+                    <div className="rounded-lg bg-card px-2 py-2">
+                      <div className="text-sm font-extrabold">{live ? `${occupancyPct(live)}%` : "—"}</div>
+                      <div className="text-[11px] text-muted-foreground">Occupied</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex-1">
+                    {live ? (
+                      <>
+                        <SlotGrid slots={live.slot_statuses} />
+                        <p className={cn("mt-2 text-xs", live.is_stale ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+                          {live.is_stale ? "Camera data is stale" : "AI data live"} · {timeAgo(lastUpdated(live), now)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {occupancy.loading ? "Loading live AI data…" : "No live AI data yet (lot must be active with monitored slots)."}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-sm">
+                    <span className="capitalize text-muted-foreground">
+                      {space.space_type}
+                      {space.base_rate_unit != null && <> · ৳{space.base_rate_unit / 100}/hr</>}
+                    </span>
+                    <Link
+                      href={`/owner/settings?lot=${space.id}`}
+                      className="inline-flex items-center gap-1.5 font-semibold text-teal-600 hover:underline dark:text-brand"
+                    >
+                      <Settings className="size-3.5" />
+                      Manage
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* metric cards */}
-      <div className="mt-6 grid grid-cols-2 gap-3.5 sm:gap-4 xl:grid-cols-4">
-        {METRICS.map((m) => (
-          <div key={m.label} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <span className={cn("flex size-10 items-center justify-center rounded-xl", m.iconClass)}>
-                <m.icon className="size-5" />
-              </span>
-              <Badge variant={m.up ? "success" : "destructive"} className="text-[11px]">
-                {m.up ? <TrendingUp /> : <TrendingDown />}
-                {m.delta}
-              </Badge>
-            </div>
-            <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[28px]">{m.value}</div>
-            <div className="mt-0.5 text-[13px] text-muted-foreground">
-              <span className="sm:hidden">{m.shortLabel}</span>
-              <span className="hidden sm:inline">{m.label}</span>
-            </div>
-            <div className="mt-3">
-              <Sparkline color={m.spark} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* occupancy trends */}
-      <div className="mt-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-extrabold tracking-tight">Occupancy Trends</h2>
-            <p className="text-[13px] text-muted-foreground">Last 24 hours</p>
-          </div>
-          <Badge variant="info">
-            <span className="size-1.5 rounded-full bg-current" />
-            Occupancy %
-          </Badge>
-        </div>
-        <div className="mt-4">
-          <TrendChart />
-        </div>
-        <div className="mt-2 flex justify-between text-[11.5px] text-muted-foreground">
-          {["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "24:00"].map((t, i, arr) => (
-            <span key={t} className={cn(i > 0 && i < arr.length - 1 && "hidden sm:inline")}>
-              {t}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* live camera feed */}
+      {/* cameras */}
       <div className="mt-7">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-extrabold tracking-tight">Live AI Camera Feed</h2>
-          <a href="/owner/cameras" className="text-sm font-semibold text-brand hover:underline">
+          <h2 className="text-lg font-extrabold tracking-tight">AI Cameras</h2>
+          <Link href="/owner/cameras" className="text-sm font-semibold text-brand hover:underline">
             View all
-          </a>
+          </Link>
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {CAMERAS.map((cam) => (
-            <div key={cam.name} className="overflow-hidden rounded-2xl border border-border bg-card">
-              <div className="relative h-40 bg-[linear-gradient(160deg,#0b1322_0%,#101b31_100%)] sm:h-44">
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[length:40px_40px]" />
-                <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10.5px] font-bold tracking-wider text-white">
-                  <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                  LIVE
+        {cameras.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            {spacesLoading ? "Loading cameras…" : "No cameras connected. Add an RTSP stream from the Cameras page."}
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {cameras.slice(0, 6).map(({ camera, space }) => (
+              <div key={camera.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand/12 text-teal-600 dark:text-brand">
+                  <Video className="size-[18px]" />
                 </span>
-                {cam.boxes.map((b, i) => (
-                  <span
-                    key={i}
-                    className="absolute rounded-[4px] border-[1.5px]"
-                    style={{ left: b.l, top: b.t, width: b.w, height: b.h, borderColor: b.c, boxShadow: `0 0 10px ${b.c}55` }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center justify-between px-4 py-3">
-                <span className="inline-flex items-center gap-2 text-sm font-semibold">
-                  <Video className="size-4 text-brand" />
-                  {cam.name}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{camera.label || space.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{camera.rtsp_url}</span>
                 </span>
-                <span className="text-[12.5px] text-muted-foreground">{cam.cars} cars detected</span>
+                <CameraStatusBadge status={camera.status} />
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </OwnerShell>
   );

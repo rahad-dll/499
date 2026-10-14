@@ -1,0 +1,4 @@
+# Downloaded datasets are large; keep them out of Git.
+*
+!.gitignore
+!inventory.json

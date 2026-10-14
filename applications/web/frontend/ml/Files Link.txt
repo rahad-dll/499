@@ -1,2 +1,5 @@
-Paper  : https://arxiv.org/abs/2505.17364
-GitHub : https://github.com/pokhrelapar/yolov8-pklot
+Optimizing YOLOv8 for Parking Space Detection Paper  : https://arxiv.org/abs/2505.17364
+Optimizing YOLOv8 for Parking Space Detection GitHub : https://github.com/pokhrelapar/yolov8-pklot
+
+Bengali License Plate Recognition Unveiling Clarity with CNN and GFP-GAN (ICCIT 2023) Paper : https://arxiv.org/abs/2312.10701 
+Bengali License Plate Recognition Unveiling Clarity with CNN and GFP-GAN (ICCIT 2023) GitHub: https://github.com/mhtusher131/Bengali-License-Plate-Recognition_Unveling-Clarity-with-CNN-and-GFP-GAN

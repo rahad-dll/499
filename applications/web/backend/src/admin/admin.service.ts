@@ -9,6 +9,33 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // ── parking space approval ────────────────────────────────────────────────
+
+  async listSpaces(status?: 'active' | 'inactive' | 'pending') {
+    return this.prisma.parking_spaces.findMany({
+      where: { deleted_at: null, ...(status && { status }) },
+      orderBy: { created_at: 'desc' },
+      include: {
+        owner: { select: { id: true, email: true } },
+        _count: { select: { slots: { where: { deleted_at: null } } } },
+      },
+    });
+  }
+
+  async setSpaceStatus(id: string, status: 'active' | 'inactive' | 'pending') {
+    const space = await this.prisma.parking_spaces.findFirst({
+      where: { id, deleted_at: null },
+      select: { id: true },
+    });
+    if (!space) throw new NotFoundException('Space not found');
+
+    return this.prisma.parking_spaces.update({
+      where: { id },
+      data: { status },
+      select: { id: true, name: true, status: true, updated_at: true },
+    });
+  }
+
   async listRoles() {
     return this.prisma.roles.findMany({
       where: { deleted_at: null },

@@ -46,13 +46,13 @@ model thanas {
 }
 
 model areas {
-  id         String    @id @default(uuid()) @db.Uuid
-  name       String    @db.VarChar(100)
-  thana_id   String    @db.Uuid
-  is_active  Boolean   @default(true)
-  created_at DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at DateTime  @updatedAt @db.Timestamptz(6)
-  thana      thanas    @relation(fields: [thana_id], references: [id])
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String   @db.VarChar(100)
+  thana_id   String   @db.Uuid
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+  thana      thanas   @relation(fields: [thana_id], references: [id])
 
   users              users[]
   owner_profiles     owner_profiles[]
@@ -93,31 +93,31 @@ model role_permissions {
 }
 
 model users {
-  id                          String                @id @default(uuid()) @db.Uuid
-  email                       String                @unique @db.VarChar(255)
-  password_hash               String?               @db.VarChar(255)
-  full_name                   String?               @db.VarChar(255)
-  phone                       String                @unique @db.VarChar(20)
-  phone_verified              Boolean               @default(false)
-  role_id                     String                @db.Uuid
-  area_id                     String?               @db.Uuid
-  is_active                   Boolean               @default(true)
-  avatar_url                  String?               @db.VarChar(500)
-  last_login_at               DateTime?             @db.Timestamptz(6)
-  password_reset_token        String?               @db.VarChar(255)
-  password_reset_expires_at   DateTime?             @db.Timestamptz(6)
-  created_at                  DateTime              @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime              @updatedAt @db.Timestamptz(6)
-  deleted_at                  DateTime?             @db.Timestamptz(6)
-  area              areas?                @relation(fields: [area_id], references: [id])
-  authority_profile authority_profiles?
-  driver_profile    driver_profiles?
-  notifications     notifications[]
-  owner_profile     owner_profiles?
-  parking_spaces    parking_spaces[]
-  oauth_accounts    user_oauth_accounts[]
-  sessions          user_sessions[]
-  role              roles                 @relation(fields: [role_id], references: [id])
+  id                        String                @id @default(uuid()) @db.Uuid
+  email                     String                @unique @db.VarChar(255)
+  password_hash             String?               @db.VarChar(255)
+  full_name                 String?               @db.VarChar(255)
+  phone                     String                @unique @db.VarChar(20)
+  phone_verified            Boolean               @default(false)
+  role_id                   String                @db.Uuid
+  area_id                   String?               @db.Uuid
+  is_active                 Boolean               @default(true)
+  avatar_url                String?               @db.VarChar(500)
+  last_login_at             DateTime?             @db.Timestamptz(6)
+  password_reset_token      String?               @db.VarChar(255)
+  password_reset_expires_at DateTime?             @db.Timestamptz(6)
+  created_at                DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime              @updatedAt @db.Timestamptz(6)
+  deleted_at                DateTime?             @db.Timestamptz(6)
+  area                      areas?                @relation(fields: [area_id], references: [id])
+  authority_profile         authority_profiles?
+  driver_profile            driver_profiles?
+  notifications             notifications[]
+  owner_profile             owner_profiles?
+  parking_spaces            parking_spaces[]
+  oauth_accounts            user_oauth_accounts[]
+  sessions                  user_sessions[]
+  role                      roles                 @relation(fields: [role_id], references: [id])
 
   @@index([role_id])
   @@index([area_id])
@@ -198,6 +198,7 @@ model driver_profiles {
   deleted_at               DateTime?       @db.Timestamptz(6)
   area                     areas?          @relation(fields: [area_id], references: [id])
   bookings                 bookings[]
+  assigned_slots           parking_slots[]
   user                     users           @relation(fields: [user_id], references: [id])
 
   @@index([area_id])
@@ -245,6 +246,8 @@ model parking_spaces {
   slots           parking_slots[]
   owner           users           @relation(fields: [owner_id], references: [id])
   pricing_rules   pricing_rules[]
+  rate_plans      rate_plans[]
+  discounts       discounts[]
   photos          space_photos[]
 
   @@index([owner_id])
@@ -254,26 +257,118 @@ model parking_spaces {
 }
 
 model parking_slots {
-  id               String         @id @default(uuid()) @db.Uuid
-  space_id         String         @db.Uuid
-  camera_id        String?        @db.Uuid
-  slot_label       String         @db.VarChar(20)
-  slot_type        slot_type      @default(standard)
-  mask_polygon     Json?
-  occupied         Boolean        @default(false)
-  confidence_score Float?
-  last_updated     DateTime?      @db.Timestamptz(6)
-  created_at       DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime       @updatedAt @db.Timestamptz(6)
-  deleted_at       DateTime?      @db.Timestamptz(6)
-  bookings         bookings[]
-  camera           cameras?       @relation(fields: [camera_id], references: [id])
-  space            parking_spaces @relation(fields: [space_id], references: [id])
+  id                 String            @id @default(uuid()) @db.Uuid
+  space_id           String            @db.Uuid
+  camera_id          String?           @db.Uuid
+  slot_label         String            @db.VarChar(20)
+  display_name       String?           @db.VarChar(100)
+  zone               String?           @db.VarChar(50)
+  floor              String?           @db.VarChar(20)
+  sort_order         Int               @default(0)
+  slot_type          slot_type         @default(standard)
+  vehicle_types      vehicle_kind[]
+  length_cm          Int?
+  width_cm           Int?
+  max_height_cm      Int?
+  features           String[]
+  ev_charger_kw      Float?
+  // normalised to the camera frame: { x1, y1, x2, y2 } in 0-1
+  bbox               Json?
+  mask_polygon       Json?
+  allow_hourly       Boolean           @default(true)
+  allow_daily        Boolean           @default(true)
+  allow_monthly      Boolean           @default(false)
+  is_bookable        Boolean           @default(true)
+  status             slot_status       @default(active)
+  access_note        String?           @db.VarChar(500)
+  assigned_driver_id String?           @db.Uuid
+  qr_code            String?           @unique @db.VarChar(64)
+  cover_photo_key    String?           @db.VarChar(500)
+  occupied           Boolean           @default(false)
+  occupancy_source   occupancy_source?
+  confidence_score   Float?
+  last_updated       DateTime?         @db.Timestamptz(6)
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime          @updatedAt @db.Timestamptz(6)
+  deleted_at         DateTime?         @db.Timestamptz(6)
+  bookings           bookings[]
+  rate_plans         rate_plans[]
+  discounts          discounts[]
+  assigned_driver    driver_profiles?  @relation(fields: [assigned_driver_id], references: [id])
+  camera             cameras?          @relation(fields: [camera_id], references: [id])
+  space              parking_spaces    @relation(fields: [space_id], references: [id])
 
   @@unique([space_id, slot_label])
   @@index([space_id])
   @@index([occupied])
   @@index([camera_id])
+  @@index([space_id, zone])
+  @@index([status])
+  @@index([assigned_driver_id])
+}
+
+// Prices for a whole space, one zone, or one slot. The most specific plan wins: slot, then zone, then space.
+model rate_plans {
+  id                  String         @id @default(uuid()) @db.Uuid
+  space_id            String         @db.Uuid
+  zone                String?        @db.VarChar(50)
+  slot_id             String?        @db.Uuid
+  name                String?        @db.VarChar(100)
+  rent_type           rent_type
+  // price per unit (hour, day, month, or one entry for flat), in paisa
+  amount_unit         Int
+  min_units           Int            @default(1)
+  max_units           Int?
+  grace_minutes       Int            @default(0)
+  overstay_rate_unit  Int?
+  deposit_unit        Int?
+  cancel_free_minutes Int?
+  cancel_fee_unit     Int?
+  // optional time window: days 0-6 (Sunday = 0), times as HH:MM; empty means always
+  days                Int[]
+  start_time          String?        @db.VarChar(5)
+  end_time            String?        @db.VarChar(5)
+  valid_from          DateTime?      @db.Timestamptz(6)
+  valid_to            DateTime?      @db.Timestamptz(6)
+  is_active           Boolean        @default(true)
+  created_at          DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at          DateTime?      @db.Timestamptz(6)
+  slot                parking_slots? @relation(fields: [slot_id], references: [id])
+  space               parking_spaces @relation(fields: [space_id], references: [id])
+
+  @@index([space_id, rent_type])
+  @@index([slot_id])
+}
+
+// Scoped like rate_plans. value: percent in basis points (1500 = 15%) or a fixed amount in paisa.
+model discounts {
+  id         String         @id @default(uuid()) @db.Uuid
+  space_id   String         @db.Uuid
+  zone       String?        @db.VarChar(50)
+  slot_id    String?        @db.Uuid
+  name       String         @db.VarChar(100)
+  kind       discount_kind
+  value      Int
+  applies_to rent_type[]
+  min_units  Int?
+  // empty code means the discount is applied automatically
+  code       String?        @db.VarChar(50)
+  valid_from DateTime?      @db.Timestamptz(6)
+  valid_to   DateTime?      @db.Timestamptz(6)
+  max_uses   Int?
+  used_count Int            @default(0)
+  is_active  Boolean        @default(true)
+  created_at DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at DateTime       @updatedAt @db.Timestamptz(6)
+  deleted_at DateTime?      @db.Timestamptz(6)
+  bookings   bookings[]
+  slot       parking_slots? @relation(fields: [slot_id], references: [id])
+  space      parking_spaces @relation(fields: [space_id], references: [id])
+
+  @@unique([space_id, code])
+  @@index([space_id])
+  @@index([slot_id])
 }
 
 model cameras {
@@ -312,15 +407,25 @@ model bookings {
   slot_id             String                @db.Uuid
   space_id            String                @db.Uuid
   status              booking_status        @default(pending)
+  rent_type           rent_type             @default(hourly)
   scheduled_at        DateTime              @db.Timestamptz(6)
+  end_at              DateTime?             @db.Timestamptz(6)
+  extended_to         DateTime?             @db.Timestamptz(6)
   hold_expires_at     DateTime?             @db.Timestamptz(6)
+  // check-in and check-out times
   arrived_at          DateTime?             @db.Timestamptz(6)
   departed_at         DateTime?             @db.Timestamptz(6)
+  vehicle_plate       String?               @db.VarChar(20)
+  base_amount_unit    Int?
+  discount_unit       Int?
+  discount_id         String?               @db.Uuid
   amount_unit         Int?
+  payment_status      payment_status        @default(pending)
   cancellation_reason String?               @db.VarChar(500)
   created_at          DateTime              @default(now()) @db.Timestamptz(6)
   updated_at          DateTime              @updatedAt @db.Timestamptz(6)
   deleted_at          DateTime?             @db.Timestamptz(6)
+  discount            discounts?            @relation(fields: [discount_id], references: [id])
   driver              driver_profiles       @relation(fields: [driver_id], references: [id])
   slot                parking_slots         @relation(fields: [slot_id], references: [id])
   space               parking_spaces        @relation(fields: [space_id], references: [id])
@@ -331,6 +436,8 @@ model bookings {
   @@index([space_id])
   @@index([status])
   @@index([scheduled_at])
+  @@index([slot_id, scheduled_at, end_at])
+  @@index([vehicle_plate])
 }
 
 model payment_transactions {
@@ -412,6 +519,43 @@ enum slot_type {
   motorcycle
   disabled
   ev
+  compact
+  large
+  bicycle
+}
+
+enum slot_status {
+  active
+  inactive
+  maintenance
+  blocked
+}
+
+enum occupancy_source {
+  ai
+  booking
+  manual
+}
+
+enum vehicle_kind {
+  car
+  motorcycle
+  cng
+  microbus
+  suv
+  pickup
+}
+
+enum rent_type {
+  hourly
+  daily
+  monthly
+  flat
+}
+
+enum discount_kind {
+  percent
+  fixed
 }
 
 enum booking_status {
@@ -457,11 +601,11 @@ enum licence_type {
 
 // BRTA vehicle classes — a driver can hold multiple
 enum vehicle_class {
-  H  // heavy
-  M  // medium
-  L  // light
-  C  // motorcycle
-  T  // three-wheeler
-  P  // public service vehicle
-  X  // others
+  H // heavy
+  M // medium
+  L // light
+  C // motorcycle
+  T // three-wheeler
+  P // public service vehicle
+  X // others
 }

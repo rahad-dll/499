@@ -491,7 +491,7 @@ export class SpacesService {
 
   // ── helper ─────────────────────────────────────────────────────────────────
 
-  private async assertOwnership(id: string, user: JwtPayload) {
+  async assertOwnership(id: string, user: JwtPayload) {
     if (user.role === 'admin') return;
     const space = await this.prisma.parking_spaces.findFirst({
       where: { id, deleted_at: null },

@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   UseGuards,
@@ -41,5 +43,11 @@ export class BookingsController {
   @Patch(':id/cancel')
   cancel(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.cancel(id, user);
+  }
+
+  // DELETE /bookings/:id — hide from the driver's history (soft delete)
+  @Delete(':id')
+  hide(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+    return this.bookingsService.hide(id, user);
   }
 }

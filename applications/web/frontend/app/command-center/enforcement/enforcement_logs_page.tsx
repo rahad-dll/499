@@ -1,83 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CheckCircle2,
   Clock,
-  Eye,
+  Info,
   MapPin,
+  ParkingSquare,
+  RotateCcw,
   ScanEye,
   Ticket,
-  Users,
 } from "lucide-react";
 import { AuthorityShell } from "@/components/portal/AuthorityShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { deriveIncidents, timeAgo, type Incident } from "@/lib/insights/metrics";
+import { useLiveSpaces } from "@/lib/spaces/use-live-spaces";
 import { cn } from "@/lib/utils";
-
-/* ---------------- mock data ---------------- */
-
-type Violation =
-  | "Illegal Parking"
-  | "No-Parking Zone"
-  | "Expired Meter"
-  | "Blocked Driveway"
-  | "Double Parking";
-
-const VIOLATION_VARIANT: Record<Violation, "warning" | "destructive" | "info" | "purple"> = {
-  "Illegal Parking": "warning",
-  "No-Parking Zone": "destructive",
-  "Expired Meter": "info",
-  "Blocked Driveway": "destructive",
-  "Double Parking": "purple",
-};
-
-interface Incident {
-  id: string;
-  time: string;
-  violation: Violation;
-  location: string;
-  confidence: number;
-  warden: string;
-  resolved?: boolean;
-}
-
-const ACTIVE: Incident[] = [
-  { id: "INC-2048", time: "Today · 14:22", violation: "Illegal Parking", location: "Road 11, Banani", confidence: 96, warden: "Warden Kabir" },
-  { id: "INC-2047", time: "Today · 13:58", violation: "No-Parking Zone", location: "Gulshan Ave, Zone A", confidence: 99, warden: "Warden Nadia" },
-  { id: "INC-2045", time: "Today · 13:10", violation: "Expired Meter", location: "Dhanmondi 27", confidence: 87, warden: "Warden Rafi" },
-  { id: "INC-2044", time: "Today · 12:40", violation: "Blocked Driveway", location: "Uttara Sector 7", confidence: 94, warden: "Warden Sami" },
-  { id: "INC-2041", time: "Today · 11:55", violation: "Illegal Parking", location: "Motijheel Plaza", confidence: 91, warden: "Warden Kabir" },
-  { id: "INC-2039", time: "Today · 11:20", violation: "Double Parking", location: "Mirpur DOHS", confidence: 89, warden: "Warden Nadia" },
-];
-
-const RESOLVED: Incident[] = [
-  { id: "INC-2036", time: "Today · 10:05", violation: "Illegal Parking", location: "Banani Block C", confidence: 95, warden: "Warden Rafi", resolved: true },
-  { id: "INC-2031", time: "Today · 09:12", violation: "No-Parking Zone", location: "Gulshan 2 Circle", confidence: 98, warden: "Warden Sami", resolved: true },
-  { id: "INC-2027", time: "Yesterday · 21:44", violation: "Expired Meter", location: "Dhanmondi 32", confidence: 84, warden: "Warden Kabir", resolved: true },
-];
 
 /* ---------------- incident card ---------------- */
 
-function IncidentCard({ inc }: { inc: Incident }) {
+function IncidentCard({
+  inc,
+  now,
+  resolved,
+  onToggle,
+}: {
+  inc: Incident;
+  now: number;
+  resolved: boolean;
+  onToggle: () => void;
+}) {
+  const confidence = Math.round(inc.slot.confidence * 100);
   return (
     <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[15px] font-extrabold">{inc.id}</span>
-        <Badge variant={VIOLATION_VARIANT[inc.violation]}>
+        <span className="text-[15px] font-extrabold" title={inc.slot.slot_id}>
+          {inc.space.name} · Slot {inc.slotNumber}
+        </span>
+        <Badge variant={resolved ? "success" : "warning"}>
           <span className="size-1.5 rounded-full bg-current" />
-          {inc.violation}
+          {resolved ? "Resolved" : "Unbooked"}
         </Badge>
       </div>
       <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
         <Clock className="size-3.5" />
-        {inc.time}
+        Detected {timeAgo(inc.slot.last_updated, now)}
+        {inc.slot.last_updated && <> · {new Date(inc.slot.last_updated).toLocaleString()}</>}
       </div>
 
       <div className="mt-3.5 border-t border-border pt-3.5">
         <div className="flex items-center gap-1.5 text-[13.5px] font-semibold">
-          <MapPin className="size-4 text-muted-foreground" />
-          {inc.location}
+          <MapPin className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{inc.space.address ?? inc.space.name}</span>
         </div>
         <div className="mt-2.5 flex items-center gap-3 text-[13px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
@@ -85,24 +60,26 @@ function IncidentCard({ inc }: { inc: Incident }) {
             AI Confidence
           </span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-brand" style={{ width: `${inc.confidence}%` }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: `${confidence}%` }} />
           </div>
-          <span className="font-extrabold text-foreground">{inc.confidence}%</span>
+          <span className="font-extrabold text-foreground">{confidence}%</span>
         </div>
         <div className="mt-3 flex items-center gap-2.5">
-          <span className="size-8 shrink-0 rounded-full bg-gradient-to-br from-[#4d7cf5] to-[#8b6cff]" />
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            <ParkingSquare className="size-4" />
+          </span>
           <span>
-            <div className="text-[13.5px] font-bold">{inc.warden}</div>
+            <div className="text-[13.5px] font-bold">Occupied with no booking</div>
             <div className="text-xs text-muted-foreground">
-              {inc.resolved ? "Resolved by" : "Assigned Warden"}
+              AI label “{inc.slot.label}”{inc.space.is_stale && " · camera data is stale"}
             </div>
           </span>
         </div>
       </div>
 
-      <Button variant="brand" className="mt-4 w-full">
-        <Eye className="size-4" />
-        View Evidence
+      <Button variant={resolved ? "outline" : "brand"} className="mt-4 w-full" onClick={onToggle}>
+        {resolved ? <RotateCcw className="size-4" /> : <CheckCircle2 className="size-4" />}
+        {resolved ? "Reopen" : "Mark Resolved"}
       </Button>
     </div>
   );
@@ -111,8 +88,28 @@ function IncidentCard({ inc }: { inc: Incident }) {
 /* ---------------- page ---------------- */
 
 export default function EnforcementLogsPage() {
+  const { spaces, loading, error, updatedAt } = useLiveSpaces();
+  const incidents = useMemo(() => deriveIncidents(spaces), [spaces]);
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(() => new Set());
   const [tab, setTab] = useState<"active" | "resolved">("active");
-  const list = tab === "active" ? ACTIVE : RESOLVED;
+  const now = updatedAt ?? 0;
+
+  const active = incidents.filter((i) => !resolvedIds.has(i.id));
+  const resolved = incidents.filter((i) => resolvedIds.has(i.id));
+  const list = tab === "active" ? active : resolved;
+  const lotsAffected = new Set(active.map((i) => i.space.id)).size;
+  const avgConfidence = incidents.length
+    ? Math.round((incidents.reduce((t, i) => t + i.slot.confidence, 0) / incidents.length) * 100)
+    : 0;
+
+  function toggle(id: string) {
+    setResolvedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <AuthorityShell active="enforcement">
@@ -121,8 +118,21 @@ export default function EnforcementLogsPage() {
           Enforcement Logs
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Review AI-detected violations and warden dispatch history.
+          Slots the AI sees as occupied without a booking — possible unpaid parking.
         </p>
+
+        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3 text-[13px] text-muted-foreground">
+          <Info className="mt-0.5 size-4 shrink-0 text-teal-600 dark:text-brand" />
+          Incidents are generated live from AI camera data. Tickets, evidence images, and warden
+          dispatch need the enforcement API, which the backend doesn’t provide yet — resolutions are
+          kept in this browser tab only.
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         {/* stat cards */}
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -131,26 +141,26 @@ export default function EnforcementLogsPage() {
               <Ticket className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">142</div>
-              <div className="text-[13px] text-muted-foreground">Tickets Issued (Today)</div>
+              <div className="text-2xl font-extrabold tracking-tight">{active.length}</div>
+              <div className="text-[13px] text-muted-foreground">Active Incidents</div>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400">
-              <Users className="size-[22px]" />
+              <MapPin className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">28</div>
-              <div className="text-[13px] text-muted-foreground">Wardens Dispatched</div>
+              <div className="text-2xl font-extrabold tracking-tight">{lotsAffected}</div>
+              <div className="text-[13px] text-muted-foreground">Lots Affected</div>
             </div>
           </div>
           <div className="col-span-2 flex items-center gap-4 rounded-2xl border border-border bg-card p-5 sm:col-span-1">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="size-[22px]" />
+              <ScanEye className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">96</div>
-              <div className="text-[13px] text-muted-foreground">Resolved Incidents</div>
+              <div className="text-2xl font-extrabold tracking-tight">{avgConfidence}%</div>
+              <div className="text-[13px] text-muted-foreground">Avg AI Confidence</div>
             </div>
           </div>
         </div>
@@ -166,7 +176,7 @@ export default function EnforcementLogsPage() {
             )}
           >
             Active Incidents
-            <Badge variant={tab === "active" ? "info" : "secondary"} className="px-2">12</Badge>
+            <Badge variant={tab === "active" ? "info" : "secondary"} className="px-2">{active.length}</Badge>
           </button>
           <button
             type="button"
@@ -176,17 +186,33 @@ export default function EnforcementLogsPage() {
               tab === "resolved" ? "bg-brand/10 text-teal-600 dark:text-brand" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            Resolved History
-            <Badge variant="secondary" className="px-2">96</Badge>
+            Resolved
+            <Badge variant="secondary" className="px-2">{resolved.length}</Badge>
           </button>
         </div>
 
         {/* incident grid */}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {list.map((inc) => (
-            <IncidentCard key={inc.id} inc={inc} />
-          ))}
-        </div>
+        {list.length === 0 ? (
+          <div className="mt-5 rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+            {loading
+              ? "Scanning live AI data…"
+              : tab === "active"
+                ? "No unbooked occupancy detected right now."
+                : "Nothing resolved yet."}
+          </div>
+        ) : (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {list.map((inc) => (
+              <IncidentCard
+                key={inc.id}
+                inc={inc}
+                now={now}
+                resolved={resolvedIds.has(inc.id)}
+                onToggle={() => toggle(inc.id)}
+              />
+            ))}
+          </div>
+        )}
       </main>
     </AuthorityShell>
   );

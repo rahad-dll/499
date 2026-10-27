@@ -4,7 +4,7 @@
 > **Project:** 498R BanglaLPR — re-implementation of *"A Cloud-Based Hybrid Model for Real-Time Detection of BRTA-Approved Licence Plates Using YOLO Tiny and Haar Cascade"* (Paper #3, arXiv:2609.06507)
 > **Author / maintainer:** Md. Yousuf
 > **Date:** 18 October 2026
-> **Full technical report:** [`Paper03_Report.md`](../../../report/Md.Yousuf/Paper03_Report.md)
+> **Full technical report:** [`Paper03_Report.md`](Paper03_Report.md)
 
 This package contains two trained **YOLOv8n Bangla licence-plate detectors** (416 px and 640 px), the evaluation results, logs and code, and the comparison of the paper's *vehicle → Haar cascade* pipeline with single-stage detection. All numbers come from the saved run files in `paper03_results.zip`.
 

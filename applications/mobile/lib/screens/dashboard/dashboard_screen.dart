@@ -74,6 +74,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Debounce / lifecycle
   Timer? _debounce;
   bool _isDisposed = false;
+  // Re-pulls counts every minute so a booking window starting/ending shows up.
+  Timer? _refreshTimer;
 
   // =========================================================================
   // LIFECYCLE
@@ -85,12 +87,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     _placesService = PlacesService();
     WidgetsBinding.instance.addObserver(this);
     _initializeLocation();
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 60),
+      (_) => _refreshParkings(),
+    );
   }
 
   @override
   void dispose() {
     _isDisposed = true;
     _debounce?.cancel();
+    _refreshTimer?.cancel();
     _positionSub?.cancel();
     _searchController.dispose();
     _placesService.dispose();
@@ -422,22 +429,44 @@ class _DashboardScreenState extends State<DashboardScreen>
   // BOOKING
   // =========================================================================
 
+  /// Re-pulls /spaces/nearby so slot counts always come from the server
+  /// (a new booking lowers the count there, a cancellation raises it again).
+  Future<void> _refreshParkings() async {
+    if (_isDisposed || !mounted) return;
+    LatLng? center = _searchedLocation;
+    if (center == null && _currentPosition != null) {
+      center = LatLng(_currentPosition!.latitude, _currentPosition!.longitude);
+    }
+    if (center == null) return;
+    // _isFetching may still be true from an earlier call; wait briefly.
+    for (var i = 0; i < 10 && _isFetching; i++) {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    if (!mounted || _isDisposed) return;
+    await _loadNearbyParkings(center: center);
+  }
+
   Future<void> _bookParking(ParkingModel parking) async {
     if (_isDisposed) return;
 
     final booking = await showNewBookingSheet(context, parking);
     if (booking == null || !mounted || _isDisposed) return;
 
+    // Booking exists on the server now -> refresh the real counts.
+    _refreshParkings();
+
     await showBookingConfirmationDialog(
       context,
       parking: parking,
       hours: booking.durationHours,
-      onViewBookings: () {
+      onViewBookings: () async {
         if (!mounted) return;
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const BookingsScreen()),
         );
+        // The user may have cancelled something in there.
+        _refreshParkings();
       },
     );
   }

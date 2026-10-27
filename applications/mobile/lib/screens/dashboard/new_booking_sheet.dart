@@ -37,7 +37,7 @@ class _NewBookingSheet extends StatefulWidget {
 
 class _NewBookingSheetState extends State<_NewBookingSheet> {
   int _durationHours = 1;
-  DateTime _scheduledAt = DateTime.now().add(const Duration(hours: 1));
+  DateTime _scheduledAt = DateTime.now();
   final _plateController = TextEditingController();
   bool _isSaving = false;
 
@@ -78,6 +78,15 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   }
 
   Future<void> _confirm() async {
+    if (_scheduledAt.isBefore(DateTime.now().subtract(const Duration(minutes: 5)))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Start time is in the past. Please pick a later time.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
     if (!_hasRate) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

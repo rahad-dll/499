@@ -7,7 +7,7 @@ import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
-import '../../widgets/landing/landing_screen.dart';
+import '../auth/sign_in_screen.dart';
 import 'active_devices_screen.dart';
 import 'bookings_screen.dart';
 import 'dashboard_screen.dart';
@@ -613,7 +613,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const LandingScreen(),
+                              builder: (_) => const SignInScreen(),
                             ),
                             (route) => false,
                           );

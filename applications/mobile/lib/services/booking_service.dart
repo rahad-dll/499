@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/booking_model.dart';
 import '../models/parking_model.dart';
+import 'api_service.dart';
+import 'authed_http.dart';
 import 'session_service.dart';
 
 class BookingService {
@@ -67,6 +69,24 @@ class BookingService {
       print('Error fetching bookings: $e');
       return [];
     }
+  }
+
+  /// GET /bookings/{id} — fresh copy of one booking (status can change on
+  /// the server). Retries once after a token refresh if the token expired.
+  Future<BookingModel> getBooking(String bookingId) async {
+    final response = await AuthedHttp.get('/bookings/$bookingId');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        return BookingModel.fromJson(data);
+      }
+      throw Exception('Unexpected response from server');
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    throw Exception(ApiService.extractErrorMessage(response));
   }
 
   Future<BookingModel> createBooking({

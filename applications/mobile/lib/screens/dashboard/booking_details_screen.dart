@@ -30,6 +30,26 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     if (_deletedService.isDeleted(_booking.id)) {
       _isDeleted = true;
     }
+    _refreshFromServer();
+  }
+
+  /// GET /bookings/{id} — pulls the latest status / cancellation reason.
+  /// Fails silently: the list data stays on screen.
+  Future<void> _refreshFromServer() async {
+    if (_booking.id.isEmpty || _isDeleted) return;
+    try {
+      final fresh = await BookingService().getBooking(_booking.id);
+      if (!mounted) return;
+      setState(() {
+        _booking = _booking.copyWith(
+          status: fresh.status,
+          cancellationReason: fresh.cancellationReason,
+          vehiclePlate: fresh.vehiclePlate,
+        );
+      });
+    } catch (_) {
+      // keep showing what the list gave us
+    }
   }
 
   (Color, String, IconData) _statusVisual(BookingStatus status) {

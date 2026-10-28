@@ -4,11 +4,14 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { IsString, MaxLength, MinLength, IsUUID } from 'class-validator';
+import { IsString, MaxLength, MinLength, IsUUID, IsOptional, Matches } from 'class-validator';
+import { UpdateSpaceStatusDto } from '../spaces/dto/slot.dto';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -43,6 +46,12 @@ class AssignRoleDto {
 class AssignPermissionDto {
   @IsUUID()
   permission_id: string;
+}
+
+class ListSpacesQueryDto {
+  @IsOptional()
+  @Matches(/^(active|inactive|pending)$/)
+  status?: 'active' | 'inactive' | 'pending';
 }
 
 @Controller('admin')
@@ -96,6 +105,23 @@ export class AdminController {
   @RequirePermissions('admin.manage_users')
   assignRole(@Param('id') id: string, @Body() dto: AssignRoleDto) {
     return this.adminService.assignRole(id, dto.role_id);
+  }
+
+  // GET /admin/spaces?status=pending — spaces waiting for approval
+  @Get('spaces')
+  @RequirePermissions('admin.manage_spaces')
+  listSpaces(@Query() query: ListSpacesQueryDto) {
+    return this.adminService.listSpaces(query.status);
+  }
+
+  // PATCH /admin/spaces/:id/status — approve (active), suspend (inactive) or reset (pending)
+  @Patch('spaces/:id/status')
+  @RequirePermissions('admin.manage_spaces')
+  setSpaceStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSpaceStatusDto,
+  ) {
+    return this.adminService.setSpaceStatus(id, dto.status);
   }
 
   @Post('roles/:roleId/permissions')

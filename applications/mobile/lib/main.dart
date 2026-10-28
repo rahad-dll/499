@@ -4,7 +4,6 @@ import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'services/session_service.dart';
-import 'widgets/landing/landing_screen.dart';
 
 void main() {
   runApp(
@@ -53,7 +52,8 @@ class AuthWrapper extends StatelessWidget {
           return const DashboardScreen();
         }
         
-        return const LandingScreen();
+        // No landing/home page: anyone who isn't signed in goes straight to login.
+        return const SignInScreen();
       },
     );
   }

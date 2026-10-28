@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
+import 'parking_info_section.dart';
 
 /// Parking-এ tap করলে যে draggable bottom sheet খোলে।
 /// Navigate / Book চাপলে আগে sheet বন্ধ হয়, তারপর callback চলে।
@@ -81,6 +82,10 @@ class ParkingDetailsSheet extends StatelessWidget {
                           if (parking.amenities.isNotEmpty) ...[
                             const SizedBox(height: 18),
                             _AmenitiesSection(parking: parking),
+                          ],
+                          if (ParkingInfoSection.hasContent(parking)) ...[
+                            const SizedBox(height: 18),
+                            ParkingInfoSection(parking: parking),
                           ],
                           const SizedBox(height: 20),
                           _ActionButtons(

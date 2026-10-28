@@ -3,11 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/user_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
-import '../../services/session_service.dart';
 import '../../services/profile_service.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
-import '../../widgets/landing/landing_screen.dart';
+import '../auth/sign_in_screen.dart';
+import 'active_devices_screen.dart';
 import 'bookings_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -504,6 +505,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildMenuItem(
             isDark: isDark,
+            icon: Icons.devices_rounded,
+            title: 'Active Devices',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ActiveDevicesScreen()),
+              );
+            },
+          ),
+          _buildMenuItem(
+            isDark: isDark,
             icon: Icons.payment_outlined,
             title: 'Payment Methods',
             onTap: () {
@@ -594,12 +606,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
 
                       if (confirm == true) {
-                        await SessionService.clearSession();
+                        // POST /auth/logout (revokes this session on the
+                        // server) and then clears the local session.
+                        await AuthService.logout();
                         if (context.mounted) {
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const LandingScreen(),
+                              builder: (_) => const SignInScreen(),
                             ),
                             (route) => false,
                           );

@@ -141,6 +141,35 @@ export class BookingsService {
     return this.formatBooking(updated);
   }
 
+  // ── hide from history (soft delete) ───────────────────────────────────────
+
+  async hide(id: string, user: JwtPayload) {
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id, deleted_at: null },
+      include: { driver: { select: { user_id: true } } },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.driver.user_id !== user.sub && user.role !== 'admin') {
+      throw new ForbiddenException();
+    }
+
+    // an active booking still holds its slot, so it cannot be hidden:
+    // not cancelled/completed/no-show, and either not yet ended (incl. extensions) or the car is still parked
+    const end = booking.extended_to ?? booking.end_at ?? booking.hold_expires_at;
+    const stillParked = booking.arrived_at !== null && booking.departed_at === null;
+    const finished = ['cancelled', 'completed', 'no_show'].includes(booking.status)
+      || (end !== null && end < new Date() && !stillParked);
+    if (!finished) {
+      throw new BadRequestException('Cancel the booking first; only past or cancelled bookings can be removed');
+    }
+
+    await this.prisma.bookings.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    });
+    return { message: 'Booking removed from history' };
+  }
+
   // ── format response ───────────────────────────────────────────────────────
 
   private formatBooking(booking: any, durationHours?: number) {

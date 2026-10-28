@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { authRepository } from "@/lib/auth/repository";
+import { profileRepository } from "@/lib/profiles/repository";
 import type {
   LoginInput,
   SignupInput,
@@ -54,6 +55,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
+
+  // Login tokens carry no display name, so fill it from GET /profiles/me once.
+  const missingName = !!user && !user.full_name;
+  useEffect(() => {
+    if (!missingName) return;
+    let active = true;
+    profileRepository
+      .getMyProfile()
+      .then((profile) => {
+        if (!active || !profile.user.full_name) return;
+        setUser((prev) => (prev ? { ...prev, full_name: profile.user.full_name } : prev));
+      })
+      .catch(() => {
+        // the header falls back to the role name
+      });
+    return () => {
+      active = false;
+    };
+  }, [missingName]);
 
   const signup = useCallback(async (input: SignupInput) => {
     const session = await authRepository.signup(input);

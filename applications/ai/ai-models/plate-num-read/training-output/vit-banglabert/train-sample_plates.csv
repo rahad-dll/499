@@ -1,0 +1,301 @@
+image,source,text,predicted,correct,char_errors,word_errors
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1003_1862_1_jpg.rf.c3431940f0a508acc3f28401ecf464df.jpg,bd-lpr,ঢাকা মেট্রো গ ২৯-৮৬৪২,ঢাকা মেট্রো গ ২৯-৮৬৪২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_122039_53_1_jpg.rf.364e55eeb6db05dacd28e9489688b87f.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-১২০৯,ঢাকা মেট্রো জ ১৪-১২০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6217_1596_1_jpg.rf.4643c643152bbc42b49b3db35ef65097.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৩-৪৪২২,ঢাকা মেট্রো ঘ ১৩-৪৪২২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__207_jpg.rf.876aa442c232d3206ae2f42625583d4b.jpg,blpd,ঢাকা মেট্রো ঘ ১৩-৭০৬১,ঢাকা মেট্রো ঘ ১৩-৭০৬১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1852_jpg.rf.7310a9aabe4d19af7e959aa662b806e6.jpg,blpd,ঢাকা মেট্রো ঘ ১১-৪৭৯৩,ঢাকা মেট্রো ঘ ১১-৪৭৯৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2468_jpg.rf.ced345884e1372910c8a0fe6a9c72b7d.jpg,blpd,ময়মনসিংহ ল ১১-১৮২৬,ময়মনসিংহ ল ১১-১৮২৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2009_790_1_jpg.rf.30e4908b0bde5d35144b01c5049f3e47.jpg,bd-lpr,চট্টগ্রাম মেট্রো গ ১৩-০১২১,চট্টগ্রাম মেট্রো গ ১৩-০১২১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1168_jpg.rf.1528834f0fb5dcd8dbe9001af53c38f0.jpg,blpd,কুষ্টিয়া ব ১২-৩৪৫৬,কুষ্টিয়া ব ১২-৩৪৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1094_741_1_jpg.rf.2e79219199871f8b46f0bd69fa67cac2.jpg,bd-lpr,ঢাকা মেট্রো খ ৩৯-৬৯০৪,ঢাকা মেট্রো খ ৩৯-৬৯০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_114948_510_1_jpg.rf.c83fc443278a87e3f0b1bf94a81fc584.jpg,bd-lpr,ট ঢাকা মেট্রো ১৬-৩৫২৮,ট ঢাকা মেট্রো ১৬-৩৫২৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2180_jpg.rf.93ee2508c466ac04632f0dee73114c44.jpg,blpd,ঢাকা মেট্রো গ ২৬-৯৯৮৫,ঢাকা মেট্রো গ ২৬-৯৯৮৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2573_jpg.rf.21f794e6d50b076b00cc6e4e637b8ef2.jpg,blpd,ঢাকা মেট্রো খ ১২-৮৬৯১,ঢাকা মেট্রো খ ১২-৮৬৯১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1995_jpg.rf.59eae6cc4e32708d69c0942eacd2daff.jpg,blpd,ঢাকা মেট্রো ন ১৬-১৩৩৯,ঢাকা মেট্রো ন ১৬-১৩৩৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2039_287_1_jpg.rf.e6099cc15765c68c2cb53954ce3a0110.jpg,bd-lpr,ঢাকা মেট্রো ১৫-৮০৭৫,ঢাকা মেট্রো ১৫-৮০৭৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1066_386_1_jpg.rf.e1f625b5c1de7fdf986d33b891d5a15b.jpg,bd-lpr,ঢাকা মেট্রো গ ২৫-১৮৩৭,ঢাকা মেট্রো গ ২৫-১৮৩৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2057_403_1_jpg.rf.3a3b2df570736db2a52060feabde4e29.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৫-০৭৯০,ঢাকা মেট্রো গ ৩৫-০৭৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2253_jpg.rf.50f36e2da4b4cd25881bdc5d09d9296b.jpg,blpd,সাতক্ষীরা ল ১১-৮২৬৫,সাতক্ষীরা ল ১১-৮২৬৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1757_jpg.rf.762dbd69d9467bd98979bec7cf0b8bc6.jpg,blpd,চট্ট মেট্রো অ ১১-০৩২৯,চট্ট মেট্রো অ ১১-০৩২৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2311_jpg.rf.3f687ed51055fc7f8a033436c818dbff.jpg,blpd,ঢাকা মেট্রো গ ২৩-৬২০২,ঢাকা মেট্রো গ ২৩-৬২০২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__283_jpg.rf.dea41bae30b5fd8f5caaa6260cc8f638.jpg,blpd,ঢাকা মেট্রো গ ৩১-১৫২৪,ঢাকা মেট্রো গ ৩১-১৫২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1838_jpg.rf.0c24de1d94d5505d8dd86a367ac0cf30.jpg,blpd,দিনাজপুর ল ১১-৩৪৫৩,,False,18,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3266_1775_1_jpg.rf.bf32ba32490f6c802f63150be2414afd.jpg,bd-lpr,ঢাকা মেট্রো গ ৩২-৩৭৮৮,,False,21,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1250_jpg.rf.0dc0be0dafbbc705e847d1a9871efd8b.jpg,blpd,মৌলভীবাজার ঢ ২৪-৬৮০১,মৌলভীবাজার ঢ ২৪-৬৮০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6186_216_1_jpg.rf.831c966d854e22f8de1a7293125f64f2.jpg,bd-lpr,ঢাকা মেট্রো ৫৪-০৬০১,ঢাকা মেট্রো ৫৪-০৬০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2497_jpg.rf.10650a42e67b11f8baf55018f70f744f.jpg,blpd,মানিকগঞ্জ ল ১১-৩৫৩৬,মানিকগঞ্জ ল ১১-৩৫৩৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6264_393_1_jpg.rf.1d2d00c9db17ce5c652d7b250394d9e3.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-৭৬১৮,,False,21,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_160638_1580_1_jpg.rf.dfad7b8d51451a83f69b8ef9e7d5cd17.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-২৭১৬,ঢাকা মেট্রো জ ১৪-২৭১৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_110514_455_1_jpg.rf.6a84b292adc70909b862eae81dd65907.jpg,bd-lpr,ট ঢাকা মেট্রো ১৪-৪৩১৭,ট ঢাকা মেট্রো ১৪-৪৩১৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__105_jpg.rf.2b8f431c22d033dcfecbf468d17b0ad2.jpg,blpd,নারায়ণগঞ্জ থ ১১-৫১১১,নারায়ণগঞ্জ থ ১১-৫১১১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5083_181_1_jpg.rf.dd3728407115045a08153061b0fb6b45.jpg,bd-lpr,ঢাকা মেট্রো ০০-০৪৫৯,ঢাকা মেট্রো ০০-০৪৫৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_155318_516_1_jpg.rf.b10e5cc0a8047491db18f1e76025a819.jpg,bd-lpr,খুলনা মেট্রো ট ১১-১১৩৭,খুলনা মেট্রো ট ১১-১১৩৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__486_jpg.rf.02bba40184b3d403dab0fca8b888661b.jpg,blpd,কুমিল্লা চ ১২-৩৪৫৬,কুমিল্লা চ ১২-৩৪৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_153046_154_1_jpg.rf.d0574bab70278ec37d412174aca00e18.jpg,bd-lpr,ঢাকা মেট্রো জ ১১-১১৯৩,ঢাকা মেট্রো জ ১১-১১৯৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__811_jpg.rf.379dae6d7853284ea1d7eaebb22b269b.jpg,blpd,পটুয়াখালী ল ১১-০৭৪৩,পটুয়াখালী ল ১১-০৭৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2115_jpg.rf.82be191043dd3ed3f8bbbd68862f73e9.jpg,blpd,চট্ট মেট্রো গ ১২-২৯৮২,চট্ট মেট্রো গ ১২-২৯৮২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__346_jpg.rf.7ec65e10e04eaf0c2e1283addb0d18e2.jpg,blpd,ঢাকা মেট্রো গ ২৩-৭৬১৮,,False,21,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_110428_1682_1_jpg.rf.2aa8c37fcf1fa7e4997bdf16e4d10802.jpg,bd-lpr,ট ঢাকা মেট্রো ১৪-৪৩৯৭,ট ঢাকা মেট্রো ১৪-৪৩৯৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1686_jpg.rf.560d188b0cb0953bd79d7c9be7ef939e.jpg,blpd,লক্ষ্মীপুর হ ১১-৩৯৮৫,লক্ষ্মীপুর হ ১১-৩৯৮৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1571_jpg.rf.55a0f521e92c7118b61a2a53282f5450.jpg,blpd,সিরাজগঞ্জ হ ১১-৫৩৪৩,সিরাজগঞ্জ হ ১১-৫৩৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1999_jpg.rf.6775c950d6cde8c5d38ed4abfdd365fa.jpg,blpd,ঢাকা মেট্রো ন ১৩-৪৪২৪,ঢাকা মেট্রো ন ১৩-৪৪২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3224_1589_1_jpg.rf.f017ffe442d5770684b0b7931ead3029.jpg,bd-lpr,ঢাকা মেট্রো গ ১৯-৭৭৫৭,ঢাকা মেট্রো গ ১৯-৭৭৫৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__838_jpg.rf.03ec569d65f27821a3a5fcfe997d888e.jpg,blpd,রাজ মেট্রো হ ১২,,False,15,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2271_jpg.rf.9b20f42172567eabb0f4e984bfe12231.jpg,blpd,সিলেট মেট্রো ল ১১-১৮২৪,সিলেট মেট্রো ল ১১-১৮২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__52_jpeg_jpg.rf.31624ed21f5095980389697bf783bb99.jpg,blpd,ময়মনসিংহ হ ১৫-৩৬৯৮,,False,19,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__14_jpeg_jpg.rf.36db9f679d5a0ca7c25c384cf0dc5756.jpg,blpd,ময়মনসিংহ হ ১১-৮৬২৪,ময়মনসিংহ হ ১১-৮৬২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__378_jpg.rf.9c14f1c625a04841097139c1bd284647.jpg,blpd,বরগুনা এ ৭৮-৯০১২,,False,16,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1477_jpg.rf.56851b23aa63a1c1007a9a2bf558b080.jpg,blpd,ময়মনসিংহ ল ১২-০৭৩৮,ময়মনসিংহ ল ১২-০৭৩৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1137_jpg.rf.f292c507a44a00943249bc3ac6898e2d.jpg,blpd,কিশোরগঞ্জ থ ১২-৩৪৫৬,কিশোরগঞ্জ থ ১২-৩৪৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1085_jpg.rf.f2b7c11d8e92044cc474638c71f2aa6f.jpg,blpd,জয়পুরহাট স ৮৯-০১২৩,,False,19,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_112045_905_1_jpg.rf.431bb4aa1a74be3b72a2859e14522a34.jpg,bd-lpr,ট ঢাকা মেট্রো ১১-০৮৫৭,,False,21,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-4019_481_1_jpg.rf.67d7e18cc9c9c95e555f7a7fa36f5685.jpg,bd-lpr,ঢাকা মেট্রো গ ২৫-৯৮৩৩,ঢাকা মেট্রো গ ২৫-৯৮৩৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3020_1821_1_jpg.rf.5c83f029f599291f33f5c8c3b9d21c20.jpg,bd-lpr,ঢাকা মেট্রো গ ৩২-১৯৬৭,ঢাকা মেট্রো গ ৩২-১৯৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2028_419_1_jpg.rf.d77f036cbcaccc3be68c55f15000b556.jpg,bd-lpr,ঢাকা মেট্রো খ ৩৭-৮৬৮৩,ঢাকা মেট্রো খ ৩৭-৮৬৮৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__368_jpg.rf.6952494704402e671ad6f057ab5091a7.jpg,blpd,চট্ট মেট্রো ড ৫৬-৭৮৯০,চট্ট মেট্রো ড ৫৬-৭৮৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3205_173_1_jpg.rf.7c7680f8f541e82d8dec67f101654a4e.jpg,bd-lpr,ঢাকা মেট্রো গ ২৬-১৪৪৮,ঢাকা মেট্রো গ ২৬-১৪৪৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6300_257_1_jpg.rf.e5ea4dd728535f2bd0b79da3f529fad6.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-৫৪৩৪,ঢাকা মেট্রো গ ২৭-৫৪৩৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_122406_398_1_jpg.rf.21c04025875faf6f9ff349e5ae6f3011.jpg,bd-lpr,ঢাকা মেট্রো ব ১১-৪৫১১,ঢাকা মেট্রো ব ১১-৪৫১১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6056_1782_1_jpg.rf.d35c11d98a72f0e81193a3afeff93ffa.jpg,bd-lpr,চট্টগ্রাম মেট্রো গ ১২-১৩৫৫,চট্টগ্রাম মেট্রো গ ১২-১৩৫৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__813_jpg.rf.75ac1c6b75f8c7712e2ffcda1f549950.jpg,blpd,পটুয়াখালী ল ১১-১২০৫,পটুয়াখালী ল ১১-১২০৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__353_jpg.rf.f2c42cee9b2bcd4f23db0f04c08e8b20.jpg,blpd,ঢাকা মেট্রো ভ ১১-১৫৮৪,ঢাকা মেট্রো ভ ১১-১৫৮৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6049_918_1_jpg.rf.a034aa9feacf1b98f6a0d4bf86efa6dd.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-১৪৪০,ঢাকা মেট্রো গ ২৭-১৪৪০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5053_1479_1_jpg.rf.c739121e6d32f1a66354bef6aadaddaf.jpg,bd-lpr,ঢাকা মেট্রো চ ১৩-৩৬৮৬,ঢাকা মেট্রো চ ১৩-৩৬৮৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle114_jpg.rf.98e187a9c281674332067df160273c58.jpg,blpd,জামালপুর ল ১১-১৬১৪,জামালপুর ল ১১-১৬১৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__153213985_251105923277577_1290509700053333197_n_430_1_jpg.rf.bb60244456e402ced9dd6c528d53b648.jpg,bd-lpr,যশোর ট ১১-৫৫৫২,যশোর ট ১১-৫৫৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__606_jpg.rf.a131f98ab1f63e08d1b22d82e42e84b7.jpg,blpd,হবিগঞ্জ ঝ ১২-৩৪৫৬,টাঙ্গাইল খ ১২-৩৪৫৬,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__photo_2021-03-02_18-44-24_8_1_jpg.rf.7682a5ab746c39fbe5fa8a745c2d56d1.jpg,bd-lpr,ঢাকা মেট্রো ব ১৫-৫৩৪৭,ঢাকা মেট্রো ব ১৫-৫৩৪৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__633_jpg.rf.cf7643255b31f3f28b4167abf03bcc78.jpg,blpd,নীলফামারী ক ২৩-৪৫৬৭,নীলফামারী ক ২৩-৪৫৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152127002_244700533860758_8101693404620028233_n_117_1_jpg.rf.6cc65b1d770c300ee73d07c059b9e007.jpg,bd-lpr,যশোর ট ১১-৫৫৫২,যশোর ট ১১-৫৫৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2135_jpg.rf.568bd7a06ca9929dfbe281ff28402846.jpg,blpd,ঢাকা মেট্রো গ ৩৭-৫৩৫৫,ঢাকা মেট্রো গ ৩৭-৫৩৫৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3083_240_1_jpg.rf.0a75ad41688b3264b216515a36d3ca22.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১১-৮৫২৬,ঢাকা মেট্রো ঘ ১১-৮৫২৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__756_jpg.rf.dd5e36f40c3dba7a1d9030eab07a08b9.jpg,blpd,যশোর হ ১৩-১৩২১,যশোর হ ১৩-১৩২১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1205_jpg.rf.be395bf4ec6b0ae9f2d2975903929e2d.jpg,blpd,মাদারীপুর ছ ০১-৮৯৯১,মানিকগঞ্জ এ ০১-৮৯৯১,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1986_jpg.rf.b4eaebddabd9d8ca945205385a755a7e.jpg,blpd,চট্ট মেট্রো অ ১১-০২৩২,চট্ট মেট্রো অ ১১-০২৩২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6354_605_1_jpg.rf.de5b6b3c976947fbd539401785e9163c.jpg,bd-lpr,ঢাকা মেট্রো গ ২৯-৫১৫০,ঢাকা মেট্রো গ ২৯-৫১৫০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_122349_129_1_jpg.rf.6b2d0cd9aa1a6d02260ddf55bcf510bf.jpg,bd-lpr,ঢাকা মেট্রো ব ১১-৪৫১১,ঢাকা মেট্রো ব ১১-৪৫১১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6128_28_1_jpg.rf.e9e93b516ab169791cbec8dfff2d07a3.jpg,bd-lpr,ঢাকা মেট্রো চ ৫১-৯৫৩১,ঢাকা মেট্রো চ ৫১-৯৫৩১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_110514_455_1_jpg.rf.c65dc174041690c7af8113bf96cdf3f6.jpg,bd-lpr,ট ঢাকা মেট্রো ১৪-৪৩১৭,ট ঢাকা মেট্রো ১৪-৪৩১৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152516949_2595716310553023_4785174502599379892_n_1631_1_jpg.rf.715226602257dbc149e5f83d36f599a6.jpg,bd-lpr,ঢাকা মেট্রো ন ১৭-৮৪২৯,ঢাকা মেট্রো ন ১৭-৮৪২৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_154218_179_1_jpg.rf.badc4df367b392a4977432c9360ed49d.jpg,bd-lpr,ঢাকা মেট্রো ব ১২-০০০৮,ঢাকা মেট্রো ব ১২-০০০৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__86_jpg.rf.df0d774fe1168619440d947123fcb8e6.jpg,blpd,ঢাকা মেট্রো ঝ ১২-০০৮৫,ঢাকা মেট্রো ঝ ১২-০০৮৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3098_14_1_jpg.rf.522f212ffa54244f0ea8f0cddc550105.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১১-৪৯১২,ঢাকা মেট্রো ঘ ১১-৪৯১২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1293_jpg.rf.dd7da590a9c01e698da32dea4e779a51.jpg,blpd,নারায়ণগঞ্জ ট ২৪-৬৮০১,নারায়ণগঞ্জ ট ২৪-৬৮০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1387_jpg.rf.2fb2d5ace9614b9267aa57928673cf4a.jpg,blpd,রাঙ্গামাটি ড ২৩-৪৫৬৭,রাঙ্গামাটি ড ২৩-৪৫৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2156_jpg.rf.efa6e0f3f25b125e70366cf62f170f3a.jpg,blpd,ঢাকা মেট্রো গ ২২-০৩২৭,ঢাকা মেট্রো গ ২২-০৩২৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_123714_821_1_jpg.rf.b20bb78165b0188f05a63882322aa4bb.jpg,bd-lpr,খুলনা মেট্রো ব ১১-০০৭১,খুলনা মেট্রো ব ১১-০০৭১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__181_jpeg_jpg.rf.bd623363736ae75a1a924b89697d3d45.jpg,blpd,হ নাটোর ১২-৫৩৮২,হ নাটোর ১২-৫৩৮২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__photo_2021-03-02_18-44-05_35_1_jpg.rf.46d854f6cbd1b55ea37667e73484edd1.jpg,bd-lpr,ঢাকা মেট্রো ব ১৪-৭৪৬৭,ঢাকা মেট্রো ব ১৪-৭৪৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2064_jpg.rf.7066e28f4813890e01549098ffbd3436.jpg,blpd,ঢাকা মেট্রো উ ১১-১৩৪৩,ঢাকা মেট্রো উ ১১-১৩৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6330_1120_1_jpg.rf.25f52881dafbde9ee3247f92ea6c22bd.jpg,bd-lpr,ঢাকা মেট্রো চ ১৩-৫৩৬৪,ঢাকা মেট্রো চ ১৩-৫৩৬৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3020_1821_1_jpg.rf.e6faf08b8155c26750e458bf135efd4f.jpg,bd-lpr,ঢাকা মেট্রো গ ৩২-১৯৬৭,ঢাকা মেট্রো গ ৩২-১৯৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1730_jpg.rf.ae59ba9e5d098459e1ee97bc537fcaec.jpg,blpd,ঠাকুরগাঁও থ ১৯-৫৬৭৮,ঠাকুরগাঁও থ ১৯-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__68_386_1_jpg.rf.c224226d1a26ee1c7677346ca725a030.jpg,bd-lpr,ঢাকা মেট্রো খ ১২-০৭৩৯,ঢাকা মেট্রো খ ১২-০৭৩৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1574_jpg.rf.78aed961a061967086ddb0d38231dd31.jpg,blpd,সুনামগঞ্জ ব ৩৪-৫৬৭৮,,False,19,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3295_981_1_jpg.rf.fe54eb5242523544728ce6d138965b04.jpg,bd-lpr,ঢাকা মেট্রো ১১-৭৫৭৬,ঢাকা মেট্রো ১১-৭৫৭৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2326_jpg.rf.bb2da495daf8eadcea02906b9fd48965.jpg,blpd,সিরাজগঞ্জ হ ১১-৭৬৯৪,সিরাজগঞ্জ হ ১১-৭৬৯৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1904_jpg.rf.a7bd244aca325be9e61d729a9c7702ad.jpg,blpd,ঢাকা মেট্রো ম ১১-১৮১৮,ঢাকা মেট্রো ম ১১-১৮১৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2050_300_1_jpg.rf.8913094891932fc88aabee6969766dce.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৭-৯০০০,ঢাকা মেট্রো গ ৩৭-৯০০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_105437_69_1_jpg.rf.979b1a37336c7d97276e9972138dffc8.jpg,bd-lpr,খুলনা মেট্রো ১১-০৭৯৯,খুলনা মেট্রো ১১-০৭৯৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2474_jpg.rf.189574f3a0f70989239d2ab8a9206f42.jpg,blpd,ঝিনাইদহ ট ১১-১১৭৮,,False,17,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2077_635_1_jpg.rf.77f42c4ef24a0a4e5e648d48ae3704fd.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৫-০৪১৪,ঢাকা মেট্রো ঘ ১৫-০৪১৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__877_jpg.rf.f1365d14f206c4e53a0e9b78d4434d9e.jpg,blpd,রাজবাড়ী ল ১১-০৬০৫,,False,18,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__742_jpg.rf.6b8a81f07ded83da937c4f65c38a3e99.jpg,blpd,রাজবাড়ী ব ২৩-৪৫৬৭,নাটোর ন ২৩-৪৫৬৭,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1707_jpg.rf.b5d4b9d5d1ff90806c6bea7a1d7ec6c3.jpg,blpd,শেরপুর ল ৩৪-৫৬৭৮,শেরপুর ল ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__593_jpg.rf.443cf4b1501fb44fa141cac4cc9f59c2.jpg,blpd,গোপালগঞ্জ জ ৩৪-৫৬৭৮,গোপালগঞ্জ জ ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__106_309_1_jpg.rf.93a871c36e2dff095bb85ab85c54b738.jpg,bd-lpr,ঢাকা মেট্রো চ ১১-৫২৭৬,ঢাকা মেট্রো চ ১১-৫২৭৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2409_jpg.rf.35aec2849269a256c337eb922b400fd8.jpg,blpd,চট্ট মেট্রো গ ১৩-১৬১২,চট্ট মেট্রো গ ১৩-১৬১২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__843_jpg.rf.35e683d2148ba9b3b42e54d17fa85e79.jpg,blpd,রাজ মেট্রো ঝ ১১-০০০৪,রাজ মেট্রো ঝ ১১-০০০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1012_1277_1_jpg.rf.8859adb2576c5b15f7787bbb6f2290e8.jpg,bd-lpr,ঢাকা মেট্রো ১৯-৪৭৮০,ঢাকা মেট্রো ১৯-৪৭৮০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6356_746_1_jpg.rf.1986f4c08ad2b359700b56efcc12ceb6.jpg,bd-lpr,ঢাকা মেট্রো গ ১৫-৩৬৮৪,ঢাকা মেট্রো গ ১৫-৩৬৮৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3229_1046_1_jpg.rf.e0074c476755c1b0015e35d4f7daf0b5.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৩-৭৮৬৩,ঢাকা মেট্রো গ ৩৩-৭৮৬৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3056_1474_1_jpg.rf.aa335cb3b6b358202d7c539487bb5c36.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৯-২৮০৭,ঢাকা মেট্রো গ ৩৯-২৮০৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle1074_jpg.rf.7101861ae0a2c6f9b1f115a6acbc6bcb.jpg,blpd,ঢাকা মেট্রো গ ৩৪-৫০৩৫,ঢাকা মেট্রো গ ৩৪-৫০৩৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1579_jpg.rf.8ee6e43f0d65afb8f9b959ddd3a8e5ba.jpg,blpd,সুনামগঞ্জ ব ৩৪-৭৮৯০,নোয়াখালী ঝ ৩৪-৭৮৯০,False,10,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2050_300_1_jpg.rf.092e3d856efd522a546ddb03fe3a8bd1.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৭-৯০০০,ঢাকা মেট্রো গ ৩৭-৯০০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6028_192_1_jpg.rf.a4597bdfe18eef5305ae1301b1a1758f.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৫-৬৭৮০,ঢাকা মেট্রো ঘ ১৫-৬৭৮০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__705_jpg.rf.754a069b0c1136a8c82855d4c89058af.jpg,blpd,পিরোজপুর ঘ ২৩-৪৫৬৭,নীলফামারী ক ২৩-৪৫৬৭,False,9,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__813_jpg.rf.00b4a3c1c5f99eccf5e3f328f772b632.jpg,blpd,পটুয়াখালী ল ১১-১২০৫,পটুয়াখালী ল ১১-১২০৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__59_148_1_jpg.rf.473f7b846ba433d9f0ceb04c84d63b07.jpg,bd-lpr,ঢাকা মেট্রো ২৮-৫৪১৪,ঢাকা মেট্রো ২৮-৫৪১৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__499_jpg.rf.80fa308f51e2d95454caa45d7cbad882.jpg,blpd,বরগুনা এ ৫৬-৭৮৯০,বরগুনা এ ৫৬-৭৮৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_155603_1743_1_jpg.rf.4a8a929a8b5e0f3243ddb5bcd04f096c.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-০৪১৬,ঢাকা মেট্রো জ ১৪-০৪১৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_124248_996_1_jpg.rf.090508c12554a39ce8bb066c336f2505.jpg,bd-lpr,ঢাকা মেট্রো ব ১৪-৭৭৬৩,ঢাকা মেট্রো ব ১৪-৭৭৬৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6255_1070_1_jpg.rf.e0e5a12de6681e35cee452bce48e23e6.jpg,bd-lpr,ঢাকা মেট্রো গ ২৫-৮৮০০,ঢাকা মেট্রো গ ২৫-৮৮০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2553_jpg.rf.6c833394c88f1b37693ef578914c9e44.jpg,blpd,গাইবান্ধা ল ১১-৩৮৭১,গাইবান্ধা ল ১১-৩৮৭১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152516949_2595716310553023_4785174502599379892_n_1631_1_jpg.rf.b389cf844cf7d1aabd7bfad054dc2e51.jpg,bd-lpr,ঢাকা মেট্রো ন ১৭-৮৪২৯,ঢাকা মেট্রো ন ১৭-৮৪২৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__88_jpeg_jpg.rf.e5b2652f57d7235e0e7a7b50f8ea8c5f.jpg,blpd,বরিশাল ল ১১-৩৭৮১,বরিশাল ল ১১-৩৭৮১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6098_932_1_jpg.rf.47d64cf121b76033c73b978e6080ffa3.jpg,bd-lpr,চট্টগ্রাম মেট্রো গ ১১-৯০৭৭,চট্টগ্রাম মেট্রো গ ১১-৯০৭৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__72_135_1_jpg.rf.a907d35483602df07f266a717ceab82b.jpg,bd-lpr,চট্টগ্রাম মেট্রো গ ১২-৭০৪১,চট্টগ্রাম মেট্রো গ ১২-৭০৪১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2631_jpg.rf.030a0cbb29797af3066956f8e7915c3e.jpg,blpd,গোপালগঞ্জ হ ১১-৫২৬২,গোপালগঞ্জ হ ১১-৫২৬২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__167_jpeg_jpg.rf.0ed14d1ce31c29e24ad72332479e6db0.jpg,blpd,বগুড়া ল ১২-১৩৯০,বগুড়া ল ১২-১৩৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6127_34_1_jpg.rf.511f8ea1a29c8129c4a387bbc130fe4c.jpg,bd-lpr,ঢাকা মেট্রো গ ২৫-১৮৩৭,ঢাকা মেট্রো গ ২৫-১৮৩৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_114922_1694_1_jpg.rf.40ef2f0df44ce57eb2f7e757bf72e313.jpg,bd-lpr,যশোর ট ১১-১০৮৬,যশোর ট ১১-১০৮৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__154614851_145441210759871_6728095357717363808_n_53_1_jpg.rf.8ca1efe3e86bc36c6627f9e3e776c495.jpg,bd-lpr,যশোর হ ১৩-০৬৫২,যশোর হ ১৩-০৬৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__6_jpeg_jpg.rf.035c72f4f7e109daf2e2eddd290b762e.jpg,blpd,ময়মনসিংহ ল ১১-৮৮১২,ময়মনসিংহ ল ১১-৮৮১২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__496_jpg.rf.b0353d00a7e693c44aeeabac4891adb6.jpg,blpd,কুমিল্লা চ ৩৪-৫৬৭৮,কুমিল্লা চ ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_154537_1368_1_jpg.rf.3c399fc25e86a9a764164ed45ef55be2.jpg,bd-lpr,ঢাকা মেট্রো জ ১১-২১৯৫,ঢাকা মেট্রো জ ১১-২১৯৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6267_729_1_jpg.rf.847655e9095b70d98b867d8f7f8a9dca.jpg,bd-lpr,ঢাকা মেট্রো ৪৫৫,ঢাকা মেট্রো ৪৫৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__Dipto_381_221_1_jpg.rf.2de00a387110132e307abdcd11ab7bc6.jpg,bd-lpr,ঢাকা মেট্রো ব ১৪-৭০৭১,ঢাকা মেট্রো ব ১৪-৭০৭১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1249_jpg.rf.8ac9a4d580e06e486e8be14b16a11197.jpg,blpd,মৌলভীবাজার ঢ ৩৪-৫৬৭৮,নাটোর ন ৩৪-৫৬৭৮,False,9,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_105413_1611_1_jpg.rf.6c09b9be854bfb5d63a0ed82c914b9cb.jpg,bd-lpr,ঢাকা মেট্রো ট ১১-৬১২৪,ঢাকা মেট্রো ট ১১-৬১২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__155028028_180812246880815_384478798206399112_n_32_1_jpg.rf.73fe492e055505cc24b1a2330c8a0c50.jpg,bd-lpr,যশোর হ ১৪-৩৮৪৯,যশোর হ ১৪-৩৮৪৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__13_jpeg_jpg.rf.b83d5aa920e821065ed760e237d8ceb3.jpg,blpd,ময়মনসিংহ হ ১৪-৪২২৪,ময়মনসিংহ হ ১৪-৪২২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6121_232_1_jpg.rf.d73abb4642960f40c6286b8078e9b299.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-৮৩৮১,ঢাকা মেট্রো গ ২৩-৮৩৮১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2352_jpg.rf.41c91c220274d687aec881066b3c35d4.jpg,blpd,ঢাকা মেট্রো গ ১৭-৪১১৯,ঢাকা মেট্রো গ ১৭-৪১১৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_115019_73_1_jpg.rf.1882651c2e68d56e79a568c3c77ebbd3.jpg,bd-lpr,খুলনা মেট্রো ট ১১-১০৮১,খুলনা মেট্রো ট ১১-১০৮১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3297_1543_1_jpg.rf.63d8a2f04fa4e047d6c12b1d9dbb3b22.jpg,bd-lpr,ঢাকা মেট্রো গ ২৯-০৭৭৬,ঢাকা মেট্রো গ ২৯-০৭৭৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6049_918_1_jpg.rf.8a8b3fe212154599d5bfbdc5386a3747.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-১৪৪০,ঢাকা মেট্রো গ ২৭-১৪৪০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__106_309_1_jpg.rf.6bdf634a649f96e0414235176929d1ef.jpg,bd-lpr,ঢাকা মেট্রো চ ১১-৫২৭৬,ঢাকা মেট্রো চ ১১-৫২৭৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__172_jpeg_jpg.rf.0987530d42651b70f0420e157cbd9e34.jpg,blpd,ঢাকা মেট্রো ক ০৩-৮০৬৩,ঢাকা মেট্রো ক ০৩-৮০৬৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1011_jpg.rf.25599c72f2828e0307677059bd671469.jpg,blpd,হবিগঞ্জ হ ১১-৪৯৩৩,হবিগঞ্জ হ ১১-৪৯৩৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_112517--2-_1639_1_jpg.rf.11dde06055388c4c1c737024c50d823e.jpg,bd-lpr,খুলনা মেট্রো ট ১১-০২৫৯,খুলনা মেট্রো ট ১১-০২৫৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_123942_499_1_jpg.rf.6b16ea4082627d13682cd046ecb53b15.jpg,bd-lpr,যশোর ব ১১-০০৩৬,যশোর ব ১১-০০৩৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1281_jpg.rf.3a48b0614d987d0922c402e7c070101a.jpg,blpd,নওগাঁ থ ২৪-৬৮০১,নওগাঁ থ ২৪-৬৮০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__876_jpg.rf.36d2fa9c35414f04f5eccba1d16dea2a.jpg,blpd,বরিশাল মেট্রো হ ১২-৯৩২৫,বরিশাল মেট্রো হ ১২-৯৩২৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_105609_181_1_jpg.rf.2bbb7dbeebc1ab9604338a33bb28de1a.jpg,bd-lpr,ঢাকা মেট্রো ট ১৪-৪৫৯৩,ঢাকা মেট্রো ট ১৪-৪৫৯৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_154920_1347_1_jpg.rf.7396a4962b23ea59ab6d39e5a0ae3b07.jpg,bd-lpr,ব ১১-০০২৯,ব ১১-০০২৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1046_1083_1_jpg.rf.4c285cd376bf36062075f47cfcb281a8.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-০৮৪৭,ঢাকা মেট্রো গ ২৩-০৮৪৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2011_1356_1_jpg.rf.1a823583cb32ed4935aef4b640702dec.jpg,bd-lpr,চট্টগ্রাম মেট্রো ক ১১-০৭২৬,চট্টগ্রাম মেট্রো ক ১১-০৭২৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6117_251_1_jpg.rf.65fa749e81e6108ba9823633beb03b48.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৪-৭৫৫২,ঢাকা মেট্রো গ ৩৪-৭৫৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1729_jpg.rf.9276cb517e3a8dd558ad86f8208f8292.jpg,blpd,ঠাকুরগাঁও থ ১১-৯১২৮,ঠাকুরগাঁও থ ১১-৯১২৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6215_796_1_jpg.rf.e06ffecaa977f33898a8e2b27fab51cc.jpg,bd-lpr,ঢাকা মেট্রো গ ১৩-৯৩৩৮,ঢাকা মেট্রো গ ১৩-৯৩৩৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1797_jpg.rf.472e050035fdee94d2cfafd93b3943f3.jpg,blpd,ঢাকা মেট্রো গ ১৫-৪৮৩০,ঢাকা মেট্রো গ ১৫-৪৮৩০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6099_771_1_jpg.rf.99751e6e7379aec23c57c3889d9e6085.jpg,bd-lpr,ক ১১-০০৭৮,ক ১১-০০৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6309_20_1_jpg.rf.ed1d5dd4d76bb4709fe7a49ec618c68b.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-৭১৯১,ঢাকা মেট্রো গ ২৩-৭১৯১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3210_343_1_jpg.rf.f608920c856d7c0e1f5c35c96ae4048d.jpg,bd-lpr,ঢাকা মেট্রো গ ১৭-০১৭৩,ঢাকা মেট্রো গ ১৭-০১৭৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1535_jpg.rf.2957a997f7f8619b43583710beba881b.jpg,blpd,ঝিনাইদহ হ ১২-৮৭৪৬,ঝিনাইদহ হ ১২-৮৭৪৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2451_jpg.rf.39907ccb0f3b4fcec995cb9a23724f12.jpg,blpd,ল ঠাকুরগাঁও ১১-০৪৭৯,ল মাদারীপুর ১১-০৮৭৯,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6148_1428_1_jpg.rf.dad6c0b7b64cc334da70a3aa7df3fee5.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-৭৯৫৭,ঢাকা মেট্রো গ ২৭-৭৯৫৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle1093_jpg.rf.8edcf6ff30da4f240239a1aee2f8e0e5.jpg,blpd,ঢাকা মেট্রো গ ৩৫-৯৮৯৫,ঢাকা মেট্রো গ ৩৫-৯৮৯৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2259_jpg.rf.085d9884e710496ba7a64a9e24577d8b.jpg,blpd,ট ঢাকা মেট্রো ১৪-৪৯৮১,ট ঢাকা মেট্রো ১৪-৪৯৮১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5009_1308_1_jpg.rf.35f1e59879d848011a5fecbad97074cf.jpg,bd-lpr,ঢাকা মেট্রো গ ১৫-৩৭৪৭,ঢাকা মেট্রো গ ১৫-৩৭৪৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1633_jpg.rf.af38601bac74087fd4ab4f916a156376.jpg,blpd,খাগড়াছড়ি হ ১১-৬৯৫৯,খাগড়াছড়ি হ ১১-৬৯৫৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2050_300_1_jpg.rf.afe129498e34cf5f8554dda5399ffc1e.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৭-৯০০০,ঢাকা মেট্রো গ ৩৭-৯০০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6311_138_1_jpg.rf.1076a01894eecef6f1b8604a88b98493.jpg,bd-lpr,ঢাকা মেট্রো ১১-৭৫৭৬,ঢাকা মেট্রো ১১-৭৫৭৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1882_jpg.rf.a1653badd6dd72104a2fb23e569ae4dc.jpg,blpd,ঢাকা মেট্রো চ ৫৩-৪৫৪১,ঢাকা মেট্রো চ ৫৩-৪৫৪১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2383_jpg.rf.67b4ab08204a76a429c5d1501ddb7713.jpg,blpd,ঢাকা মেট্রো চ ১৩-৭০১০,ঢাকা মেট্রো চ ১৩-৭০১০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6039_165_1_jpg.rf.11a868ba98ae0887721cc555e94e537e.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-৪৮০৪,ঢাকা মেট্রো গ ২৩-৪৮০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_124148_1465_1_jpg.rf.f1e20386a7f0e4983c621362a96d12f9.jpg,bd-lpr,চট্টগ্রাম মেট্রো ব ১১-১১১৬,চট্টগ্রাম মেট্রো ব ১১-১১১৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_115334_22_1_jpg.rf.a995e7a314de20fb808b765ea211d75e.jpg,bd-lpr,ট ঢাকা মেট্রো ১৬-২৮৬০,ট ঢাকা মেট্রো ১৬-২৮৬০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3241_1098_1_jpg.rf.16227417b7ec362acba850788387ca02.jpg,bd-lpr,ঢাকা মেট্রো খ ১২-৪৫৯১,ঢাকা মেট্রো খ ১২-৪৫৯১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_125648_70_1_jpg.rf.cbe17e1edd833486c801246d1fc27d2d.jpg,bd-lpr,খুলনা মেট্রো ১১-০০৪৩,খুলনা মেট্রো ১১-০০৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2048_255_1_jpg.rf.759a01ed0bfcc33fb06a73b7aca68d22.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৫-৮০৭৫,ঢাকা মেট্রো ঘ ১৫-৮০৭৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6089_1864_1_jpg.rf.19dca2cd2c760bab3a893451c586a109.jpg,bd-lpr,ঢাকা মেট্রো গ ৩১-৫২০৯,ঢাকা মেট্রো গ ৩১-৫২০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6360_943_1_jpg.rf.696a55f49236f0ef5a4f65cba93208b9.jpg,bd-lpr,ঢাকা মেট্রো গ ২৬-৮২৯৬,ঢাকা মেট্রো গ ২৬-৮২৯৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1860_jpg.rf.ea84c6385f8068868e92cc572a492735.jpg,blpd,ঢাকা মেট্রো ঘ ১৫-৭৩৫৮,ঢাকা মেট্রো ঘ ১৫-৭৩৫৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_160956_390_1_jpg.rf.33308365752ab492d58166dd1d972640.jpg,bd-lpr,খুলনা মেট্রো জ ০৪-০০৫৫,খুলনা মেট্রো জ ০৪-০০৫৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__638_jpg.rf.3b4f1c0baecee44d99ad6f21da2db242.jpg,blpd,নীলফামারী ক ০১-৩৪৫৬,নরসিংদী শ ০১-৩৪৫৬,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6001_252_1_jpg.rf.f4b85a8239cc74a75f0323bf251d3d2c.jpg,bd-lpr,ঢাকা মেট্রো গ ১৯-৬৫৩৯,ঢাকা মেট্রো গ ১৯-৬৫৩৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__671_jpg.rf.1cf2c64c3e58fd063e579bee50b94e8b.jpg,blpd,পাবনা জ ১৯-৫৬৭৮,পাবনা জ ১৯-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3062_270_1_jpg.rf.f17408b3130fc1d42b144e0cf9d4119a.jpg,bd-lpr,ঢাকা মেট্রো গ ২০-৪৪৬২,ঢাকা মেট্রো গ ২০-৪৪৬২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__65_jpg.rf.c3ce63a55b1d2dab7c0ea7574d201c1a.jpg,blpd,যশোর হ ১৬-৪২৫২,যশোর হ ১৪-৪২৫২,False,1,1
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6272_1846_1_jpg.rf.d3b78508523dfcdf0927e343b764ae3c.jpg,bd-lpr,ঢাকা মেট্রো ভ ১১-১৯৮১,ঢাকা মেট্রো ভ ১১-১৯৮১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1932_jpg.rf.882250ae6b3e6fd61e3236a6a3fa2638.jpg,blpd,বগুড়া ট ১১-০৫৪১,,False,16,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3196_104_1_jpg.rf.d9db9059d511e3ed940ea04c760938dc.jpg,bd-lpr,ঢাকা মেট্রো গ ২০-২৫৫১,ঢাকা মেট্রো গ ২০-২৫৫১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__580_jpg.rf.044d051abc651a3042e38974c8f4dc2b.jpg,blpd,গাজীপুর ল ২৪-৬৮০১,,False,17,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__227_png_jpg.rf.fd9ca3b9382615a6b984749d95f827d4.jpg,blpd,ঢাকা মেট্রো গ ১৫-০৫৬৮,ঢাকা মেট্রো গ ১৫-০৫৬৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3280_77_1_jpg.rf.0bbbd408fc811ebbeaa2dc2057c469a3.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৫-৪৭২৬,ঢাকা মেট্রো গ ৩৫-৪৭২৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_152815_180_1_jpg.rf.01dd775bea85687ba05a5af666db2838.jpg,bd-lpr,খুলনা মেট্রো জ ১১-০০৯০,খুলনা মেট্রো জ ১১-০০৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6012_299_1_jpg.rf.5885d45f44bfcc4e5d189d7ad7cfb311.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৯-৫৫৩৩,ঢাকা মেট্রো গ ৩৯-৫৫৩৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3292_101_1_jpg.rf.5229c8502db3b20568aac15ce3b758fe.jpg,bd-lpr,ঢাকা মেট্রো গ ১৩-৫৬৯০,ঢাকা মেট্রো গ ১৩-৫৬৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5089-_88_1_jpg.rf.8568cba413c722a89163fe217017fb07.jpg,bd-lpr,ঢাকা মেট্রো গ ২০-৯০২৫,ঢাকা মেট্রো গ ২০-৯০২৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6188_1410_1_jpg.rf.fc22c81bdf4d71401f886b31c73e8c5e.jpg,bd-lpr,ঢাকা মেট্রো খ ১২-১৮৭১,ঢাকা মেট্রো খ ১২-১৮৭১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__66_64_1_jpg.rf.6bec3f4836e1935d2d5ca819649a65cb.jpg,bd-lpr,ঢাকা মেট্রো ক ১১-৪৭৬৮,ঢাকা মেট্রো ক ১১-৪৭৬৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3201_346_1_jpg.rf.ca0b11ccb7bf48af8f5f95bf2b539f1e.jpg,bd-lpr,ঢাকা মেট্রো গ ৩১-৫৭৬২,ঢাকা মেট্রো গ ৩১-৫৭৬২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-4035_1849_1_jpg.rf.90dd7cdddd26119e4ff0147114d17c9a.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৫-৩৭৫৬,ঢাকা মেট্রো ঘ ১৫-৩৭৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_123942_499_1_jpg.rf.5cf67e8426db0513e3473ae5902dbcf1.jpg,bd-lpr,যশোর ব ১১-০০৩৬,যশোর ব ১১-০০৩৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2241_jpg.rf.3fe08a824097725690eb4892604b9d84.jpg,blpd,ঢাকা মেট্রো ন ১৭-৩৮১২,ঢাকা মেট্রো ন ১৭-৩৮১২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2169_jpg.rf.3f140a4461d070cb63ac855e1172c6b5.jpg,blpd,ঢাকা মেট্রো গ ২৭-৯০৬০,ঢাকা মেট্রো গ ২৭-৯০৬০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_124032_1059_1_jpg.rf.f8ae4ebe09d1e4f6db4adc7ad580b916.jpg,bd-lpr,খুলনা মেট্রো ব ১১-০০৬৭,খুলনা মেট্রো ব ১১-০০৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1084_630_1_jpg.rf.d454cc74ba02911683931e14c2f96c38.jpg,bd-lpr,ঢাকা মেট্রো গ ২৬-১৪৪৮,ঢাকা মেট্রো গ ২৬-১৪৪৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1001_jpg.rf.4453536453dc0c629b1c17aa443ff472.jpg,blpd,গোপালগঞ্জ হ ১১-৫২৬২,গোপালগঞ্জ হ ১১-৫২৬২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_125648_70_1_jpg.rf.37b1e45dc3e89637fbf55e09632eba86.jpg,bd-lpr,খুলনা মেট্রো ১১-০০৪৩,খুলনা মেট্রো ১১-০০৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle1135_jpg.rf.d34d956da4f36d75fed096fd3db6a54d.jpg,blpd,এ সিলেট ১৪৬৩,,False,12,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_122115_90_1_jpg.rf.16c915bf8cbe3ebe7311a6989387e748.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-১২০৯,ঢাকা মেট্রো জ ১৪-১২০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_124530_1240_1_jpg.rf.b57fd73573f8556291e6e123ceaec66e.jpg,bd-lpr,ঢাকা মেট্রো ব ১৫-৪১০৯,ঢাকা মেট্রো ব ১৫-৪১০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2009_jpg.rf.190f5ee35ce3b1ce57d4aab170b847e9.jpg,blpd,বরিশাল মেট্রো ল ১১-৬৮৮৬,বরিশাল মেট্রো ল ১১-৬৮৮৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2366_jpg.rf.2eb37371618aa6be3347cfcbb015324b.jpg,blpd,ঢাকা মেট্রো ঘ ১৩-৮৯১৩,ঢাকা মেট্রো ঘ ১৩-৮৯১৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__Navid_333_549_1_jpg.rf.a659c055a133eafc69d478a389259f83.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৫-৮৯৪৪,ঢাকা মেট্রো গ ৩৫-৮৯৪৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2057_403_1_jpg.rf.b392c3d1b08f2d7889943e867d713df2.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৫-০৭৯০,ঢাকা মেট্রো গ ৩৫-০৭৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2174_jpg.rf.d0d7df0c6b9c0f9d53f50b411551b90d.jpg,blpd,ঢাকা মেট্রো গ ৩৯-৮৯২৪,ঢাকা মেট্রো গ ৩৯-৮৯২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1697_jpg.rf.da435917ab91261b72460c73f2d33525.jpg,blpd,শরীয়তপুর ছ ৩৪-৫৬৭৮,নাটোর ন ৩৪-৫৬৭৮,False,9,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__135_163_1_jpg.rf.d5001abcd893b00235ee028bec06bf3d.jpg,bd-lpr,ঢাকা মেট্রো ব ১৩-১২৮৯,ঢাকা মেট্রো ব ১৩-১২৮৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1609_jpg.rf.269e97663f0339e9e58b0bb69373ccfd.jpg,blpd,ঠাকুরগাঁও ল ১১-১৪৮৭,ঠাকুরগাঁও ল ১১-১৪৮৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152347981_1889424597890200_3153381553012256225_n_676_1_jpg.rf.3d6a61e25c28df9ffaf1523b711d7aef.jpg,bd-lpr,যশোর ট ১১-৫৫৫২,যশোর ট ১১-৫৫৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1990_jpg.rf.371e9704dc01a6022b35dfb86e960e3f.jpg,blpd,চট্ট মেট্রো ড ১১-০২৪৫,চট্ট মেট্রো ড ১১-০২৪৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2349_jpg.rf.f0f8a09e213956b74fb88d8c8656bb4e.jpg,blpd,ঢাকা মেট্রো চ ১৯-৭৯১০,ঢাকা মেট্রো চ ১৯-৭৯১০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6114_400_1_jpg.rf.cee5186f2d7ed650f490c93ad507f7e9.jpg,bd-lpr,ঢাকা মেট্রো গ ১২-১৮৪২,ঢাকা মেট্রো গ ১২-১৮৪২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__538_jpg.rf.557fe8d4bfdbad482eb162287063084b.jpg,blpd,দিনাজপুর দ ৩৪-৫৬৭৮,দিনাজপুর দ ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3277_532_1_jpg.rf.40e0b5e309cff21513f6e407ae31d366.jpg,bd-lpr,ঢাকা মেট্রো গ ৩২-৮৫৬৫,ঢাকা মেট্রো গ ৩২-৮৫৬৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1691_jpg.rf.52bf6ab21e4746105662993cd26ae667.jpg,blpd,লক্ষ্মীপুর ল ১১-৩২৫২,লক্ষ্মীপুর ল ১১-৩২৫২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1384_jpg.rf.691fd64308f185ee0201f44846ff33e0.jpg,blpd,রাঙ্গামাটি ড ২৩-৪৫৬৭,রাঙ্গামাটি ড ২৩-৪৫৬৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2031_jpg.rf.de35cb3444bb88a516a82c4f563ae35d.jpg,blpd,ঢাকা মেট্রো গ ১৫-০১৭৩,ঢাকা মেট্রো গ ১৫-০১৭৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__931_jpg.rf.5a958508158a8d8927acf36d13bf327d.jpg,blpd,টাঙ্গাইল হ ১৪-৮৮১৩,টাঙ্গাইল হ ১৪-৮৮১৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2045_jpg.rf.b90db36014353061e271f4bd1efa4595.jpg,blpd,ঢাকা মেট্রো গ ৩১-০০৮০,ঢাকা মেট্রো গ ৩১-০০৮০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5082_744_1_jpg.rf.09a02eec8eae7f29d12b7c57fcf2868d.jpg,bd-lpr,ঢাকা ২১-৪৮৪৯,ঢাকা ২১-৪৮৪৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__780_jpg.rf.fc3fa4d84e60d8ec647c0ca93139c84a.jpg,blpd,নোয়াখালী হ ১১-৫৭০৭,নোয়াখালী হ ১১-৫৭০৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__127_jpg.rf.0d4ca13cf968940ffa9ec326c64408b0.jpg,blpd,নারায়ণগঞ্জ থ ১১-১৮৫৪,নারায়ণগঞ্জ থ ১১-১৮৫৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2249_jpg.rf.9f8ad11a36bf40028ac9069bf0f978e6.jpg,blpd,ঢ ঢাকা মেট্রো ১৪-৩০৪০,,False,21,4
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__310_jpg.rf.e9720260f609a7750c44ca222207fee1.jpg,blpd,ঢাকা মেট্রো গ ২৫-৮৮০০,ঢাকা মেট্রো গ ২৫-৮৮০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__6_13_1_jpg.rf.1930e8e6a704fd4d9f0ed19522e5584a.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৩-০৯৫৭,ঢাকা মেট্রো ঘ ১৩-০৯৫৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6231_18_1_jpg.rf.920811d893124d19cb4ffecbb593575e.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-৭৯৫৭,ঢাকা মেট্রো গ ২৭-৭৯৫৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__527_jpg.rf.884de668bf42ff18b18a1113ffccc61f.jpg,blpd,ঢাকা ছ ১৪-৭৮৯২,ঢাকা ছ ১৪-৭৮৯২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1547_jpg.rf.25b0a1b5eba47797b7f44be84d321ce7.jpg,blpd,শরীয়তপুর হ ১১-৫৭০৪,শরীয়তপুর হ ১১-৫৭০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1057_1439_1_jpg.rf.2ccaafe5521c52d9805f0de6149faee2.jpg,bd-lpr,ঢাকা মেট্রো গ ২২-০৩৮৬,ঢাকা মেট্রো গ ২২-০৩৮৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6057_1591_1_jpg.rf.ee9469cee2813e7eae889ab544aed883.jpg,bd-lpr,ঢাকা মেট্রো চ ১৩-৮৮৬১,ঢাকা মেট্রো চ ১৩-৮৮৬১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3091_186_1_jpg.rf.50c8e3aa66b56039ee8fa1caa786a510.jpg,bd-lpr,ঢাকা মেট্রো ভ ১৪-০০৮২,ঢাকা মেট্রো ভ ১৪-০০৮২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-4056_274_1_jpg.rf.3d0cde00680c6924d9889796f7f16339.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১৫-৪৮০০,ঢাকা মেট্রো ঘ ১৫-৪৮০০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152516949_2595716310553023_4785174502599379892_n_1631_1_jpg.rf.3b91181fffc7730a4a14c3b7680d2d4a.jpg,bd-lpr,ঢাকা মেট্রো ন ১৭-৮৪২৯,ঢাকা মেট্রো ন ১৭-৮৪২৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3049_577_1_jpg.rf.d421ca913277db9dc44ea4a24ba70bf8.jpg,bd-lpr,ঢাকা মেট্রো গ ২১-০০৭৫,ঢাকা মেট্রো গ ২১-০০৭৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190413_122039_53_1_jpg.rf.e4b13d725c72f13b9c4fc695ce0f0c21.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-১২০৯,ঢাকা মেট্রো জ ১৪-১২০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1070_590_1_jpg.rf.11a402b605094344f89beb921f6ebb72.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-৯৩৪৩,ঢাকা মেট্রো গ ২৩-৯৩৪৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__767_jpg.rf.5e34935340bffe96f47484749108e2d4.jpg,blpd,লক্ষ্মীপুর হ ১১-০৫২১,,False,20,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2538_jpg.rf.54553cf8e2780b7a3778ce88d5fc1b66.jpg,blpd,কুড়িগ্রাম হ ২০০০৫,,False,18,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1786_jpg.rf.15c74b2c2238ac3df31526525ed5d6a2.jpg,blpd,চট্ট মেট্রো গ ১৩-৯৩৩২,চট্ট মেট্রো গ ১৩-৯৩৩২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__503_jpg.rf.df785b58949cc92d806fe8b64573a77c.jpg,blpd,কুমিল্লা চ ১২-৩৪৫৬,কুমিল্লা চ ১২-৩৪৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle1138_jpg.rf.ebd4d8fd4aeecaf6da6a1d3d272fbafc.jpg,blpd,চট্ট মেট্রো গ ১৩-৩৫৫১,চট্ট মেট্রো গ ১৩-৩৫৫১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__667_jpg.rf.12fab121526f4477b3e2ca18499544ac.jpg,blpd,চাঁপাইনবাবগঞ্জ ড ৫৬-৭৮৯০,চাঁপাইনবাবগঞ্জ ড ৫৬-৭৮৯০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_112528_939_1_jpg.rf.0213a0972665e21153422ddfa3cf29fd.jpg,bd-lpr,খুলনা মেট্রো ট ১১-০২৫৯,খুলনা মেট্রো ট ১১-০২৫৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-1030_1420_1_jpg.rf.31e0025094ae0bbc1eb97ce832bd2cd1.jpg,bd-lpr,ঢাকা মেট্রো গ ১৫-০৭৪৭,ঢাকা মেট্রো গ ১৫-০৭৪৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1616_jpg.rf.f655236a228faf8e2773acaa14cfa4f6.jpg,blpd,ঠাকুরগাঁও হ ১২-৪১৭২,ঠাকুরগাঁও হ ১২-৪১৭২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__956_jpg.rf.b6d92537fbf668539a8608e49ca2cf37.jpg,blpd,টাঙ্গাইল ল ১১-৯৬৯৩,টাঙ্গাইল ল ১১-৯৬৯৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2457_jpg.rf.da1306edd93d388b46336f98d1ab2462.jpg,blpd,ঢাকা মেট্রো ল ১৩-৯৪৭৭,ঢাকা মেট্রো ল ১৩-৯৪৭৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2352_jpg.rf.4e73256fe00fe38fac5b614ea4766590.jpg,blpd,ঢাকা মেট্রো গ ১৭-৪১১৯,ঢাকা মেট্রো গ ১৭-৪১১৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2265_jpg.rf.d84e743163843e693822e549f50148c2.jpg,blpd,রাজশাহী হ ১১-৫২৬৫,রাজশাহী হ ১১-৫২৬৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3157_297_1_jpg.rf.f2a7ceb9936322cabf8a3248e0c6c656.jpg,bd-lpr,ঢাকা মেট্রো গ ১১-৪৬০৭,ঢাকা মেট্রো গ ১১-৪৬০৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__56_jpg.rf.9537c134adf19aaaedf2461ac82ffa38.jpg,blpd,নারায়ণগঞ্জ থ ১১-০১০১,নারায়ণগঞ্জ থ ১১-০১০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1805_jpg.rf.4040000e352a3f243b4d80e20a08dd6b.jpg,blpd,হ মাদারীপুর ১১-০৯১৬,,False,19,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6144_467_1_jpg.rf.39b9b1b7ba0beba1ff71c39f6302bfa0.jpg,bd-lpr,ঢাকা মেট্রো ঘ ১১-৯২৬২,ঢাকা মেট্রো ঘ ১১-৯২৬২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__179_jpeg_jpg.rf.79940212c21b9fc541403c148e86a262.jpg,blpd,জামালপুর ল ১১-১০২৭,জামালপুর ল ১১-১০২৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1805_jpg.rf.391515f6f777fe8eb2f79ffa1687e0c9.jpg,blpd,হ মাদারীপুর ১১-০৯১৬,,False,19,3
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1095_jpg.rf.36895b9ca9cdc38139a5210ee44cbc81.jpg,blpd,ঝিনাইদহ প ৩৪-৫৬৭৮,ঝিনাইদহ প ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6216_622_1_jpg.rf.e4a580462836f273b713c6e6f322feee.jpg,bd-lpr,ঢাকা মেট্রো গ ১৩-৪১৭১,ঢাকা মেট্রো গ ১৩-৪১৭১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__425_jpg.rf.472abf61704baf91af5582487eb0ed9c.jpg,blpd,চট্টগ্রাম থ ৯০-১২৩৪,চট্টগ্রাম থ ৯০-১২৩৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2566_jpg.rf.a6f40bd73f3acf2a48b1a297eb1a4897.jpg,blpd,ঢাকা মেট্রো গ ১৫-৬৭০৭,ঢাকা মেট্রো গ ১৫-৬৭০৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-5066_1380_1_jpg.rf.b18468202dcbbb7fff62462fbba5e1a6.jpg,bd-lpr,ঢাকা মেট্রো গ ২০-৯৬৬৪,ঢাকা মেট্রো গ ২০-৯৬৬৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__685_jpg.rf.6410eb59119595abd8bd158ab9409711.jpg,blpd,পঞ্চগড় হ ৩৪-৫৬৭৮,পঞ্চগড় হ ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6089_1864_1_jpg.rf.d53bb7b6fb9022162252985d9dcb6c21.jpg,bd-lpr,ঢাকা মেট্রো গ ৩১-৫২০৯,ঢাকা মেট্রো গ ৩১-৫২০৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2363_jpg.rf.af2de7d327d32b54be4a59007ca3a6dd.jpg,blpd,ঢাকা মেট্রো গ ১৭-১১৩৩,ঢাকা মেট্রো গ ১৭-১১৩৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1302_jpg.rf.21484eb2b3a55eeaa9b06aa905551a26.jpg,blpd,নরসিংদী শ ৩৪-৫৬৭৮,নরসিংদী শ ৩৪-৫৬৭৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1850_jpg.rf.3fc67ea896b1101bf20a5c651dd33be0.jpg,blpd,ঢাকা মেট্রো গ ৩১-২৮২২,ঢাকা মেট্রো গ ৩১-২৮২২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__40_66_1_jpg.rf.595dfa70c4e79e0c1a7208851a7f8dc1.jpg,bd-lpr,ঢাকা মেট্রো গ ২৯-১৭১০,ঢাকা মেট্রো গ ২৯-১৭১০,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6205_97_1_jpg.rf.d9567c22912c43015087adf252990281.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৫-৫৫১৯,ঢাকা মেট্রো গ ৩৫-৫৫১৯,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_153348_299_1_jpg.rf.3dfdfe5ba2c966ef4c01cbec78625021.jpg,bd-lpr,ঢাকা মেট্রো জ ১১-২০০১,ঢাকা মেট্রো জ ১১-২০০১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1812_jpg.rf.e140637a52604190afc860e6d5472e4d.jpg,blpd,মানিকগঞ্জ ল ১১-৩৫৩৬,মানিকগঞ্জ ল ১১-৩৫৩৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__Vehicle11_jpg.rf.75d5241af897d539c95ef28052c1a481.jpg,blpd,যশোর হ ১৫-৭৫৫৬,যশোর হ ১৫-৭৫৫৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6321_985_1_jpg.rf.8f06ccb1bc1e1af928cbb1c86331bfdd.jpg,bd-lpr,ঢাকা মেট্রো গ ৩৭-৪৮৩৭,ঢাকা মেট্রো গ ৩৭-৪৮৩৭,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20190412_110808_851_1_jpg.rf.258693d5c4f42afb964c422b10cdf32a.jpg,bd-lpr,ট ঢাকা মেট্রো ১৪-২৮৬১,ট ঢাকা মেট্রো ১৪-২৮৬১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1860_jpg.rf.df771117cc385ce5db9b5d1d80d752ee.jpg,blpd,ঢাকা মেট্রো ঘ ১৫-৭৩৫৮,ঢাকা মেট্রো ঘ ১৫-৭৩৫৮,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2561_jpg.rf.3b357b9814e64b889125b6b73f793a8a.jpg,blpd,ঢাকা মেট্রো এ ০১-৫৩২৪,ঢাকা মেট্রো এ ০১-৫৩২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__58_36_1_jpg.rf.2954c3064a4f68f927dea6a20a1ae78b.jpg,bd-lpr,ঢাকা মেট্রো খ ১৩-০৭৮৬,ঢাকা মেট্রো খ ১৩-০৭৮৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6290_253_1_jpg.rf.f3058d59ba7683b5d3672dff033ad098.jpg,bd-lpr,ঢাকা মেট্রো গ ২৭-৬৭২২,ঢাকা মেট্রো গ ২৭-৬৭২২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__338_jpg.rf.94ccff5761e2c328c8ae37380f1413bb.jpg,blpd,ঢাকা মেট্রো গ ২১-৭৩৪২,ঢাকা মেট্রো গ ২১-৭৩৪২,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-6302_1896_1_jpg.rf.c6beeb0f157b657eac279e166ec8a938.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-০৩২৪,ঢাকা মেট্রো গ ২৩-০৩২৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__152327439_260758152122049_7944773467383640275_n_1399_1_jpg.rf.8ba8f935aadcd1ded1943fb7fefb8b7e.jpg,bd-lpr,যশোর ড ১১-০০০৪,যশোর ড ১১-০০০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__IMG_20191220_155603_1743_1_jpg.rf.29cb5f4455eff5f594a9bd5bb87c251f.jpg,bd-lpr,ঢাকা মেট্রো জ ১৪-০৪১৬,ঢাকা মেট্রো জ ১৪-০৪১৬,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__951_jpg.rf.9e4514275952f562b2a3ffe3bfed629f.jpg,blpd,টাঙ্গাইল ল ১২-১৮০৪,টাঙ্গাইল ল ১২-১৮০৪,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__2656_jpg.rf.52b740cc529e8a29f6c1de16c71acf6d.jpg,blpd,নীলফামারী ল ১১-১০৮৫,নীলফামারী ল ১১-১০৮৫,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-2035_103_1_jpg.rf.fd9a140dfd4e142788ab19e07c991e48.jpg,bd-lpr,চট্টগ্রাম মেট্রো গ ১১-৪৫৩১,চট্টগ্রাম মেট্রো গ ১১-৪৫৩১,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__823_jpg.rf.a75ae4faf583d8bbcec777946dcf3b7d.jpg,blpd,ট পিরোজপুর ১১-০৩৫৩,ট পিরোজপুর ১১-০৩৫৩,True,0,0
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/blpd__1203_jpg.rf.73a78227194f0a0a92969abaf02c384a.jpg,blpd,মাদারীপুর ছ ৩৪-৫৬৭৮,নাটোর ন ৩৪-৫৬৭৮,False,8,2
+/kaggle/input/datasets/raahad/bangla-plate-reading/images/train/bd-lpr__car-3243_241_1_jpg.rf.5f26f52be92816d1d2e5bdcc2ba01a47.jpg,bd-lpr,ঢাকা মেট্রো গ ২৩-১৯৯৮,ঢাকা মেট্রো গ ২৩-১৯৯৮,True,0,0

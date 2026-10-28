@@ -1,3 +1,4 @@
 annotation_vps/
 .venv
 weights
+*.safetensors

@@ -10,9 +10,14 @@ Live Link : https://499-ab-frontend.vercel.app/
 - Registration and sign-in for drivers, parking owners, and traffic authorities
 - JWT-backed sessions with automatic access-token refresh
 - Role-aware dashboard routing
-- Parking-owner dashboard with live parking-lot data from the CityPulse API
-- Parking-lot registration, camera, revenue, and facility-settings views
-- Traffic-authority command center with zones, enforcement, and analytics views
+- Parking-owner dashboard with live lots, AI slot status, cameras, and today's revenue
+- Parking-lot registration with an OpenStreetMap location picker and photo upload
+- Camera management with an AI occupancy check (`POST /spaces/:id/infer`)
+- Revenue history from `GET /bookings` with filters, cancel, and CSV export
+- Facility settings: edit, relocate, photos, hourly rate, and delete
+- Editable owner/authority profiles with signed-in device management
+- Traffic-authority command center on a live OpenStreetMap of Dhaka
+- Zones, enforcement, and analytics derived from live AI occupancy data
 - Responsive desktop, tablet, and mobile navigation
 - Network-aware loading indicators and loader demos
 
@@ -24,6 +29,7 @@ Live Link : https://499-ab-frontend.vercel.app/
 - shadcn/ui components built on Radix UI primitives
 - Class Variance Authority, `clsx`, and `tailwind-merge` for component variants
 - Framer Motion and Lucide React
+- Leaflet + React Leaflet with free OpenStreetMap tiles (no API key)
 - Native `fetch` for API requests
 - Node's built-in test runner for unit tests
 
@@ -97,13 +103,16 @@ frontend/
 |   `-- layout.tsx              # Root metadata, theme initialization, auth provider
 |-- components/
 |   |-- loading/                # Heartbeat and network-aware loaders
+|   |-- maps/                   # OpenStreetMap (Leaflet) live map and location picker
 |   |-- portal/                 # Owner and authority navigation shells
 |   `-- ui/                     # shadcn/ui components and shared UI primitives
 |-- context/AuthContext.tsx     # Client authentication state
 |-- lib/
 |   |-- api/                    # API client and transport errors
 |   |-- auth/                   # Auth contracts, JWT sessions, and HTTP repository
-|   `-- spaces/                 # Parking-space API repository and types
+|   |-- bookings/               # Bookings API repository, types, and hook
+|   |-- insights/               # Pure metrics: occupancy, stress, alerts, revenue
+|   `-- spaces/                 # Parking-space API repository, types, and live-data hooks
 |-- docs/                       # Supporting project documentation
 |-- ml/                         # Parking-detection research and experiments
 |-- public/                     # Static assets
@@ -140,11 +149,25 @@ npm run test:unit
 npm run build
 ```
 
+## Data Sources
+
+| Feature | API |
+| --- | --- |
+| Owner lots, settings, cameras | `GET/POST/PATCH/DELETE /spaces`, `GET /spaces/:id` |
+| Lot photos | `POST /spaces/:id/photos`, `DELETE /spaces/:id/photos/:photoId`, `GET .../presign` |
+| AI occupancy check | `POST /spaces/:id/infer` |
+| Revenue | `GET /bookings`, `PATCH /bookings/:id/cancel` |
+| Profiles and devices | `GET/PATCH /profiles/me`, `GET /auth/sessions`, `DELETE /auth/sessions/:id` |
+| Command center, zones, analytics, enforcement | Public `GET /spaces/nearby` (polled every 30 s across Dhaka) |
+
+The API has no alerts, enforcement, or analytics endpoints, so `lib/insights/metrics.ts` derives them from live slot data. Unbooked occupancy (an occupied slot with no booking) is shown as an enforcement incident.
+
 ## Current Limitations
 
 - The current API adapter does not expose password-reset endpoints, so the forgot/reset-password pages report that the feature is unavailable.
 - The driver-specific dashboard is not implemented yet.
-- Several camera, revenue, analytics, and command-center visualizations currently use demonstration data.
+- Warden dispatch, tickets, evidence images, occupancy history charts, surge pricing, payouts, and notifications need backend endpoints that do not exist yet.
+- The API stores one camera per parking lot (`rtsp_url` on `PATCH /spaces/:id`).
 - Social sign-in, notifications, search, and some landing-page links are UI placeholders.
 
 ## Part of CityPulse

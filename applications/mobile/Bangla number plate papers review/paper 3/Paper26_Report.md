@@ -5,8 +5,6 @@
 > **Author / Implementer:** Md. Yousuf
 > **Project:** 498R BanglaLPR — team paper re-implementation study
 > **Date:** 1 November 2026 (notebook run: 31 October 2026)
-> **Companion file:** `Paper26_README.md` (model card, usage guide, file manifest)
-> **Source folder:** `weights/paper26/Md.Yousuf` in the team repository `Rokib-Hasan-Oli/CSE498R`
 > **Environment:** Kaggle Notebook, 2 × Tesla T4, Python 3.13.15, PyTorch 2.11.0+cu128, Ultralytics 8.4.170 (and the official YOLOv12 fork, which reports Ultralytics 8.3.63)
 
 **Source of every number.** All results in this report come from the completed notebook output (`paper26_run.ipynb`: run log, the generated `results_vs_paper.md`), from the per-run `results.json`, `results.csv`, `args.yaml` and log files inside `paper26_results.zip`, from `environment.json`, and from the code written by the notebook (`lprkit/det.py`, `rec.py`, `common.py`, `report.py`, `p26_official.py`). Statements about the original paper come from the paper itself (arXiv:2502.12524v1, 18 Feb 2025, technical report; Tables 1, 2, 3, 5, 6, 7 and the text of §1–§5 were read). Numbers marked *derived* are simple arithmetic on the printed values (for example a difference, a ratio, or a count back-computed from a percentage). Where this study did not measure something, the report says so. The model weights (`best.pt`), the full outputs archive, and the team file `detection/conditions.json` were **not available** while this report was written; every value that would come only from them is marked "not available".

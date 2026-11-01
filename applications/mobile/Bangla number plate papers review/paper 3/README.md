@@ -3,9 +3,9 @@
 > **Project:** 498R BanglaLPR — re-implementation and evaluation of *“YOLOv12: Attention-Centric Real-Time Object Detectors”* (Paper #26, arXiv:2502.12524)  
 > **Author / maintainer:** Md. Yousuf  
 > **Date:** 1 November 2026  
-> **Notebook:** [`paper26_run.ipynb`](https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/notebooks/Md.Yousuf/paper26_run.ipynb)  
-> **Output archive:** [`paper26_outputs.zip`](https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/output/paper26_outputs.zip)  
-> **Weights / results location:** [`weights/paper26/Md.Yousuf`](https://github.com/Rokib-Hasan-Oli/CSE498R/tree/main/weights/paper26/Md.Yousuf) in [`Rokib-Hasan-Oli/CSE498R`](https://github.com/Rokib-Hasan-Oli/CSE498R)
+> **Notebook:** [`paper26_run.ipynb`]([https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/notebooks/Md.Yousuf/paper26_run.ipynb](https://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/notebookc9268b9ada.ipynb))  
+> **Output archive:** [`paper26_outputs.zip`]([https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/output/paper26_outputs.zip](https://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/paper26_outputs.zip))  
+> **Weights / results location:** [`weights/paper26/Md.Yousuf`]()
 
 This package documents a controlled project-level comparison of **YOLOv12-S trained with the authors’ own code, YOLO12-S in Ultralytics 8.4.170, and YOLO11-S** for detecting Bangla BRTA licence plates, plus an additional comparison of **YOLOv12-N and YOLO11-N as character detectors**. The notebook records training, test-set metrics, condition-specific results, latency measurements, environment information, logs, and code in `paper26_outputs.zip`.
 
@@ -676,16 +676,10 @@ Official implementation: https://github.com/sunsmarterjie/yolov12
   author       = {Md. Yousuf},
   year         = {2026},
   month        = nov,
-  howpublished = {498R BanglaLPR project notebook and experiment outputs},
-  note         = {CSE498R, Rokib-Hasan-Oli/CSE498R; Paper #26}
+
 }
 ```
 
-Project notebook:  
-https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/notebooks/Md.Yousuf/paper26_run.ipynb
-
-Project outputs:  
-https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/output/paper26_outputs.zip
 
 ---
 

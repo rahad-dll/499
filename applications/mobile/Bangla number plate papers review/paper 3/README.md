@@ -3,7 +3,7 @@
 > **Project:** 498R BanglaLPR — re-implementation and evaluation of *“YOLOv12: Attention-Centric Real-Time Object Detectors”* (Paper #26, arXiv:2502.12524)  
 > **Author / maintainer:** Md. Yousuf  
 > **Date:** 1 November 2026  
-> **Notebook:** [`paper26_run.ipynb`]([https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/notebooks/Md.Yousuf/paper26_run.ipynb](https://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/notebookc9268b9ada.ipynb))  
+> **Notebook:** [`paper26_run.ipynb`]([[https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/notebooks/Md.Yousuf/paper26_run.ipynb](https://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/notebookc9268b9ada.ipynb)](http://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/paper26_run.ipynb))  
 > **Output archive:** [`paper26_outputs.zip`]([https://github.com/Rokib-Hasan-Oli/CSE498R/blob/main/output/paper26_outputs.zip](https://github.com/rahad-dll/499/blob/feature/mobile/applications/mobile/Bangla%20number%20plate%20papers%20review/paper%203/paper26_outputs.zip))  
 > **Weights / results location:** [`weights/paper26/Md.Yousuf`]()
 

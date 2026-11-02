@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/parking_model.dart';
 import '../../services/location_service.dart';
+import '../../services/booking_events.dart';
 import '../../services/parking_api_service.dart';
 import '../../services/places_service.dart';
 import '../../utils/app_snackbar.dart';
@@ -87,6 +88,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     _placesService = PlacesService();
     WidgetsBinding.instance.addObserver(this);
     _initializeLocation();
+    // Any booking created / cancelled / removed anywhere in the app ->
+    // re-pull slot counts so the map never shows a stale "booked" slot.
+    BookingEvents.changes.addListener(_onBookingsChanged);
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 60),
       (_) => _refreshParkings(),
@@ -96,6 +100,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     _isDisposed = true;
+    BookingEvents.changes.removeListener(_onBookingsChanged);
     _debounce?.cancel();
     _refreshTimer?.cancel();
     _positionSub?.cancel();
@@ -105,6 +110,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     _stripController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onBookingsChanged() {
+    if (_isDisposed || !mounted) return;
+    _refreshParkings();
   }
 
   @override

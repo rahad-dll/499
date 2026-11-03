@@ -136,30 +136,53 @@ export class CamerasService {
     return camera.id;
   }
 
+  // ── GET /spaces/:spaceId/cameras
+  // All cameras of the lot with their slots, plus the lot's rate per vehicle type.
+
+  async findAll(spaceId: string, user: JwtPayload) {
+    await this.getManagedSpace(spaceId, user);
+    const [cameras, vehicleRates] = await Promise.all([
+      this.loadCameras(spaceId),
+      this.vehicleRates(spaceId),
+    ]);
+    return {
+      space_id: spaceId,
+      vehicle_rates: [...vehicleRates].map(([vehicle_type, hourly_rate_unit]) => ({ vehicle_type, hourly_rate_unit })),
+      cameras,
+    };
+  }
+
   // ── read one camera with its slots in pixel units
 
   async findOne(spaceId: string, cameraId: string) {
-    const camera = await this.prisma.cameras.findFirst({
-      where: { id: cameraId, space_id: spaceId, deleted_at: null },
+    const [camera] = await this.loadCameras(spaceId, cameraId);
+    if (!camera) throw new NotFoundException('Camera not found');
+    return camera;
+  }
+
+  private async loadCameras(spaceId: string, cameraId?: string) {
+    const cameras = await this.prisma.cameras.findMany({
+      where: { space_id: spaceId, deleted_at: null, ...(cameraId && { id: cameraId }) },
+      orderBy: [{ sort_order: 'asc' }, { created_at: 'asc' }],
       include: {
         slots: { where: { deleted_at: null }, orderBy: [{ sort_order: 'asc' }, { slot_label: 'asc' }] },
       },
     });
-    if (!camera) throw new NotFoundException('Camera not found');
+    if (!cameras.length) return [];
 
     const [vehicleRates, slotRates] = await Promise.all([
       this.vehicleRates(spaceId),
       this.prisma.rate_plans.findMany({
         where: {
           space_id: spaceId, name: EDITOR_RATE_NAME, rent_type: 'hourly', deleted_at: null, is_active: true,
-          slot_id: { in: camera.slots.map((s) => s.id) },
+          slot_id: { in: cameras.flatMap((c) => c.slots.map((s) => s.id)) },
         },
         select: { slot_id: true, amount_unit: true },
       }),
     ]);
     const slotRate = new Map(slotRates.map((p) => [p.slot_id, p.amount_unit]));
 
-    return {
+    return cameras.map((camera) => ({
       id: camera.id,
       space_id: camera.space_id,
       label: camera.label,
@@ -192,7 +215,7 @@ export class CamerasService {
           updated_at: slot.updated_at,
         };
       }),
-    };
+    }));
   }
 
   // ── helpers

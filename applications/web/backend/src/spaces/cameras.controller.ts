@@ -1,4 +1,4 @@
-import { Body, Controller, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,5 +22,14 @@ export class CamerasController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.camerasService.create(spaceId, dto, user);
+  }
+
+  // GET /spaces/:spaceId/cameras — all cameras with their slots and the lot's vehicle rates
+  @Get()
+  findAll(
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.camerasService.findAll(spaceId, user);
   }
 }

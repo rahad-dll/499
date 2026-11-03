@@ -6,9 +6,11 @@ import { SlotsController } from './slots.controller';
 import { SlotsService } from './slots.service';
 import { CamerasController } from './cameras.controller';
 import { CamerasService } from './cameras.service';
+import { RatesController } from './rates.controller';
+import { RatesService } from './rates.service';
 
 @Module({
-  controllers: [SpacesController, SlotsController, CamerasController],
-  providers: [SpacesService, InferenceSchedulerService, SlotsService, CamerasService],
+  controllers: [SpacesController, SlotsController, CamerasController, RatesController],
+  providers: [SpacesService, InferenceSchedulerService, SlotsService, CamerasService, RatesService],
 })
 export class SpacesModule {}

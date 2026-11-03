@@ -72,12 +72,16 @@ class RoutePreviewCard extends StatelessWidget {
     required this.onStart,
     required this.onOpenGoogleMaps,
     required this.onClose,
+    this.onSimulate,
   });
 
   final NavigationController nav;
   final VoidCallback onStart;
   final VoidCallback onOpenGoogleMaps;
   final VoidCallback onClose;
+
+  /// Debug builds only: drive the route virtually (no need to move).
+  final VoidCallback? onSimulate;
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +205,19 @@ class RoutePreviewCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (onSimulate != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onSimulate,
+                  icon: const Icon(Icons.bug_report_rounded, size: 16),
+                  label: const Text('Simulate drive (debug)'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: DashColors.muted,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -311,10 +328,14 @@ class NavigationBottomPanel extends StatelessWidget {
     super.key,
     required this.nav,
     required this.onEnd,
+    this.voiceOn = true,
+    this.onToggleVoice,
   });
 
   final NavigationController nav;
   final VoidCallback onEnd;
+  final bool voiceOn;
+  final VoidCallback? onToggleVoice;
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +371,15 @@ class NavigationBottomPanel extends StatelessWidget {
                 ],
               ),
             ),
+            if (onToggleVoice != null)
+              IconButton(
+                onPressed: onToggleVoice,
+                tooltip: voiceOn ? 'Mute voice' : 'Unmute voice',
+                icon: Icon(
+                  voiceOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                  color: voiceOn ? DashColors.teal : DashColors.muted,
+                ),
+              ),
             SizedBox(
               height: 44,
               child: ElevatedButton(

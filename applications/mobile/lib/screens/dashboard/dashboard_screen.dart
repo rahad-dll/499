@@ -1,11 +1,13 @@
 // lib/screens/dashboard/dashboard_screen.dart
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../models/parking_model.dart';
 import '../../services/booking_events.dart';
@@ -14,6 +16,7 @@ import '../../services/navigation_controller.dart';
 import '../../services/parking_api_service.dart';
 import '../../services/places_service.dart';
 import '../../services/recent_searches_service.dart';
+import '../../services/voice_guide.dart';
 import '../../theme/map_style.dart';
 import '../../utils/app_snackbar.dart';
 import '../../utils/geo_utils.dart';
@@ -48,7 +51,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   final RecentSearchesService _recentService = RecentSearchesService();
   final ParkingApiService _parkingApi = ParkingApiService();
   final LocationService _locationService = LocationService();
-  final NavigationController _nav = NavigationController();
+  final VoiceGuide _voice = VoiceGuide();
+  late final NavigationController _nav =
+      NavigationController(onSpeak: (text) => _voice.speak(text));
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
   final ScrollController _stripController = ScrollController();
@@ -112,6 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addObserver(this);
     _searchFocus.addListener(_onFocusChanged);
     _nav.addListener(_onNavChanged);
+    _voice.init();
     _loadRecents();
     _initializeLocation();
     BookingEvents.changes.addListener(_onBookingsChanged);
@@ -127,6 +133,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     BookingEvents.changes.removeListener(_onBookingsChanged);
     _nav.removeListener(_onNavChanged);
     _nav.dispose();
+    _voice.dispose();
+    _setAwake(false);
     _searchFocus.removeListener(_onFocusChanged);
     _searchFocus.dispose();
     _debounce?.cancel();
@@ -491,6 +499,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final st = _nav.status;
     if (st != _lastNavStatus) {
       _lastNavStatus = st;
+      if (st == NavStatus.arrived) _setAwake(false);
       _updateMarkers();
     }
     setState(() {});
@@ -549,16 +558,37 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Future<void> _startNavigation() async {
+  Future<void> _startNavigation({bool simulate = false}) async {
     _followUser = true;
     _lastCameraMove = DateTime.fromMillisecondsSinceEpoch(0);
+    _setAwake(true);
     await _nav.start();
+    if (simulate) _nav.startSimulation();
     _followCamera();
+  }
+
+  Future<void> _setAwake(bool on) async {
+    try {
+      if (on) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } catch (e) {
+      debugPrint('Wakelock error: $e');
+    }
+  }
+
+  void _toggleVoice() {
+    setState(() => _voice.enabled = !_voice.enabled);
+    if (!_voice.enabled) _voice.stop();
   }
 
   void _endNavigation() {
     final here = _currentPosition;
     _nav.stop();
+    _voice.stop();
+    _setAwake(false);
     setState(() {
       _routeDestination = null;
       _selectedParking = null;
@@ -878,6 +908,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     if (d != null) _openExternalNavigation(d);
                   },
                   onClose: _endNavigation,
+                  onSimulate:
+                      kDebugMode ? () => _startNavigation(simulate: true) : null,
                 ),
               )
             else if (navStatus == NavStatus.navigating)
@@ -885,7 +917,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                 left: 12,
                 right: 12,
                 bottom: 12,
-                child: NavigationBottomPanel(nav: _nav, onEnd: _endNavigation),
+                child: NavigationBottomPanel(
+                  nav: _nav,
+                  onEnd: _endNavigation,
+                  voiceOn: _voice.enabled,
+                  onToggleVoice: _toggleVoice,
+                ),
               )
             else if (navStatus == NavStatus.arrived)
               Positioned(

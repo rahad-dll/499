@@ -21,10 +21,16 @@ import 'routing_service.dart';
 enum NavStatus { idle, previewing, navigating, arrived }
 
 class NavigationController extends ChangeNotifier {
-  NavigationController({RoutingService? routing})
+  NavigationController({RoutingService? routing, this.onSpeak})
       : _routing = routing ?? RoutingService();
 
   final RoutingService _routing;
+
+  /// Spoken guidance hook ("In 200 meters, turn left"). Optional.
+  final void Function(String text)? onSpeak;
+
+  /// True while a virtual drive (debug "Simulate drive") is running.
+  bool simulating = false;
 
   // ---- public state -------------------------------------------------------
   NavStatus status = NavStatus.idle;
@@ -62,6 +68,9 @@ class NavigationController extends ChangeNotifier {
   int _reqId = 0;
   DateTime? _lastReroute;
   LatLng? _destination;
+  Timer? _simTimer;
+  double _simAlongM = 0;
+  final Set<String> _spoken = {};
 
   // -------------------------------------------------------------------------
   // Preview
@@ -108,6 +117,7 @@ class NavigationController extends ChangeNotifier {
     if (r == null) return;
     _hint = 0;
     _offRouteCount = 0;
+    _spoken.clear();
     stepIndex = 0;
     remainingM = r.distanceM;
     remainingS = r.durationS;
@@ -125,8 +135,13 @@ class NavigationController extends ChangeNotifier {
   Future<void> start() async {
     if (route == null) return;
     status = NavStatus.navigating;
+    simulating = false;
+    _simTimer?.cancel();
     _resetProgress();
     notifyListeners();
+
+    final first = route!.steps.isNotEmpty ? route!.steps.first.instruction : '';
+    onSpeak?.call('Starting navigation to $destinationName. $first');
 
     await _sub?.cancel();
     _sub = Geolocator.getPositionStream(
@@ -140,20 +155,32 @@ class NavigationController extends ChangeNotifier {
     );
   }
 
-  void _onPosition(Position p) {
+  void _onPosition(Position p) => _process(
+        LatLng(p.latitude, p.longitude),
+        headingDeg: p.heading,
+        speed: p.speed,
+        accuracy: p.accuracy,
+      );
+
+  /// One GPS fix (real or simulated).
+  void _process(
+    LatLng raw, {
+    required double headingDeg,
+    required double speed,
+    required double accuracy,
+  }) {
     final r = route;
     if (r == null || status != NavStatus.navigating) return;
 
-    final raw = LatLng(p.latitude, p.longitude);
     final snap = r.geometry.snap(raw, hintSegment: _hint);
 
-    speedMps = (p.speed.isFinite && p.speed > 0) ? p.speed : 0;
-    if (speedMps > 1.5 && p.heading.isFinite && p.heading >= 0) {
-      heading = p.heading;
+    speedMps = (speed.isFinite && speed > 0) ? speed : 0;
+    if (speedMps > 1.5 && headingDeg.isFinite && headingDeg >= 0) {
+      heading = headingDeg;
     }
 
     // GPS jitter tolerance grows with the reported accuracy.
-    final threshold = math.max(35.0, p.accuracy * 1.5);
+    final threshold = math.max(35.0, accuracy * 1.5);
     final onRoute = snap.offRouteM <= threshold;
 
     if (onRoute) {
@@ -161,10 +188,11 @@ class NavigationController extends ChangeNotifier {
       _hint = snap.segmentIndex;
       position = snap.point;
       _updateProgress(snap);
+      _announce();
     } else {
       position = raw;
       _offRouteCount++;
-      if (_offRouteCount >= 3) _maybeReroute(raw, p);
+      if (_offRouteCount >= 3) _maybeReroute(raw, headingDeg);
     }
 
     final toDestination = GeoUtils.distanceM(raw, r.destination);
@@ -196,7 +224,8 @@ class NavigationController extends ChangeNotifier {
     traveledPoints = [...r.points.sublist(0, snap.segmentIndex + 1), snap.point];
   }
 
-  Future<void> _maybeReroute(LatLng raw, Position p) async {
+  Future<void> _maybeReroute(LatLng raw, double headingDeg) async {
+    if (simulating) return;
     if (isRerouting) return;
     final now = DateTime.now();
     if (_lastReroute != null &&
@@ -206,13 +235,14 @@ class NavigationController extends ChangeNotifier {
     _lastReroute = now;
     isRerouting = true;
     notifyListeners();
+    onSpeak?.call('Rerouting');
 
     final id = ++_reqId;
     final dest = _destination ?? route!.destination;
     final fresh = await _routing.route(
       raw,
       dest,
-      headingDeg: speedMps > 2 ? p.heading : null,
+      headingDeg: speedMps > 2 ? headingDeg : null,
     );
 
     if (id != _reqId || status != NavStatus.navigating) return;
@@ -227,12 +257,96 @@ class NavigationController extends ChangeNotifier {
   void _arrive() {
     _sub?.cancel();
     _sub = null;
+    _simTimer?.cancel();
+    simulating = false;
     status = NavStatus.arrived;
     remainingM = 0;
     remainingS = 0;
     distanceToNextM = 0;
     upcoming = null;
     isRerouting = false;
+    onSpeak?.call('You have arrived at $destinationName');
+    notifyListeners();
+  }
+
+  // -------------------------------------------------------------------------
+  // Voice guidance
+  // -------------------------------------------------------------------------
+
+  void _announce() {
+    final r = route;
+    final up = upcoming;
+    if (onSpeak == null || r == null || up == null) return;
+    if (up.maneuver == Maneuver.arrive) return; // _arrive() speaks that one
+    if (stepIndex >= r.steps.length) return;
+
+    final stepLen = r.steps[stepIndex].distanceM;
+    final d = distanceToNextM;
+
+    void say(String tag, String text) {
+      if (_spoken.add('$stepIndex:$tag')) onSpeak!(text);
+    }
+
+    if (d <= 40) {
+      say('now', up.instruction);
+    } else if (d <= 180 && stepLen > 220) {
+      say('near', 'In ${_spokenDistance(d)}, ${up.instruction}');
+    } else if (d <= 650 && stepLen > 1000) {
+      say('far', 'In ${_spokenDistance(d)}, ${up.instruction}');
+    }
+  }
+
+  static String _spokenDistance(double m) {
+    if (m < 1000) {
+      final r = (m / 50).round() * 50;
+      return '${r < 50 ? 50 : r} meters';
+    }
+    return '${(m / 1000).toStringAsFixed(1)} kilometers';
+  }
+
+  // -------------------------------------------------------------------------
+  // Simulated drive (debug / demo): feeds fake GPS fixes along the route
+  // -------------------------------------------------------------------------
+
+  void startSimulation({double speedMps = 16}) {
+    final r = route;
+    if (status != NavStatus.navigating || r == null) return;
+
+    _sub?.cancel();
+    _sub = null;
+    _simTimer?.cancel();
+    simulating = true;
+    _simAlongM = 0;
+
+    final g = r.geometry;
+    _simTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (route == null || status != NavStatus.navigating) {
+        t.cancel();
+        return;
+      }
+      _simAlongM = math.min(_simAlongM + speedMps, g.totalM);
+
+      var i = 0;
+      while (i < g.points.length - 2 && g.cum[i + 1] < _simAlongM) {
+        i++;
+      }
+      final segLen = g.cum[i + 1] - g.cum[i];
+      final f = segLen > 0 ? (_simAlongM - g.cum[i]) / segLen : 0.0;
+      final a = g.points[i];
+      final b = g.points[i + 1];
+      final pos = LatLng(
+        a.latitude + (b.latitude - a.latitude) * f,
+        a.longitude + (b.longitude - a.longitude) * f,
+      );
+
+      _process(
+        pos,
+        headingDeg: GeoUtils.bearing(a, b),
+        speed: speedMps,
+        accuracy: 5,
+      );
+      if (_simAlongM >= g.totalM) t.cancel();
+    });
     notifyListeners();
   }
 
@@ -244,6 +358,9 @@ class NavigationController extends ChangeNotifier {
     _reqId++;
     _sub?.cancel();
     _sub = null;
+    _simTimer?.cancel();
+    simulating = false;
+    _spoken.clear();
     status = NavStatus.idle;
     isLoadingRoute = false;
     isRerouting = false;
@@ -260,6 +377,7 @@ class NavigationController extends ChangeNotifier {
   @override
   void dispose() {
     _sub?.cancel();
+    _simTimer?.cancel();
     _routing.dispose();
     super.dispose();
   }

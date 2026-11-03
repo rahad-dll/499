@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import {
   ArrayMaxSize, IsArray, IsEnum, IsInt, IsNotEmpty, IsNumber, IsOptional,
   IsString, Matches, Max, MaxLength, Min, ValidateNested,
@@ -65,3 +65,7 @@ export class CreateCameraDto {
   @IsOptional() @IsArray() @ArrayMaxSize(500) @ValidateNested({ each: true }) @Type(() => CameraSlotDto)
   slots?: CameraSlotDto[];
 }
+
+// Every field is optional. Slots are matched by label within this camera:
+// a known label is updated, a new label is added, slots left out are not changed.
+export class UpdateCameraDto extends PartialType(CreateCameraDto) {}

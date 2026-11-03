@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { CreateCameraDto } from './dto/camera.dto';
+import { CreateCameraDto, UpdateCameraDto } from './dto/camera.dto';
 import { CamerasService } from './cameras.service';
 
 @ApiTags('cameras')
@@ -22,6 +22,17 @@ export class CamerasController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.camerasService.create(spaceId, dto, user);
+  }
+
+  // PATCH /spaces/:spaceId/cameras/:cameraId — change one camera, add or update its slots
+  @Patch(':cameraId')
+  update(
+    @Param('spaceId', ParseUUIDPipe) spaceId: string,
+    @Param('cameraId', ParseUUIDPipe) cameraId: string,
+    @Body() dto: UpdateCameraDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.camerasService.update(spaceId, cameraId, dto, user);
   }
 
   // GET /spaces/:spaceId/cameras — all cameras with their slots and the lot's vehicle rates

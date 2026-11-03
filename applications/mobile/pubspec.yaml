@@ -27,7 +27,7 @@ dependencies:
   device_info_plus: ^10.1.0
 
   # Google Maps & Location
-  google_maps_flutter: ^2.6.0
+  google_maps_flutter: ^2.10.0
   geolocator: ^10.1.0
   permission_handler: ^11.3.0
   location: ^6.0.0

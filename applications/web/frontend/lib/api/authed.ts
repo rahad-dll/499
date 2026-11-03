@@ -1,7 +1,10 @@
 import { authRepository } from "@/lib/auth/repository";
 import { ApiError, apiRequest } from "./client";
 
-/** `apiRequest` with the current Bearer token (refreshed when close to expiry). */
+/**
+ * `apiRequest` with the current Bearer token (refreshed when close to expiry):
+ * the outermost layer of the request pipeline in `client.ts`.
+ */
 export async function authedRequest<T>(
   path: string,
   init: RequestInit = {},

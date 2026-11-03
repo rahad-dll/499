@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { SpacesService } from './spaces.service';
-import { CameraSlotDto, CameraSource, CreateCameraDto, PixelBoxDto } from './dto/camera.dto';
+import { CameraSlotDto, CameraSource, CreateCameraDto, PixelBoxDto, UpdateCameraDto } from './dto/camera.dto';
 import { VehicleKind } from './dto/slot.dto';
 
 // hourly rate plans managed by the camera and rate editor; other rate plans are left alone
@@ -136,6 +136,137 @@ export class CamerasService {
     return camera.id;
   }
 
+  // ── PATCH /spaces/:spaceId/cameras/:cameraId
+  // Changes one camera. Slots are matched by label within this camera: a known
+  // label is updated, a new label is added, slots left out are not changed.
+  // Other cameras are not touched.
+
+  async update(spaceId: string, cameraId: string, dto: UpdateCameraDto, user: JwtPayload) {
+    await this.getManagedSpace(spaceId, user);
+    const camera = await this.prisma.cameras.findFirst({
+      where: { id: cameraId, space_id: spaceId, deleted_at: null },
+      include: { slots: { where: { deleted_at: null }, select: { id: true, slot_label: true, bbox: true, vehicle_types: true } } },
+    });
+    if (!camera) throw new NotFoundException('Camera not found');
+
+    // the camera as it will be after this request
+    const final = {
+      label: dto.label?.trim() ?? camera.label ?? '',
+      source_type: (dto.source_type ?? camera.source_type) as CameraSource,
+      rtsp_url: dto.rtsp_url !== undefined ? dto.rtsp_url : camera.rtsp_url,
+      frame_width: dto.frame_width ?? camera.frame_width,
+      frame_height: dto.frame_height ?? camera.frame_height,
+    };
+    this.validateCamera(final);
+
+    const slotsIn = dto.slots ?? [];
+    if (slotsIn.length && (!final.frame_width || !final.frame_height)) {
+      throw new BadRequestException('Set frame_width and frame_height before adding slots to this camera');
+    }
+    const frame = { frame_width: final.frame_width ?? 0, frame_height: final.frame_height ?? 0 };
+    const labels = this.validateSlots(slotsIn, frame);
+
+    // slots sent here plus this camera's other slots must not overlap
+    const existingByLabel = new Map(camera.slots.map((s) => [s.slot_label, s]));
+    const errors: string[] = [];
+    for (const kept of camera.slots.filter((s) => !labels.includes(s.slot_label))) {
+      const box = this.toPixels(kept.bbox as NormalisedBox | null, frame.frame_width, frame.frame_height);
+      if (!box) continue;
+      for (const slot of slotsIn) {
+        if (this.overlaps(slot.bbox, box)) {
+          errors.push(`Slots ${kept.slot_label} and ${slot.slot_label.toUpperCase()} overlap.`);
+        }
+      }
+    }
+    if (errors.length) throw new BadRequestException(errors);
+
+    // new labels must be free in the whole lot
+    const newLabels = labels.filter((l) => !existingByLabel.has(l));
+    const [taken, vehicleRates] = await Promise.all([
+      newLabels.length
+        ? this.prisma.parking_slots.findMany({
+          where: { space_id: spaceId, deleted_at: null, slot_label: { in: newLabels } },
+          select: { slot_label: true },
+        })
+        : Promise.resolve([]),
+      this.vehicleRates(spaceId),
+    ]);
+    if (taken.length) {
+      throw new ConflictException(`Slot labels already used in this lot: ${taken.map((s) => s.slot_label).join(', ')}`);
+    }
+    const missingRate = slotsIn
+      .filter((s) => !existingByLabel.has(s.slot_label.toUpperCase()))
+      .filter((s) => s.hourly_rate_unit === undefined && !vehicleRates.has(s.vehicle_type))
+      .map((s) => s.slot_label.toUpperCase());
+    if (missingRate.length) {
+      throw new BadRequestException(
+        `No hourly rate for slots ${missingRate.join(', ')}: set the lot's rate for that vehicle type first, or give each slot hourly_rate_unit`,
+      );
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.cameras.update({
+        where: { id: cameraId },
+        data: {
+          label: final.label,
+          source_type: final.source_type,
+          rtsp_url: final.source_type === CameraSource.rtsp ? final.rtsp_url!.trim() : null,
+          frame_width: final.frame_width,
+          frame_height: final.frame_height,
+        },
+      });
+
+      let order = camera.slots.length;
+      for (const slot of slotsIn) {
+        const label = slot.slot_label.toUpperCase();
+        const existing = existingByLabel.get(label);
+        const data = {
+          slot_type: SLOT_TYPE_FOR_VEHICLE[slot.vehicle_type],
+          vehicle_types: [slot.vehicle_type],
+          bbox: this.toNormalised(slot.bbox, frame.frame_width, frame.frame_height),
+        };
+        const slotId = existing
+          ? (await tx.parking_slots.update({ where: { id: existing.id }, data, select: { id: true } })).id
+          : (await tx.parking_slots.create({
+            data: {
+              ...data,
+              space_id: spaceId,
+              camera_id: cameraId,
+              slot_label: label,
+              sort_order: order++,
+              qr_code: randomBytes(8).toString('hex'),
+            },
+            select: { id: true },
+          })).id;
+
+        // own price: replace it when sent; drop it when it equals the vehicle rate
+        if (slot.hourly_rate_unit !== undefined) {
+          await tx.rate_plans.updateMany({
+            where: { slot_id: slotId, name: EDITOR_RATE_NAME, rent_type: 'hourly', deleted_at: null },
+            data: { deleted_at: new Date(), is_active: false },
+          });
+          if (slot.hourly_rate_unit !== vehicleRates.get(slot.vehicle_type)) {
+            await tx.rate_plans.create({
+              data: {
+                space_id: spaceId, slot_id: slotId, vehicle_type: slot.vehicle_type,
+                name: EDITOR_RATE_NAME, rent_type: 'hourly', amount_unit: slot.hourly_rate_unit,
+              },
+            });
+          }
+        }
+      }
+
+      await this.growCapacity(tx, spaceId);
+    }, { timeout: 30_000, maxWait: 10_000 }).catch((error: unknown) => {
+      if ((error as { code?: string })?.code === 'P2002') {
+        throw new ConflictException('A slot label in this camera was just used in this lot; reload and pick another label');
+      }
+      throw error;
+    });
+
+    return this.findOne(spaceId, cameraId);
+  }
+
   // ── GET /spaces/:spaceId/cameras
   // All cameras of the lot with their slots, plus the lot's rate per vehicle type.
 
@@ -252,7 +383,7 @@ export class CamerasService {
     });
   }
 
-  private validateCamera(dto: CreateCameraDto) {
+  private validateCamera(dto: { source_type: CameraSource; rtsp_url?: string | null }) {
     if (dto.source_type === CameraSource.rtsp && !/^rtsps?:\/\/\S+$/i.test(dto.rtsp_url?.trim() ?? '')) {
       throw new BadRequestException('An RTSP camera needs an rtsp:// URL.');
     }

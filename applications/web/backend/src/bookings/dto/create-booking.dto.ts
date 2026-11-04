@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBookingDto {
@@ -9,7 +18,8 @@ export class CreateBookingDto {
 
   @ApiPropertyOptional({
     example: 'uuid-of-slot',
-    description: 'Specific slot to book. If omitted, first available slot is auto-selected.',
+    description:
+      'Specific slot to book. If omitted, first available slot is auto-selected.',
   })
   @IsOptional()
   @IsUUID()
@@ -22,11 +32,13 @@ export class CreateBookingDto {
   @ApiProperty({ example: 2, description: 'Duration in hours' })
   @IsInt()
   @Min(1)
+  @Max(24)
   @Type(() => Number)
   duration_hours: number;
 
   @ApiPropertyOptional({ example: 'DHK-1234' })
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   vehicle_plate?: string;
 }

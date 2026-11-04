@@ -61,13 +61,18 @@ export function NetworkAwareLoader({
   const { status: detected, refresh } = useNetworkStatus();
   const status = forceStatus ?? detected;
   const [pastGrace, setPastGrace] = useState(false);
+  const [wasLoading, setWasLoading] = useState(isLoading);
+
+  // Every loading cycle starts with a fresh grace period. Reset while rendering
+  // (React's "store the previous prop in state" pattern) instead of in an effect.
+  if (isLoading !== wasLoading) {
+    setWasLoading(isLoading);
+    setPastGrace(false);
+  }
 
   // FAST connections skip the loader entirely for sub-250ms loads
   useEffect(() => {
-    if (!isLoading) {
-      setPastGrace(false);
-      return;
-    }
+    if (!isLoading) return;
     const id = setTimeout(() => setPastGrace(true), FAST_GRACE_MS);
     return () => clearTimeout(id);
   }, [isLoading]);

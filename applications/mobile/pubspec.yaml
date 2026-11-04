@@ -24,14 +24,19 @@ dependencies:
 
   # Utilities
   intl: ^0.18.1
+  device_info_plus: ^10.1.0
 
   # Google Maps & Location
-  google_maps_flutter: ^2.6.0
+  google_maps_flutter: ^2.10.0
   geolocator: ^10.1.0
   permission_handler: ^11.3.0
   location: ^6.0.0
   flutter_polyline_points: ^2.0.0
   url_launcher: ^6.3.2
+
+  # Navigation extras (voice guidance, keep screen on)
+  flutter_tts: ^4.2.0
+  wakelock_plus: ^1.2.8
 
   # # External Navigation
   # url_launcher: ^6.2.5

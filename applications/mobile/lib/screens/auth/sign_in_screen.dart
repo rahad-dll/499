@@ -7,6 +7,7 @@ import '../../utils/responsive.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../services/session_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/device_name_service.dart';
 import 'sign_up_screen.dart';
 import '../dashboard/dashboard_screen.dart';  // ← শুধু এই import টা যোগ করুন
 
@@ -83,10 +84,11 @@ class _SignInScreenState extends State<SignInScreen> {
     if (isValid) {
       setState(() => isLoading = true);
 
+      final deviceName = await DeviceNameService.getDeviceName();
       final result = await AuthService.login(
         email: emailController.text.trim(),
         password: passwordController.text,
-        deviceName: 'Flutter App',
+        deviceName: deviceName,
         rememberMe: rememberMe,
       );
 

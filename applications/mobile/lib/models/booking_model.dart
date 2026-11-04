@@ -165,6 +165,7 @@ class BookingModel {
   BookingModel copyWith({
     BookingStatus? status,
     String? cancellationReason,
+    String? vehiclePlate,
   }) {
     return BookingModel(
       id: id,
@@ -182,7 +183,7 @@ class BookingModel {
       totalPrice: totalPrice,
       status: status ?? this.status,
       cancellationReason: cancellationReason ?? this.cancellationReason,
-      vehiclePlate: vehiclePlate,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
       createdAt: createdAt,
     );
   }

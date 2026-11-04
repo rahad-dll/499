@@ -5,6 +5,7 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../models/parking_model.dart';
 import '../../services/booking_service.dart';
+import '../../utils/app_toast.dart';
 import '../../utils/currency_formatter.dart';
 
 const Color _kAccent = Color(0xFF18D6C0);
@@ -37,9 +38,113 @@ class _NewBookingSheet extends StatefulWidget {
 
 class _NewBookingSheetState extends State<_NewBookingSheet> {
   int _durationHours = 1;
-  DateTime _scheduledAt = DateTime.now().add(const Duration(hours: 1));
+  DateTime _scheduledAt = DateTime.now();
   final _plateController = TextEditingController();
   bool _isSaving = false;
+
+  // Availability of THIS start time + duration (not "right now").
+  int? _freeSlots; // null = unknown (not checked yet / check failed)
+  bool _checking = false;
+  int _checkSeq = 0; // ignores out-of-date responses
+
+  @override
+  void initState() {
+    super.initState();
+    // after the first frame so setState inside the check is safe
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _checkAvailability();
+    });
+  }
+
+  Future<void> _checkAvailability() async {
+    final seq = ++_checkSeq;
+    setState(() => _checking = true);
+    try {
+      final count = await BookingService().getFreeSlotCount(
+        spaceId: widget.space.id,
+        from: _scheduledAt,
+        durationHours: _durationHours,
+      );
+      if (!mounted || seq != _checkSeq) return;
+      setState(() {
+        _freeSlots = count;
+        _checking = false;
+      });
+    } catch (_) {
+      // Can't tell -> don't block; the server re-checks on confirm anyway.
+      if (!mounted || seq != _checkSeq) return;
+      setState(() {
+        _freeSlots = null;
+        _checking = false;
+      });
+    }
+  }
+
+  bool get _fullForThisTime => _freeSlots == 0;
+
+  Widget _availabilityBanner(bool isDark) {
+    if (_freeSlots == null) {
+      return _checking
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Checking availability…',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink();
+    }
+    final full = _freeSlots == 0;
+    final color = full ? Colors.red : const Color(0xFF22C55E);
+    final text = full
+        ? 'No slot is free for this time — it is already booked. '
+            'Pick another time or a shorter duration; it may be free later.'
+        : '$_freeSlots slot${_freeSlots == 1 ? '' : 's'} free for this time';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            full ? Icons.event_busy_rounded : Icons.event_available_rounded,
+            size: 18,
+            color: color,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   double get _total {
     if (widget.space.rate == null) return 0;
@@ -75,15 +180,24 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
         time.hour, time.minute,
       );
     });
+    _checkAvailability();
   }
 
   Future<void> _confirm() async {
+    if (_scheduledAt.isBefore(DateTime.now().subtract(const Duration(minutes: 5)))) {
+      showAppToast(context, 'Start time is in the past. Please pick a later time.', color: Colors.orange);
+      return;
+    }
     if (!_hasRate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Rate information not available for this parking'),
-          backgroundColor: Colors.orange,
-        ),
+      showAppToast(context, 'Rate information not available for this parking', color: Colors.orange);
+      return;
+    }
+
+    if (_fullForThisTime) {
+      showAppToast(
+        context,
+        'This time is already fully booked. Please choose another time.',
+        color: Colors.orange,
       );
       return;
     }
@@ -102,12 +216,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
     } catch (e) {
       setState(() => _isSaving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Booking failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
       }
     }
   }
@@ -172,7 +281,10 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                         ? Colors.white
                         : (isDark ? Colors.grey[300] : Colors.grey[700]),
                   ),
-                  onSelected: (_) => setState(() => _durationHours = h),
+                  onSelected: (_) {
+                    setState(() => _durationHours = h);
+                    _checkAvailability();
+                  },
                 );
               }).toList(),
             ),
@@ -354,11 +466,15 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             ),
             
             const SizedBox(height: 16),
-            
+
+            _availabilityBanner(isDark),
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_isSaving || !_hasRate) ? null : _confirm,
+                onPressed: (_isSaving || !_hasRate || _fullForThisTime)
+                    ? null
+                    : _confirm,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF18D6C0),
                   foregroundColor: Colors.white,
@@ -376,7 +492,13 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
-                    : Text(_hasRate ? 'Confirm Booking' : 'Rate Unavailable'),
+                    : Text(
+                        !_hasRate
+                            ? 'Rate Unavailable'
+                            : (_fullForThisTime
+                                ? 'Fully booked for this time'
+                                : 'Confirm Booking'),
+                      ),
               ),
             ),
             if (!_hasRate)

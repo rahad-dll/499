@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 export type NetworkStatus = "FAST" | "MEDIUM" | "SLOW" | "OFFLINE";
 
@@ -37,29 +37,36 @@ function readStatus(): NetworkStatus {
   }
 }
 
+const readServerStatus = (): NetworkStatus => "FAST"; // SSR: assume the best
+
+/** Change callbacks of every mounted hook, so `refresh()` can force a re-read. */
+const listeners = new Set<() => void>();
+
+function subscribe(onChange: () => void): () => void {
+  listeners.add(onChange);
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  const connection = getConnection();
+  connection?.addEventListener("change", onChange);
+
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+    connection?.removeEventListener("change", onChange);
+  };
+}
+
+/** Re-reads the network status now (e.g. from a "Retry" button). */
+function refresh() {
+  listeners.forEach((onChange) => onChange());
+}
+
 /**
  * Tracks the user's connection quality as FAST / MEDIUM / SLOW / OFFLINE,
  * reacting live to online/offline events and `navigator.connection` changes.
  */
 export function useNetworkStatus() {
-  const [status, setStatus] = useState<NetworkStatus>("FAST");
-
-  const refresh = useCallback(() => setStatus(readStatus()), []);
-
-  useEffect(() => {
-    refresh();
-
-    window.addEventListener("online", refresh);
-    window.addEventListener("offline", refresh);
-    const connection = getConnection();
-    connection?.addEventListener("change", refresh);
-
-    return () => {
-      window.removeEventListener("online", refresh);
-      window.removeEventListener("offline", refresh);
-      connection?.removeEventListener("change", refresh);
-    };
-  }, [refresh]);
-
+  const status = useSyncExternalStore(subscribe, readStatus, readServerStatus);
   return { status, refresh };
 }

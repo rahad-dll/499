@@ -1,0 +1,154 @@
+/* CityPulse map styles (Leaflet / OpenStreetMap): pins, clusters, popups, dark tiles. */
+
+/* OSM only ships light tiles; invert them for the dark theme. */
+.cp-map-tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.88) saturate(0.6);
+}
+
+.leaflet-container {
+  font-family: var(--font-sans);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  border-top-left-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, transparent);
+  color: var(--muted-foreground);
+  font-size: 10.5px;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--brand);
+}
+
+/* parking-lot pin: stress color, white disc with free-slot count */
+.cp-pin {
+  --pin: #18d6c0;
+  position: relative;
+  width: 36px;
+  height: 46px;
+  cursor: pointer;
+  transform-origin: 50% 100%;
+  transition: transform 0.18s ease;
+  filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.35));
+}
+.cp-pin:hover {
+  transform: scale(1.1);
+}
+.cp-pin--optimal { --pin: #12c2a9; }
+.cp-pin--moderate { --pin: #f59e0b; }
+.cp-pin--critical { --pin: #ef4444; }
+.cp-pin svg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: visible;
+}
+.cp-pin svg path {
+  fill: var(--pin);
+  stroke: #fff;
+  stroke-width: 2.2;
+}
+.cp-pin__value {
+  position: absolute;
+  z-index: 1;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  color: var(--pin);
+  font: 800 12px/1 var(--font-sans);
+}
+.cp-pin__stale {
+  position: absolute;
+  z-index: 2;
+  top: -3px;
+  right: -3px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: #f59e0b;
+}
+.cp-pin--selected {
+  transform: scale(1.18);
+}
+.cp-pin--selected svg path {
+  stroke: #18d6c0;
+  stroke-width: 3;
+}
+.cp-pin--selected::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 46px;
+  height: 46px;
+  border: 2px solid rgba(24, 214, 192, 0.75);
+  border-radius: 9999px;
+  animation: cp-pin-pulse 1.6s ease-out infinite;
+}
+@keyframes cp-pin-pulse {
+  0% { transform: scale(0.85); opacity: 1; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+/* group of nearby lots, in the CityPulse brand gradient */
+.cp-cluster {
+  --halo: rgba(18, 194, 169, 0.35);
+  display: flex;
+  width: 46px;
+  height: 46px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  border-radius: 9999px;
+  background: linear-gradient(140deg, #18d6c0, #26b7e8 55%, #8b6cff);
+  box-shadow: 0 0 0 6px var(--halo), 0 8px 18px rgba(15, 23, 42, 0.32);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.18s ease;
+}
+.cp-cluster:hover {
+  transform: scale(1.08);
+}
+.cp-cluster--moderate { --halo: rgba(245, 158, 11, 0.4); }
+.cp-cluster--critical { --halo: rgba(239, 68, 68, 0.42); }
+.cp-cluster__count {
+  font: 800 15px/1 var(--font-sans);
+}
+.cp-cluster__label {
+  margin-top: 2px;
+  font: 700 8.5px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+/* themed popup */
+.leaflet-container .cp-popup .leaflet-popup-content-wrapper {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.4);
+}
+.leaflet-container .cp-popup .leaflet-popup-content {
+  margin: 14px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.leaflet-container .cp-popup .leaflet-popup-tip {
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.leaflet-container .cp-popup a.leaflet-popup-close-button {
+  top: 8px;
+  right: 8px;
+  color: var(--muted-foreground);
+}

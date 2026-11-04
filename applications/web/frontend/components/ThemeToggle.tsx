@@ -1,37 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { useDarkTheme } from "@/components/maps/use-dark-theme";
 import { cn } from "@/lib/utils";
 
-type Mode = "light" | "dark";
-
-function currentMode(): Mode {
-  if (typeof document === "undefined") return "light";
-  const explicit = document.documentElement.dataset.theme;
-  if (explicit === "light" || explicit === "dark") return explicit;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-}
-
 export function ThemeToggle({ className }: { className?: string }) {
-  // Must match the server render ("light") on the first client render to avoid
-  // a hydration mismatch — the real mode is read after mount in useEffect.
-  const [mode, setMode] = useState<Mode>("light");
-
-  useEffect(() => {
-    setMode(currentMode());
-  }, []);
+  // Light is the default; dark only when the user has explicitly chosen it.
+  // useDarkTheme reports light during hydration (matching the server render)
+  // and then syncs to the real `data-theme` on <html>.
+  const isDark = useDarkTheme();
 
   function toggle() {
-    const next: Mode = mode === "dark" ? "light" : "dark";
+    const next = isDark ? "light" : "dark";
+    // The data-theme MutationObserver in useDarkTheme picks this up.
     document.documentElement.dataset.theme = next;
     localStorage.setItem("cp-theme", next);
-    setMode(next);
   }
-
-  const isDark = mode === "dark";
 
   return (
     <button

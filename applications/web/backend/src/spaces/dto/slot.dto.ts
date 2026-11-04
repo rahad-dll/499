@@ -30,6 +30,8 @@ export enum VehicleKind {
   microbus   = 'microbus',
   suv        = 'suv',
   pickup     = 'pickup',
+  bicycle    = 'bicycle',
+  truck      = 'truck',
 }
 
 // Box in the camera frame, normalised to 0-1 so it survives resolution changes

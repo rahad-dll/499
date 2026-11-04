@@ -11,6 +11,7 @@ import { PermissionsGuard } from './auth/guards/permissions.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfilesModule } from './profiles/profiles.module';
 import { SpacesModule } from './spaces/spaces.module';
+import { TrafficModule } from './traffic/traffic.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     BookingsModule,
     ProfilesModule,
     SpacesModule,
+    TrafficModule,
     UsersModule,
   ],
   controllers: [AppController],

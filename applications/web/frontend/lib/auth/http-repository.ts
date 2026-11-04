@@ -15,6 +15,7 @@ import {
 } from "./types";
 
 const REFRESH_WINDOW_MS = 30_000;
+const REFRESH_LOCK = "cp:auth-refresh";
 
 function authError(error: unknown, fallback: string): AuthError {
   if (!(error instanceof ApiError)) return new AuthError(fallback);
@@ -38,6 +39,9 @@ async function requestTokens(input: LoginInput): Promise<ApiTokens> {
 }
 
 export class HttpAuthRepository implements AuthRepository {
+  /** the refresh in progress, shared by everyone who asks for the session meanwhile */
+  private refreshing: Promise<AuthSession | null> | null = null;
+
   async signup(input: SignupInput): Promise<AuthSession> {
     try {
       await apiRequest<{ message: string; user_id: string }>("/auth/register", {
@@ -86,6 +90,31 @@ export class HttpAuthRepository implements AuthRepository {
   }
 
   async getSession(): Promise<AuthSession | null> {
+    const stored = readApiSession();
+    if (!stored) return null;
+    if (stored.expiresAt > Date.now() + REFRESH_WINDOW_MS) return stored;
+
+    // Every caller in this tab waits on the same refresh instead of starting its own.
+    this.refreshing ??= this.refreshOnce().finally(() => {
+      this.refreshing = null;
+    });
+    return this.refreshing;
+  }
+
+  /**
+   * The API rotates refresh tokens: a second refresh with the same token is
+   * rejected, and its failure would sign the user out. A Web Lock keeps tabs
+   * that share a remembered session from refreshing at the same time.
+   */
+  private async refreshOnce(): Promise<AuthSession | null> {
+    if (typeof navigator !== "undefined" && navigator.locks) {
+      return await navigator.locks.request(REFRESH_LOCK, () => this.refreshStored());
+    }
+    return this.refreshStored();
+  }
+
+  private async refreshStored(): Promise<AuthSession | null> {
+    // re-read: another tab may have refreshed while this one waited for the lock
     const stored = readApiSession();
     if (!stored) return null;
     if (stored.expiresAt > Date.now() + REFRESH_WINDOW_MS) return stored;

@@ -2,3 +2,4 @@ annotation_vps/
 .venv
 weights
 *.safetensors
+prototype-ui/

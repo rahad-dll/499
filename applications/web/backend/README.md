@@ -1,5 +1,7 @@
 # CityPulse API Backend
 
+> **Note:** This file covers the technical stack only: setup, configuration and modules. For the system flow, from camera image to slot occupancy, plate reading and traffic, see [OVERVIEW.md](OVERVIEW.md).
+
 NestJS backend service for the CityPulse platform. It powers authentication, role-based access control, parking-space management, and database access for the web application.
 
 ## Latest Updates
@@ -138,4 +140,4 @@ CityPulse: Intelligent Parking & Traffic Control Platform
 
 ---
 
-**README Updated:** 2026-08-09
+**README Updated:** 2026-11-04

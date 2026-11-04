@@ -5,6 +5,7 @@ import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
 import '../../services/deleted_bookings_service.dart';
+import '../../utils/app_toast.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/dashboard/app_bottom_nav.dart';
 import 'booking_details_screen.dart';
@@ -70,12 +71,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   Future<void> _cancelBooking(BookingModel booking) async {
     if (booking.status == BookingStatus.cancelled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This booking is already cancelled'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      showAppToast(context, 'This booking is already cancelled', color: Colors.orange);
       return;
     }
 
@@ -111,26 +107,10 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
     try {
       await _service.updateStatus(booking.id, BookingStatus.cancelled);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Booking cancelled successfully'),
-            ],
-          ),
-          backgroundColor: Color(0xFF22C55E),
-        ),
-      );
+      showAppToast(context, 'Booking cancelled successfully', color: Color(0xFF22C55E));
       _loadBookings();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel booking: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
     }
   }
 
@@ -165,24 +145,22 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
     
     if (confirm == true) {
+      try {
+        // Server only allows removing cancelled / finished bookings.
+        await _service.deleteBooking(booking.id);
+      } catch (e) {
+        if (!mounted) return false;
+        showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
+        return false;
+      }
       _deletedService.addDeletedId(booking.id);
-      
+
+      if (!mounted) return false;
       setState(() {
         _bookings.removeWhere((b) => b.id == booking.id);
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.delete_outline, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Booking removed from list'),
-            ],
-          ),
-          backgroundColor: Color(0xFFE53E3E),
-        ),
-      );
+      showAppToast(context, 'Booking removed from list', color: Color(0xFFE53E3E));
       return true;
     }
     return false;

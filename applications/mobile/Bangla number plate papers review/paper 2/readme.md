@@ -1,7 +1,7 @@
 # README.md — Paper #3: Bangla Licence-Plate Detectors and Hybrid-Pipeline Study
 
 > **Document name:** `README.md`
-> **Project:** 498R BanglaLPR — re-implementation of *"A Cloud-Based Hybrid Model for Real-Time Detection of BRTA-Approved Licence Plates Using YOLO Tiny and Haar Cascade"* (Paper #3, arXiv:2609.06507)
+> **Project:**BanglaLPR — re-implementation of *"A Cloud-Based Hybrid Model for Real-Time Detection of BRTA-Approved Licence Plates Using YOLO Tiny and Haar Cascade"* (Paper #3, arXiv:2609.06507)
 > **Author / maintainer:** Md. Yousuf
 > **Date:** 18 October 2026
 > **Full technical report:** [`Paper03_Report.md`](Paper03_Report.md)

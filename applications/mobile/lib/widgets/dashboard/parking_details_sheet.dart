@@ -468,15 +468,16 @@ class _ActionButtons extends StatelessWidget {
           flex: 2,
           child: Container(
             decoration: BoxDecoration(
-              gradient:
-                  parking.hasAvailableSpots ? DashColors.brandGradient : null,
-              color: parking.hasAvailableSpots
+              gradient: parking.isOpen ? DashColors.brandGradient : null,
+              color: parking.isOpen
                   ? null
                   : Colors.grey.withValues(alpha: 0.20),
               borderRadius: BorderRadius.circular(14),
             ),
             child: ElevatedButton.icon(
-              onPressed: parking.hasAvailableSpots
+              // "0 free" only describes RIGHT NOW. The user can still pick a
+              // later time in the booking sheet, which checks that window.
+              onPressed: parking.isOpen
                   ? () {
                       Navigator.pop(context);
                       onBook();
@@ -484,7 +485,7 @@ class _ActionButtons extends StatelessWidget {
                   : null,
               icon: const Icon(Icons.bolt_rounded, size: 18),
               label: Text(
-                parking.hasAvailableSpots ? 'Book Now' : 'Fully Booked',
+                !parking.isOpen ? 'Closed' : (parking.hasAvailableSpots ? 'Book Now' : 'Book for Later'),
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,

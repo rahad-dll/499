@@ -1,18 +1,9 @@
 @import "tailwindcss";
 
-/* Dark mode is driven by the existing [data-theme="dark"] attribute
-   (set by the pre-paint script + ThemeToggle), with a system fallback
-   when the user has made no explicit choice. */
-@custom-variant dark {
-  &:where([data-theme="dark"], [data-theme="dark"] *) {
-    @slot;
-  }
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
-      @slot;
-    }
-  }
-}
+/* Light is the default theme. Dark mode applies only when the user explicitly
+   chooses it via ThemeToggle ([data-theme="dark"], restored by the pre-paint
+   script) — the OS color-scheme preference is intentionally ignored. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ---------------- CityPulse brand tokens ---------------- */
 :root {
@@ -78,33 +69,6 @@
   --input: #2a3a54;
   --ring: #18d6c0;
   --brand: #18d6c0;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --background: #0f1728;
-    --foreground: #f8fafc;
-    --card: #141e30;
-    --card-foreground: #f8fafc;
-    --popover: #141e30;
-    --popover-foreground: #f8fafc;
-    --primary: #18d6c0;
-    --primary-foreground: #082b27;
-    --secondary: #172235;
-    --secondary-foreground: #d6e2f0;
-    --muted: #172235;
-    --muted-foreground: #94a3b8;
-    --accent: #1c2b44;
-    --accent-foreground: #f8fafc;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --success: #22c55e;
-    --warning: #f59e0b;
-    --border: #253248;
-    --input: #2a3a54;
-    --ring: #18d6c0;
-    --brand: #18d6c0;
-  }
 }
 
 /* ---------------- Tailwind theme mapping ---------------- */

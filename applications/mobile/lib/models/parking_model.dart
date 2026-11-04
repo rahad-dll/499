@@ -5,11 +5,17 @@ class SlotStatus {
   final String slotId;
   final String status; // 'available' | 'not_available' | 'unknown'
   final double confidence;
+  final String label; // 'empty' | 'booked' | 'occupied' | 'unknown'
+  final bool isBooked;
+  final DateTime? lastUpdated;
 
   SlotStatus({
     required this.slotId,
     required this.status,
     required this.confidence,
+    this.label = 'unknown',
+    this.isBooked = false,
+    this.lastUpdated,
   });
 
   factory SlotStatus.fromJson(Map<String, dynamic> json) {
@@ -17,6 +23,10 @@ class SlotStatus {
       slotId: json['slot_id']?.toString() ?? '',
       status: json['status']?.toString() ?? 'unknown',
       confidence: (json['confidence'] ?? 0.0).toDouble(),
+      label: json['label']?.toString() ?? 'unknown',
+      isBooked: json['is_booked'] == true,
+      lastUpdated:
+          DateTime.tryParse(json['last_updated']?.toString() ?? '')?.toLocal(),
     );
   }
 }
@@ -40,6 +50,7 @@ class ParkingModel {
   final int photoCount;
   final int cameraCount;
   final List<SlotStatus> slotStatuses;
+  final bool isStale; // backend flag: slot data older than 10 min / missing
 
   ParkingModel({
     required this.id,
@@ -60,6 +71,7 @@ class ParkingModel {
     this.photoCount = 0,
     this.cameraCount = 0,
     this.slotStatuses = const [],
+    this.isStale = false,
   });
 
   factory ParkingModel.fromJson(Map<String, dynamic> json) {
@@ -118,6 +130,7 @@ class ParkingModel {
       photoCount: json['photo_count'] ?? 0,
       cameraCount: json['camera_count'] ?? 0,
       slotStatuses: slots,
+      isStale: json['is_stale'] == true,
     );
   }
 

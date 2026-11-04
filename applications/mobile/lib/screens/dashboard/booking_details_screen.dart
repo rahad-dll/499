@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/booking_model.dart';
 import '../../services/booking_service.dart';
+
 import '../../services/deleted_bookings_service.dart';
+import '../../utils/app_toast.dart';
 import '../../utils/currency_formatter.dart';
 
 class BookingDetailsScreen extends StatefulWidget {
@@ -19,6 +21,9 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   late BookingModel _booking;
   bool _isBusy = false;
   bool _isDeleted = false;
+  // true once this screen cancelled/removed the booking, so the list behind
+  // us knows to reload when we pop.
+  bool _changed = false;
   final _deletedService = DeletedBookingsService();
 
   @override
@@ -28,6 +33,26 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     // Check if already deleted
     if (_deletedService.isDeleted(_booking.id)) {
       _isDeleted = true;
+    }
+    _refreshFromServer();
+  }
+
+  /// GET /bookings/{id} — pulls the latest status / cancellation reason.
+  /// Fails silently: the list data stays on screen.
+  Future<void> _refreshFromServer() async {
+    if (_booking.id.isEmpty || _isDeleted) return;
+    try {
+      final fresh = await BookingService().getBooking(_booking.id);
+      if (!mounted) return;
+      setState(() {
+        _booking = _booking.copyWith(
+          status: fresh.status,
+          cancellationReason: fresh.cancellationReason,
+          vehiclePlate: fresh.vehiclePlate,
+        );
+      });
+    } catch (_) {
+      // keep showing what the list gave us
     }
   }
 
@@ -48,12 +73,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
 
   Future<void> _cancelBooking() async {
     if (_booking.status == BookingStatus.cancelled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This booking is already cancelled'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      showAppToast(context, 'This booking is already cancelled', color: Colors.orange);
       return;
     }
 
@@ -95,27 +115,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       setState(() {
         _booking = updated;
         _isBusy = false;
+        _changed = true;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 10),
-              Text('Booking cancelled successfully'),
-            ],
-          ),
-          backgroundColor: Color(0xFF22C55E),
-        ),
-      );
+      showAppToast(context, 'Booking cancelled successfully', color: Color(0xFF22C55E));
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isBusy = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to cancel booking: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
     }
   }
 
@@ -151,31 +157,27 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     if (confirm != true) return;
 
     setState(() => _isBusy = true);
-    
-    // Add to deleted service
+
+    try {
+      // Server decides: only cancelled / finished bookings can be removed.
+      await BookingService().deleteBooking(_booking.id);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isBusy = false);
+      showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
+      return;
+    }
     _deletedService.addDeletedId(_booking.id);
-    
-    await Future.delayed(const Duration(milliseconds: 300));
-    
+
     if (!mounted) return;
-    
+
     setState(() {
       _isDeleted = true;
       _isBusy = false;
+      _changed = true;
     });
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.delete_outline, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Booking removed from list'),
-          ],
-        ),
-        backgroundColor: Color(0xFFE53E3E),
-      ),
-    );
+    showAppToast(context, 'Booking removed from list', color: Color(0xFFE53E3E));
     
     await Future.delayed(const Duration(milliseconds: 300));
     if (mounted) {
@@ -207,7 +209,13 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
     final cardColor = isDark ? const Color(0xFF1A2340) : Colors.white;
     final accentColor = const Color(0xFF18D6C0);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.pop(context, _changed);
+      },
+      child: Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
         title: const Text(
@@ -218,7 +226,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
         foregroundColor: isDark ? Colors.white : Colors.black87,
         elevation: 0,
         leading: IconButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, _changed),
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -645,6 +653,7 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                 ),
               ),
       ),
+    ),
     );
   }
 

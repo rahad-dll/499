@@ -1,134 +1,126 @@
 // lib/widgets/dashboard/dashboard_search_bar.dart
 import 'package:flutter/material.dart';
 
-import '../../services/places_service.dart';
 import 'dashboard_colors.dart';
-import 'search_suggestions_list.dart';
 
-/// উপরের floating search bar + autocomplete list।
-/// Positioned screen থেকে বসাবে, এখানে শুধু SafeArea আছে।
+/// Floating search field + an optional results [panel] (see SearchPanel).
+/// The screen positions this; only SafeArea is handled here.
 class DashboardSearchBar extends StatelessWidget {
   const DashboardSearchBar({
     super.key,
     required this.controller,
+    required this.focusNode,
     required this.onChanged,
     required this.onClear,
+    required this.onSubmitted,
     required this.isLoading,
-    required this.suggestions,
-    required this.onSuggestionSelected,
+    this.panel,
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
+  final ValueChanged<String> onSubmitted;
   final bool isLoading;
-  final List<PlaceSuggestion> suggestions;
-  final ValueChanged<PlaceSuggestion> onSuggestionSelected;
+  final Widget? panel;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _SearchField(
-              controller: controller,
-              onChanged: onChanged,
-              onClear: onClear,
-              isLoading: isLoading,
-            ),
-            if (suggestions.isNotEmpty)
-              SearchSuggestionsList(
-                suggestions: suggestions,
-                onSelected: onSuggestionSelected,
+            Container(
+              height: 54,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: focusNode.hasFocus
+                      ? DashColors.teal.withValues(alpha: 0.6)
+                      : DashColors.border,
+                  width: focusNode.hasFocus ? 1.5 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.10),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  const Icon(Icons.search_rounded,
+                      color: DashColors.teal, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: controller,
+                      builder: (context, value, _) => TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        onChanged: onChanged,
+                        onSubmitted: onSubmitted,
+                        textInputAction: TextInputAction.search,
+                        style: const TextStyle(
+                          color: DashColors.title,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Search area or parking space',
+                          hintStyle: TextStyle(
+                            color: DashColors.muted,
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                  ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (context, value, _) {
+                      if (isLoading) {
+                        return const Padding(
+                          padding: EdgeInsets.only(right: 14),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(DashColors.teal),
+                            ),
+                          ),
+                        );
+                      }
+                      if (value.text.isEmpty) return const SizedBox(width: 14);
+                      return IconButton(
+                        onPressed: onClear,
+                        splashRadius: 18,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 20,
+                          color: DashColors.muted,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            if (panel != null) panel!,
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SearchField extends StatelessWidget {
-  const _SearchField({
-    required this.controller,
-    required this.onChanged,
-    required this.onClear,
-    required this.isLoading,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-  final bool isLoading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DashColors.border, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 14),
-          const Icon(Icons.search_rounded, color: DashColors.teal, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              style: const TextStyle(
-                color: DashColors.title,
-                fontSize: 14,
-              ),
-              decoration: const InputDecoration(
-                hintText: 'Search for parking...',
-                hintStyle: TextStyle(
-                  color: DashColors.muted,
-                  fontSize: 14,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(DashColors.teal),
-                ),
-              ),
-            )
-          else if (controller.text.isNotEmpty)
-            GestureDetector(
-              onTap: onClear,
-              child: const Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 18,
-                  color: DashColors.muted,
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }

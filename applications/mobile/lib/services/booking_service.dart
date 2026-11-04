@@ -5,6 +5,7 @@ import '../models/booking_model.dart';
 import '../models/parking_model.dart';
 import 'api_service.dart';
 import 'authed_http.dart';
+import 'booking_events.dart';
 import 'session_service.dart';
 
 class BookingService {
@@ -89,6 +90,71 @@ class BookingService {
     throw Exception(ApiService.extractErrorMessage(response));
   }
 
+  /// How many slots of [spaceId] are free for the whole window
+  /// [from, from + durationHours). Uses GET /spaces/{id}/slots?from&to, which
+  /// already skips slots that have a live booking overlapping the window —
+  /// so a slot taken 10:00-11:00 still counts as free for 14:00-15:00.
+  Future<int> getFreeSlotCount({
+    required String spaceId,
+    required DateTime from,
+    required int durationHours,
+  }) async {
+    final to = from.add(Duration(hours: durationHours));
+    final query = 'from=${Uri.encodeQueryComponent(from.toUtc().toIso8601String())}'
+        '&to=${Uri.encodeQueryComponent(to.toUtc().toIso8601String())}';
+    final response = await AuthedHttp.get('/spaces/$spaceId/slots?$query');
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      if (data is List) return data.length;
+      if (data is Map && data['data'] is List) {
+        return (data['data'] as List).length;
+      }
+      throw Exception('Unexpected response from server');
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    throw Exception(ApiService.extractErrorMessage(response));
+  }
+
+  /// Max bookings a driver may hold at once (upcoming + ongoing).
+  static const int maxLiveBookings = 2;
+
+  /// Throws a readable error if this driver already has too many live
+  /// bookings, or one that overlaps the requested time window.
+  Future<void> _assertCanBook({
+    required DateTime startTime,
+    required int durationHours,
+  }) async {
+    final now = DateTime.now();
+    final newEnd = startTime.add(Duration(hours: durationHours));
+
+    final live = (await getBookings()).where((b) {
+      final isLiveStatus = b.status == BookingStatus.confirmed ||
+          b.status == BookingStatus.pending ||
+          b.status == BookingStatus.active;
+      return isLiveStatus && b.endTime.isAfter(now);
+    }).toList();
+
+    if (live.length >= maxLiveBookings) {
+      throw Exception(
+        'You already have ${live.length} active/upcoming bookings '
+        '(max $maxLiveBookings). Cancel one or wait until it ends.',
+      );
+    }
+
+    final clash = live.any(
+      (b) => b.scheduledAt.isBefore(newEnd) && b.endTime.isAfter(startTime),
+    );
+    if (clash) {
+      throw Exception(
+        'You already have a booking that overlaps this time. '
+        'Pick a different time or cancel the other booking.',
+      );
+    }
+  }
+
   Future<BookingModel> createBooking({
     required ParkingModel space,
     required DateTime startTime,
@@ -99,6 +165,11 @@ class BookingService {
     if (token.isEmpty) {
       throw Exception('You need to sign in again before booking.');
     }
+
+    // Client-side guard (the backend enforces the same rules, but this
+    // gives an instant message and also protects while an older backend
+    // build is still deployed).
+    await _assertCanBook(startTime: startTime, durationHours: durationHours);
 
     // No slot_id here on purpose — the nearby-spaces list only gives us
     // counts, not individual slot ids, and sending the space's own id as
@@ -120,6 +191,8 @@ class BookingService {
     if (response.statusCode == 201 || response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is Map<String, dynamic>) {
+        // A slot is now taken -> let the dashboard re-pull its counts.
+        BookingEvents.notifyChanged();
         return BookingModel.fromJson(data);
       }
       throw Exception('Unexpected response from server');
@@ -155,18 +228,29 @@ class BookingService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data is Map<String, dynamic>) {
+        // Slot is free again on the server -> refresh availability everywhere.
+        BookingEvents.notifyChanged();
         return BookingModel.fromJson(data);
       }
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
     }
     throw Exception(_extractError(response));
   }
 
-  /// NOTE: the backend has no DELETE /bookings/:id route — only
-  /// PATCH /bookings/:id/cancel exists. There's no hard-delete of booking
-  /// history today, so this cancels instead of removing. If you want a
-  /// real "remove from my list" action, that needs a new endpoint from
-  /// Rahad first — worth flagging to him.
+  /// DELETE /bookings/{id} — removes a finished or cancelled booking from
+  /// the driver's history (soft delete on the server). The backend refuses
+  /// to hide a booking that is still active, so the user must cancel first.
   Future<void> deleteBooking(String bookingId) async {
-    await updateStatus(bookingId, BookingStatus.cancelled);
+    final response = await AuthedHttp.delete('/bookings/$bookingId');
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      BookingEvents.notifyChanged();
+      return;
+    }
+    if (response.statusCode == 401) {
+      throw Exception('Session expired. Please sign in again.');
+    }
+    throw Exception(ApiService.extractErrorMessage(response));
   }
 }

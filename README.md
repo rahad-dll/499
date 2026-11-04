@@ -72,18 +72,18 @@ project-499/
 
 ### Sprint 1 (W1–2) — Review & Data Collection
 
-- [ ] Explore: RTSP access at Dhaka parking sites
-- [ ] Explore: public Bangla licence plate datasets
-- [ ] Build: CSE499B review report and presentation
-- [ ] Build: start Dhaka parking footage collection
+- [x] Explore: RTSP access at Dhaka parking sites
+- [x] Explore: public Bangla licence plate datasets
+- [x] Build: CSE499B review report and presentation
+- [x] Build: start Dhaka parking footage collection
 - [ ] Build: stream worker reading one camera
 
 ### Sprint 2 (W3–4) — Dhaka Dataset & Live Stream
 
 - [ ] Explore: labelling tools, frame sampling rate
-- [ ] Build: labelled Dhaka slot images; transfer test of the CSE499A model
+- [x] Build: labelled Dhaka slot images; transfer test of the CSE499A model
 - [ ] Build: Redis-to-WebSocket push of slot changes
-- [ ] Build: pricing endpoints
+- [x] Build: pricing endpoints
 
 ### Sprint 3 (W5–6) — Phase 3 & Platform Completion
 
@@ -94,10 +94,10 @@ project-499/
 
 ### Sprint 4 (W7–8) — Bangla LPR
 
-- [ ] Explore: Bangla OCR models (ViT + BanglaBERT, TrOCR baseline)
-- [ ] Build: YOLOv8 plate detector
-- [ ] Build: two-line Bangla OCR
-- [ ] Build: LPR running on live streams
+- [x] Explore: Bangla OCR models (ViT + BanglaBERT, TrOCR baseline)
+- [x] Build: YOLOv8 plate detector
+- [x] Build: two-line Bangla OCR
+- [x] Build: LPR running on live streams
 
 ### Sprint 5 (W9–10) — Authority, Pricing & Pending Features
 
@@ -166,4 +166,4 @@ project-499/
 
 ---
 
-**README Updated:** 2026-10-07
+**README Updated:** 2026-11-04

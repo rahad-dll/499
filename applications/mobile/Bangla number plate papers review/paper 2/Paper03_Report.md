@@ -3,7 +3,7 @@
 > **Document name:** `Paper03_Report.md`
 > **Title:** Re-implementation and Evaluation of *"A Cloud-Based Hybrid Model for Real-Time Detection of BRTA-Approved Licence Plates Using YOLO Tiny and Haar Cascade"* (Paper #3)
 > **Author / Implementer:** Md. Yousuf
-> **Project:** 498R BanglaLPR — team paper re-implementation study
+> **Project:** paper re-implementation study
 > **Date:** 18 October 2026
 > **Companion file:** `README.md` (model card, usage guide, file manifest)
 > **Environment:** Kaggle Notebook, 2 × Tesla T4, Python 3.13.15, PyTorch 2.11.0+cu128, Ultralytics 8.4.170

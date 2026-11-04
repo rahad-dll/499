@@ -313,6 +313,7 @@ model rate_plans {
   space_id            String         @db.Uuid
   zone                String?        @db.VarChar(50)
   slot_id             String?        @db.Uuid
+  vehicle_type        vehicle_kind?
   name                String?        @db.VarChar(100)
   rent_type           rent_type
   // price per unit (hour, day, month, or one entry for flat), in paisa
@@ -338,6 +339,7 @@ model rate_plans {
   space               parking_spaces @relation(fields: [space_id], references: [id])
 
   @@index([space_id, rent_type])
+  @@index([space_id, vehicle_type])
   @@index([slot_id])
 }
 
@@ -372,17 +374,25 @@ model discounts {
 }
 
 model cameras {
-  id             String          @id @default(uuid()) @db.Uuid
-  space_id       String          @db.Uuid
-  label          String?         @db.VarChar(100)
-  rtsp_url       String          @db.VarChar(500)
-  status         camera_status   @default(setup)
-  last_heartbeat DateTime?       @db.Timestamptz(6)
-  created_at     DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime        @updatedAt @db.Timestamptz(6)
-  deleted_at     DateTime?       @db.Timestamptz(6)
-  space          parking_spaces  @relation(fields: [space_id], references: [id])
-  slots          parking_slots[]
+  id                String          @id @default(uuid()) @db.Uuid
+  space_id          String          @db.Uuid
+  label             String?         @db.VarChar(100)
+  source_type       camera_source   @default(rtsp)
+  rtsp_url          String?         @db.VarChar(500)
+  frame_width       Int?
+  frame_height      Int?
+  media_key         String?         @db.VarChar(500)
+  media_type        String?         @db.VarChar(100)
+  media_size        Int?
+  media_uploaded_at DateTime?       @db.Timestamptz(6)
+  sort_order        Int             @default(0)
+  status            camera_status   @default(setup)
+  last_heartbeat    DateTime?       @db.Timestamptz(6)
+  created_at        DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime        @updatedAt @db.Timestamptz(6)
+  deleted_at        DateTime?       @db.Timestamptz(6)
+  space             parking_spaces  @relation(fields: [space_id], references: [id])
+  slots             parking_slots[]
 
   @@index([space_id])
 }
@@ -514,6 +524,11 @@ enum camera_status {
   setup
 }
 
+enum camera_source {
+  rtsp
+  video
+}
+
 enum slot_type {
   standard
   motorcycle
@@ -544,6 +559,8 @@ enum vehicle_kind {
   microbus
   suv
   pickup
+  bicycle
+  truck
 }
 
 enum rent_type {

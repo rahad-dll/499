@@ -42,11 +42,17 @@ api-services/
 ├── models/
 │   └── schemas.py       # Pydantic contracts
 ├── routes/
-│   └── inference.py     # endpoint handlers
+│   ├── inference.py     # occupancy endpoints
+│   └── plates.py        # licence plate endpoint
 └── weights/
-    └── mobilenetv2/
-        ├── phase1_weights.pth   (archived)
-        └── phase2_weights.pth   (active)
+    ├── mobilenetv2/
+    │   ├── phase1_weights.pth   (archived)
+    │   └── phase2_weights.pth   (active)
+    ├── plate-detector-yolo26n/
+    │   └── best.pt
+    └── plate-reader-yolo26s/
+        ├── best.pt
+        └── classes.json
 ```
 
 ---
@@ -79,6 +85,10 @@ Swagger UI → `http://localhost:8001/docs`
 | `DEFAULT_MODEL`        | `occupancy`                                   | default selector used when no model is provided               |
 | `MODEL_PATH_OCCUPANCY` | `mobilenetv2/phase2_weights.pth`              | occupancy model path relative to `MODEL_DIR`                  |
 | `MODEL_PATH_VPS_NET`   | `vps-net/Customized.pth`                      | alternate model path relative to `MODEL_DIR`                  |
+| `MODEL_PATH_PLATE_DETECTOR` | `plate-detector-yolo26n/best.pt`         | plate detector path relative to `MODEL_DIR`                   |
+| `MODEL_PATH_PLATE_READER`   | `plate-reader-yolo26s/best.pt`           | plate character reader path relative to `MODEL_DIR`           |
+| `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-yolo26s/classes.json`      | reader classes with English and Bangla text                   |
+| `PLATE_MIN_CONFIDENCE`      | `0.4`                                    | plates detected below this confidence are dropped             |
 | `HOST`                 | `0.0.0.0`                                     |                                                               |
 | `PORT`                 | `8001`                                        |                                                               |
 | `CORS_ORIGINS`         | `http://localhost:3000,http://localhost:5173` | comma-separated allowed origins                               |
@@ -107,6 +117,7 @@ This API is not intended for direct public access. Deploy it on an internal netw
 | POST   | `/api/v1/inference/predict`       | ✓    | single slot classification |
 | POST   | `/api/v1/inference/predict-batch` | ✓    | batch slot classification  |
 | GET    | `/api/v1/inference/history`       | ✓    | paginated inference log    |
+| POST   | `/api/v1/inference/plate`         | ✓    | find and read licence plates |
 
 ---
 
@@ -163,12 +174,52 @@ Paginated inference log, newest first.
 
 ---
 
+### POST `/api/v1/inference/plate`
+
+Find every licence plate in an image (slot image or full camera frame) and read it. The YOLO26n detector finds the plates, the YOLO26s reader finds each character, and the characters become text: district, word and letter first, then the digits. Plates are returned most confident first; `plates` is empty when no plate is found.
+
+**Form field:** `file` — JPEG or PNG
+
+**Query params:**
+
+- `slot_id` (optional)
+- `space_id` (optional)
+
+```json
+{
+  "slot_id": "A01",
+  "space_id": "space-abc",
+  "plates": [
+    {
+      "box": { "x1": 412, "y1": 1630, "x2": 640, "y2": 1764 },
+      "confidence": 0.9412,
+      "text_en": "Dhaka Metro Ga 24-2955",
+      "text_bn": "ঢাকা মেট্রো গ ২৪-২৯৫৫"
+    }
+  ],
+  "inference_id": "6a563b45a83b52e626761fdc",
+  "created_at": "2026-11-05T10:12:41.204Z"
+}
+```
+
+Store `text_en`: two reader classes differ only in case (`Da` / `DA`, `Tha` / `THA`), so keep the text as returned.
+
+---
+
 ## Storage
 
-Inference records are stored in the `inferences` MongoDB collection. A TTL index auto-deletes records older than 30 days.
+Records are stored in MongoDB and auto-deleted after 30 days by a TTL index.
+
+`inferences` (occupancy):
 
 ```
 slot_id, space_id, label, confidence, filename, created_at
+```
+
+`plate_reads` (licence plates):
+
+```
+slot_id, space_id, plates[box, confidence, text_en, text_bn], filename, created_at
 ```
 
 ---

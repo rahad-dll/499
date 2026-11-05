@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from db.mongodb import connect_db, close_db
 from routes.inference import router as inference_router
+from routes.plates import router as plates_router
 
 
 @asynccontextmanager
@@ -18,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="CityPulse Inference API",
-    description="Parking occupancy detection inference service",
+    description="Parking occupancy and licence plate inference service",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -38,6 +39,7 @@ app.add_middleware(
 )
 
 app.include_router(inference_router)
+app.include_router(plates_router)
 
 
 @app.get("/health")

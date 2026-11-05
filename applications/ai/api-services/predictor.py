@@ -1,4 +1,5 @@
 import io
+import json
 import re
 from pathlib import Path
 
@@ -6,7 +7,16 @@ import torch
 from PIL import Image
 from torchvision import models, transforms
 
-from config import DEFAULT_MODEL, DEFAULT_OCCUPANCY_MODEL, MODEL_DIR, MODEL_PATHS
+from config import (
+    DEFAULT_MODEL,
+    DEFAULT_OCCUPANCY_MODEL,
+    MODEL_DIR,
+    MODEL_PATHS,
+    PLATE_DETECTOR_MODEL,
+    PLATE_MIN_CONFIDENCE,
+    PLATE_READER_CLASSES,
+    PLATE_READER_MODEL,
+)
 
 # must match training order — ImageFolder sorts alphabetically
 CLASS_NAMES = ["empty", "occupied"]
@@ -144,3 +154,68 @@ def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
         "label":      CLASS_NAMES[idx.item()],
         "confidence": round(confidence.item(), 4),
     }
+
+
+# ── licence plates
+
+_plate_models = None
+
+# The reader's class names "Da"/"DA" (ড/দ) and "Tha"/"THA" (থ/ঠ) differ only in case.
+# Plate text is compared case-insensitively, so these get spellings that stay distinct.
+PLATE_ENGLISH_SPELLING = {"Da": "Dda", "DA": "Da", "THA": "Ttha"}
+
+
+def load_plate_models():
+    """Load the plate detector, the character reader and the reader's class list. Loads once per process."""
+    global _plate_models
+
+    if _plate_models is None:
+        from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
+
+        classes = json.loads((Path(MODEL_DIR) / PLATE_READER_CLASSES).read_text(encoding="utf-8"))
+        _plate_models = {
+            "detector": YOLO(str(Path(MODEL_DIR) / PLATE_DETECTOR_MODEL)),
+            "reader":   YOLO(str(Path(MODEL_DIR) / PLATE_READER_MODEL)),
+            "bangla":   [c["bangla"] for c in classes],
+            "english":  [PLATE_ENGLISH_SPELLING.get(c["name"], c["name"]) for c in classes],
+            "kind":     [c["kind"] for c in classes],
+        }
+
+    return _plate_models
+
+
+def plate_text(boxes: list[tuple[int, float]], labels: list[str], kind: list[str]) -> str:
+    """Turn (class_id, x1) character boxes into plate text.
+
+    District, word and letter come first, then the digits, each left to right;
+    six digits are written as 12-3456.
+    """
+    ordered = sorted(boxes, key=lambda b: b[1])
+    head = " ".join(labels[c] for c, _ in ordered if kind[c] != "digit")
+    digits = "".join(labels[c] for c, _ in ordered if kind[c] == "digit")
+    if len(digits) == 6:
+        digits = f"{digits[:2]}-{digits[2:]}"
+    return " ".join(part for part in (head, digits) if part)
+
+
+def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
+    """Find every licence plate in an image and read it. Most confident plate first."""
+    plate_models = load_plate_models()
+    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    detection = plate_models["detector"].predict(img, conf=min_confidence, verbose=False)[0]
+
+    plates = []
+    for box in sorted(detection.boxes, key=lambda b: -float(b.conf)):
+        x1, y1, x2, y2 = (round(v) for v in box.xyxy[0].tolist())
+        reading = plate_models["reader"].predict(img.crop((x1, y1, x2, y2)), conf=0.25, verbose=False)[0]
+        chars = [(int(c), float(b[0])) for c, b in zip(reading.boxes.cls, reading.boxes.xyxy)]
+
+        plates.append({
+            "box":        {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
+            "confidence": round(float(box.conf), 4),
+            "text_en":    plate_text(chars, plate_models["english"], plate_models["kind"]),
+            "text_bn":    plate_text(chars, plate_models["bangla"], plate_models["kind"]),
+        })
+
+    return plates

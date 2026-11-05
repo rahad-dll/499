@@ -26,6 +26,10 @@ async def connect_db() -> bool:
             "created_at",
             expireAfterSeconds=60 * 60 * 24 * 30,
         )
+        await db.plate_reads.create_index(
+            "created_at",
+            expireAfterSeconds=60 * 60 * 24 * 30,
+        )
     except Exception as exc:
         logger.warning("MongoDB unavailable during startup: %s", exc)
         client = None

@@ -34,6 +34,28 @@ class HistoryResponse(BaseModel):
     page_size: int
 
 
+class PlateBox(BaseModel):
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+
+
+class PlateRead(BaseModel):
+    box:        PlateBox = Field(..., description="plate position in the image, pixels")
+    confidence: float    = Field(..., description="plate detector confidence (0–1)")
+    text_en:    str      = Field(..., description="plate text in English, e.g. 'Dhaka Metro Ga 12-3456'")
+    text_bn:    str      = Field(..., description="plate text in Bangla")
+
+
+class PlateResponse(BaseModel):
+    slot_id:      Optional[str] = None
+    space_id:     Optional[str] = None
+    plates:       list[PlateRead]   # most confident first; empty when no plate is found
+    inference_id: str               # MongoDB ObjectId as string
+    created_at:   datetime
+
+
 class StandardResponse(BaseModel):
     success: bool = True
     data:    Optional[dict | list | None] = None

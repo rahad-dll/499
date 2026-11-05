@@ -160,6 +160,10 @@ def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
 
 _plate_models = None
 
+# The reader's class names "Da"/"DA" (ড/দ) and "Tha"/"THA" (থ/ঠ) differ only in case.
+# Plate text is compared case-insensitively, so these get spellings that stay distinct.
+PLATE_ENGLISH_SPELLING = {"Da": "Dda", "DA": "Da", "THA": "Ttha"}
+
 
 def load_plate_models():
     """Load the plate detector, the character reader and the reader's class list. Loads once per process."""
@@ -173,7 +177,7 @@ def load_plate_models():
             "detector": YOLO(str(Path(MODEL_DIR) / PLATE_DETECTOR_MODEL)),
             "reader":   YOLO(str(Path(MODEL_DIR) / PLATE_READER_MODEL)),
             "bangla":   [c["bangla"] for c in classes],
-            "english":  [c["name"] for c in classes],
+            "english":  [PLATE_ENGLISH_SPELLING.get(c["name"], c["name"]) for c in classes],
             "kind":     [c["kind"] for c in classes],
         }
 

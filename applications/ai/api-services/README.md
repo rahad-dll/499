@@ -202,7 +202,7 @@ Find every licence plate in an image (slot image or full camera frame) and read 
 }
 ```
 
-Store `text_en`: two reader classes differ only in case (`Da` / `DA`, `Tha` / `THA`), so keep the text as returned.
+`text_en` can be compared ignoring case: the letters ড / দ are written `Dda` / `Da`, and ঠ / থ `Ttha` / `Tha`.
 
 ---
 

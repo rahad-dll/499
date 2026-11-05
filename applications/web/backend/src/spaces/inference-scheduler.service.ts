@@ -5,7 +5,8 @@
  * bucket, it:
  *   1. Downloads each photo via presigned URL
  *   2. Sends to the AI inference API
- *   3. Upserts the result
+ *   3. For an occupied or booked slot, reads the licence plate
+ *   4. Upserts the result
  *
  * GET /spaces/nearby reads from parking_slots directly — instant response.
  */
@@ -84,20 +85,27 @@ export class InferenceSchedulerService implements OnModuleInit {
               select: { id: true },
             });
 
+            const image = await this.downloadPhoto(photo.s3_key);
+
             if (activeBooking) {
-              this.logger.debug(`Skipping AI for ${photo.s3_key} — slot is booked`);
-              // Mark as not_available in cache
+              this.logger.debug(`Skipping occupancy AI for ${photo.s3_key} — slot is booked`);
+              // Mark as not_available in cache; the plate is still read to see which car is there
+              const plate = await this.readPlate(space.id, slotLabel, image, photo.s3_key);
               await this.prisma.parking_slots.upsert({
                 where: { space_id_slot_label: { space_id: space.id, slot_label: slotLabel } },
-                update: { occupied: true, last_updated: now },
-                create: { space_id: space.id, slot_label: slotLabel, occupied: true, last_updated: now },
+                update: { occupied: true, last_updated: now, ...plate },
+                create: { space_id: space.id, slot_label: slotLabel, occupied: true, last_updated: now, ...plate },
               });
               updated++;
               continue;
             }
 
-            const result = await this.inferPhoto(space.id, photo.s3_key);
+            const result = await this.inferPhoto(space.id, photo.s3_key, image);
             const occupied = result.status === 'not_available';
+            // an empty slot clears the last plate so a car that left is not shown
+            const plate = occupied
+              ? await this.readPlate(space.id, slotLabel, image, photo.s3_key)
+              : { plate_text: null, plate_confidence: null, plate_read_at: null };
 
             await this.prisma.parking_slots.upsert({
               where: { space_id_slot_label: { space_id: space.id, slot_label: slotLabel } },
@@ -105,6 +113,7 @@ export class InferenceSchedulerService implements OnModuleInit {
                 occupied,
                 confidence_score: result.confidence,
                 last_updated: new Date(),
+                ...plate,
               },
               create: {
                 space_id: space.id,
@@ -112,6 +121,7 @@ export class InferenceSchedulerService implements OnModuleInit {
                 occupied,
                 confidence_score: result.confidence,
                 last_updated: new Date(),
+                ...plate,
               },
             });
             updated++;
@@ -138,20 +148,8 @@ export class InferenceSchedulerService implements OnModuleInit {
     });
   }
 
-  private async inferPhoto(spaceId: string, s3Key: string) {
-    const slotId = `${spaceId}-${parse(s3Key).name}`;
-    const aiBaseUrl = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001');
-    const aiToken = this.config.get<string>('AI_API_TOKEN', '');
-
-    const aiEndpoint = new URL(
-      '/api/v1/inference/predict',
-      aiBaseUrl.endsWith('/') ? aiBaseUrl : `${aiBaseUrl}/`,
-    );
-    aiEndpoint.searchParams.set('space_id', spaceId);
-    aiEndpoint.searchParams.set('slot_id', slotId);
-    aiEndpoint.searchParams.set('model', 'occupancy');
-
-    // Presigned URL → fetch bytes → send to AI
+  // Presigned URL → fetch bytes; downloaded once per slot and sent to both AI calls
+  private async downloadPhoto(s3Key: string): Promise<Buffer> {
     const s3 = this.getS3Client();
     const presignedUrl = await getSignedUrl(
       s3,
@@ -161,10 +159,18 @@ export class InferenceSchedulerService implements OnModuleInit {
 
     const imgResponse = await fetch(presignedUrl, { signal: AbortSignal.timeout(60_000) });
     if (!imgResponse.ok) throw new Error(`S3 ${imgResponse.status} for ${s3Key}`);
-    const imageBuffer = Buffer.from(await imgResponse.arrayBuffer());
+    return Buffer.from(await imgResponse.arrayBuffer());
+  }
+
+  private async postToAi(path: string, params: Record<string, string>, image: Buffer, filename: string) {
+    const aiBaseUrl = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001');
+    const aiToken = this.config.get<string>('AI_API_TOKEN', '');
+
+    const aiEndpoint = new URL(path, aiBaseUrl.endsWith('/') ? aiBaseUrl : `${aiBaseUrl}/`);
+    for (const [key, value] of Object.entries(params)) aiEndpoint.searchParams.set(key, value);
 
     const formData = new FormData();
-    formData.append('file', new Blob([imageBuffer], { type: 'image/jpeg' }), basename(s3Key));
+    formData.append('file', new Blob([new Uint8Array(image)], { type: 'image/jpeg' }), filename);
 
     const aiResponse = await fetch(aiEndpoint.toString(), {
       method: 'POST',
@@ -173,8 +179,41 @@ export class InferenceSchedulerService implements OnModuleInit {
       signal: AbortSignal.timeout(90_000),
     });
     if (!aiResponse.ok) throw new Error(`AI ${aiResponse.status}`);
+    return aiResponse.json() as Promise<unknown>;
+  }
 
-    const payload = (await aiResponse.json()) as {
+  /**
+   * Reads the licence plate of the car in a slot. Returns the most confident plate,
+   * or empty fields when none is found. A failed read never blocks the occupancy update.
+   */
+  private async readPlate(spaceId: string, slotLabel: string, image: Buffer, s3Key: string) {
+    try {
+      const payload = (await this.postToAi(
+        '/api/v1/inference/plate',
+        { space_id: spaceId, slot_id: `${spaceId}-${slotLabel}` },
+        image,
+        basename(s3Key),
+      )) as { plates?: { text_en?: string; confidence?: number }[] };
+
+      const best = payload.plates?.find((p) => p.text_en);
+      return {
+        plate_text: best?.text_en ?? null,
+        plate_confidence: best?.confidence ?? null,
+        plate_read_at: new Date(),
+      };
+    } catch (e) {
+      this.logger.warn(`Plate read failed for ${s3Key}: ${e instanceof Error ? e.message : e}`);
+      return {};
+    }
+  }
+
+  private async inferPhoto(spaceId: string, s3Key: string, image: Buffer) {
+    const payload = (await this.postToAi(
+      '/api/v1/inference/predict',
+      { space_id: spaceId, slot_id: `${spaceId}-${parse(s3Key).name}`, model: 'occupancy' },
+      image,
+      basename(s3Key),
+    )) as {
       prediction?: { label?: string; confidence?: number };
       label?: string; confidence?: number;
     };

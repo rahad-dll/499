@@ -41,6 +41,13 @@ def _load_model_paths() -> dict[str, str]:
 MODEL_PATHS = _load_model_paths()
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "occupancy")
 
+# Licence plate models, relative to MODEL_DIR: detector finds plates, reader finds characters.
+PLATE_DETECTOR_MODEL = os.getenv("MODEL_PATH_PLATE_DETECTOR", "").strip() or "plate-detector-yolo26n/best.pt"
+PLATE_READER_MODEL   = os.getenv("MODEL_PATH_PLATE_READER", "").strip() or "plate-reader-yolo26s/best.pt"
+PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "plate-reader-yolo26s/classes.json"
+# boxes below this confidence are dropped (removes weak whole-image boxes on close-ups)
+PLATE_MIN_CONFIDENCE = float(os.getenv("PLATE_MIN_CONFIDENCE", 0.4))
+
 # Server bind settings — 0.0.0.0 makes it reachable inside Docker
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", 8001))

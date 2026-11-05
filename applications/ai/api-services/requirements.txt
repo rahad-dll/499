@@ -1,5 +1,6 @@
 torch
 torchvision
+ultralytics
 pillow
 pandas
 scikit-learn

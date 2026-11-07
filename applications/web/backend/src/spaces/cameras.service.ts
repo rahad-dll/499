@@ -342,6 +342,10 @@ export class CamerasService {
           occupied: slot.occupied,
           confidence_score: slot.confidence_score,
           last_updated: slot.last_updated,
+          plate_text: slot.plate_text,
+          plate_confidence: slot.plate_confidence,
+          plate_read_at: slot.plate_read_at,
+          plate_check: slot.plate_check,
           created_at: slot.created_at,
           updated_at: slot.updated_at,
         };

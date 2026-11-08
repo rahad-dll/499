@@ -17,6 +17,7 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { basename, parse } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
+import type { plate_check } from '../generated/prisma/enums.js';
 
 const SLOT_IMAGE_BUCKET = 'fixed-slot-image';
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -82,7 +83,7 @@ export class InferenceSchedulerService implements OnModuleInit {
                 hold_expires_at: { gte: now },
                 slot: { slot_label: slotLabel },
               },
-              select: { id: true },
+              select: { id: true, vehicle_plate: true },
             });
 
             const image = await this.downloadPhoto(photo.s3_key);
@@ -90,7 +91,10 @@ export class InferenceSchedulerService implements OnModuleInit {
             if (activeBooking) {
               this.logger.debug(`Skipping occupancy AI for ${photo.s3_key} — slot is booked`);
               // Mark as not_available in cache; the plate is still read to see which car is there
-              const plate = await this.readPlate(space.id, slotLabel, image, photo.s3_key);
+              const plate = this.withPlateCheck(
+                await this.readPlate(space.id, slotLabel, image, photo.s3_key),
+                activeBooking,
+              );
               await this.prisma.parking_slots.upsert({
                 where: { space_id_slot_label: { space_id: space.id, slot_label: slotLabel } },
                 update: { occupied: true, last_updated: now, ...plate },
@@ -104,8 +108,8 @@ export class InferenceSchedulerService implements OnModuleInit {
             const occupied = result.status === 'not_available';
             // an empty slot clears the last plate so a car that left is not shown
             const plate = occupied
-              ? await this.readPlate(space.id, slotLabel, image, photo.s3_key)
-              : { plate_text: null, plate_confidence: null, plate_read_at: null };
+              ? this.withPlateCheck(await this.readPlate(space.id, slotLabel, image, photo.s3_key), null)
+              : { plate_text: null, plate_confidence: null, plate_read_at: null, plate_check: null };
 
             await this.prisma.parking_slots.upsert({
               where: { space_id_slot_label: { space_id: space.id, slot_label: slotLabel } },
@@ -205,6 +209,29 @@ export class InferenceSchedulerService implements OnModuleInit {
       this.logger.warn(`Plate read failed for ${s3Key}: ${e instanceof Error ? e.message : e}`);
       return {};
     }
+  }
+
+  /**
+   * Compares the plate read with the current booking's vehicle plate, ignoring case,
+   * spaces and dashes. A failed read ({}) leaves the last check untouched.
+   */
+  private withPlateCheck(
+    plate: { plate_text?: string | null; plate_confidence?: number | null; plate_read_at?: Date | null },
+    booking: { vehicle_plate: string | null } | null,
+  ) {
+    if (!('plate_text' in plate)) return plate;
+
+    const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const read = plate.plate_text ? normalise(plate.plate_text) : '';
+    const booked = booking?.vehicle_plate ? normalise(booking.vehicle_plate) : '';
+
+    let plate_check: plate_check;
+    if (!read) plate_check = 'unknown';
+    else if (!booking) plate_check = 'no_booking';
+    else if (!booked) plate_check = 'unknown';
+    else plate_check = read === booked ? 'match' : 'mismatch';
+
+    return { ...plate, plate_check };
   }
 
   private async inferPhoto(spaceId: string, s3Key: string, image: Buffer) {

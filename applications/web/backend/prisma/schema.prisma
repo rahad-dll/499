@@ -292,6 +292,8 @@ model parking_slots {
   plate_text         String?           @db.VarChar(64)
   plate_confidence   Float?
   plate_read_at      DateTime?         @db.Timestamptz(6)
+  // plate read compared with the current booking's vehicle plate
+  plate_check        plate_check?
   created_at         DateTime          @default(now()) @db.Timestamptz(6)
   updated_at         DateTime          @updatedAt @db.Timestamptz(6)
   deleted_at         DateTime?         @db.Timestamptz(6)
@@ -554,6 +556,13 @@ enum occupancy_source {
   ai
   booking
   manual
+}
+
+enum plate_check {
+  match      // the booked car is in the slot
+  mismatch   // a different car is in a booked slot
+  no_booking // a car is parked in a slot without a current booking
+  unknown    // no plate read, or the booking has no plate
 }
 
 enum vehicle_kind {

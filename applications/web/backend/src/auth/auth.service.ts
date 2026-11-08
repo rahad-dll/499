@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -9,7 +10,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto, RegisterRole } from './dto/register.dto';
@@ -17,6 +20,9 @@ import { JwtPayload } from './strategies/jwt.strategy';
 
 const BCRYPT_ROUNDS = 12;
 const REFRESH_DAYS = 30;
+const RESET_CODE_MINUTES = 15;
+const RESET_RESEND_SECONDS = 60;
+const RESET_MAX_TRIES = 5;
 
 @Injectable()
 export class AuthService {
@@ -24,6 +30,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private mail: MailService,
   ) {}
 
   // ── register
@@ -180,6 +187,91 @@ export class AuthService {
     ]);
 
     return { message: 'Password changed', signed_out_sessions: signedOut.count };
+  }
+
+  // ── forgot / reset password
+  // The answer never says whether an email has an account. The code is 6 digits, valid
+  // 15 minutes, stored only as a hash; 5 wrong tries cancel it, and a new code can be
+  // requested once a minute.
+
+  private readonly logger = new Logger(AuthService.name);
+  private resetFailures = new Map<string, number>();
+
+  async forgotPassword(email: string) {
+    const answer = { message: 'If an account exists for this email, a reset code has been sent.' };
+    const user = await this.prisma.users.findFirst({
+      where: { email: { equals: email.trim(), mode: 'insensitive' } },
+      select: { id: true, email: true, is_active: true, deleted_at: true, password_reset_expires_at: true },
+    });
+    if (!user || !user.is_active || user.deleted_at) return answer;
+
+    const issuedAt = user.password_reset_expires_at
+      ? user.password_reset_expires_at.getTime() - RESET_CODE_MINUTES * 60_000
+      : 0;
+    if (Date.now() - issuedAt < RESET_RESEND_SECONDS * 1000) return answer;
+
+    const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
+    await this.prisma.users.update({
+      where: { id: user.id },
+      data: {
+        password_reset_token: this.hashToken(code),
+        password_reset_expires_at: new Date(Date.now() + RESET_CODE_MINUTES * 60_000),
+      },
+    });
+    this.resetFailures.delete(user.id);
+
+    // sent in the background: waiting for SMTP would make known emails answer slower
+    // (and a mail failure would show as 500), which tells callers the account exists
+    void this.mail.send(
+      user.email,
+      'Your CityPulse password reset code',
+      `Your CityPulse password reset code is ${code}.\n\n` +
+        `It expires in ${RESET_CODE_MINUTES} minutes. If you did not ask to reset your password, ignore this email.`,
+      `<p>Your CityPulse password reset code is</p><p style="font-size:24px;font-weight:bold;letter-spacing:4px">${code}</p>` +
+        `<p>It expires in ${RESET_CODE_MINUTES} minutes. If you did not ask to reset your password, ignore this email.</p>`,
+    ).catch((error: Error) => this.logger.error(`Reset email failed: ${error.message}`));
+    return answer;
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const invalid = new BadRequestException('Invalid or expired code');
+    const user = await this.prisma.users.findFirst({
+      where: { email: { equals: dto.email.trim(), mode: 'insensitive' } },
+      select: { id: true, password_reset_token: true, password_reset_expires_at: true },
+    });
+    if (!user?.password_reset_token || !user.password_reset_expires_at) throw invalid;
+    if (user.password_reset_expires_at < new Date()) throw invalid;
+
+    if (user.password_reset_token !== this.hashToken(dto.token)) {
+      const failures = (this.resetFailures.get(user.id) ?? 0) + 1;
+      this.resetFailures.set(user.id, failures);
+      if (failures >= RESET_MAX_TRIES) {
+        // too many guesses: the code is cancelled and a new one must be requested
+        await this.prisma.users.update({
+          where: { id: user.id },
+          data: { password_reset_token: null, password_reset_expires_at: null },
+        });
+        this.resetFailures.delete(user.id);
+      }
+      throw invalid;
+    }
+
+    const password_hash = await bcrypt.hash(dto.new_password, BCRYPT_ROUNDS);
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.users.update({
+        where: { id: user.id },
+        data: { password_hash, password_reset_token: null, password_reset_expires_at: null },
+      }),
+      // whoever had the account before the reset is signed out everywhere
+      this.prisma.user_sessions.updateMany({
+        where: { user_id: user.id, revoked: false },
+        data: { revoked: true, revoked_at: now, revoked_reason: 'password_reset' },
+      }),
+    ]);
+    this.resetFailures.delete(user.id);
+
+    return { message: 'Password has been reset. Please sign in with the new password.' };
   }
 
   // ── sessions

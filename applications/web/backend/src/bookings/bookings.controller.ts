@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -24,6 +25,7 @@ import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, QuoteBookingDto } from './dto/create-booking.dto';
+import { ListBookingsQueryDto } from './dto/list-bookings-query.dto';
 
 @ApiTags('bookings')
 @ApiBearerAuth()
@@ -71,10 +73,23 @@ export class BookingsController {
     return this.bookingsService.create(dto, user);
   }
 
-  // GET /bookings — list driver's bookings
+  // GET /bookings — list driver's bookings, newest first, one page at a time
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 CHANGED 08 Nov · My bookings, with filters and paging',
+    description:
+      'Filters: status (one or comma-separated), from / to on the start time. ' +
+      'Paging: page (default 1), limit (default 50, max 100). ' +
+      'Response is now { data, page, limit, total } instead of a bare list.',
+  })
+  @ApiOkResponse({
+    schema: {
+      example: { data: [{ id: 'b430942a-7f74-478d-8cfe-82a71ac60323', slot_label: 'A02', status: 'confirmed', total_price: 100 }], page: 1, limit: 50, total: 1 },
+    },
+  })
   @Get()
-  findAll(@CurrentUser() user: JwtPayload) {
-    return this.bookingsService.findAll(user);
+  findAll(@CurrentUser() user: JwtPayload, @Query() query: ListBookingsQueryDto) {
+    return this.bookingsService.findAll(user, query);
   }
 
   // GET /bookings/:id

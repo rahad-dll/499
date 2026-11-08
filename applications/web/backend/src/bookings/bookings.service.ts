@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateBookingDto, QuoteBookingDto } from './dto/create-booking.dto';
+import { ListBookingsQueryDto } from './dto/list-bookings-query.dto';
 import { EDITOR_RATE_NAME } from '../spaces/rate-plan.constants';
 
 // the Prisma client or an interactive transaction, so pricing works in both
@@ -49,18 +50,17 @@ export class BookingsService {
   // lot's rate for the slot's vehicle type, then the lot's base price.
   // Prices are in paisa; null when the lot has no price at all.
   private async price(db: Db, spaceId: string, slotId: string, hours: number) {
-    const [slot, space, plans] = await Promise.all([
-      db.parking_slots.findUnique({ where: { id: slotId }, select: { vehicle_types: true } }),
-      db.parking_spaces.findUnique({ where: { id: spaceId }, select: { base_rate_unit: true } }),
-      db.rate_plans.findMany({
-        where: {
-          space_id: spaceId, name: EDITOR_RATE_NAME, rent_type: 'hourly',
-          is_active: true, deleted_at: null,
-          OR: [{ slot_id: slotId }, { slot_id: null, vehicle_type: { not: null } }],
-        },
-        select: { slot_id: true, vehicle_type: true, amount_unit: true },
-      }),
-    ]);
+    // one after another: inside a transaction they share one connection
+    const slot = await db.parking_slots.findUnique({ where: { id: slotId }, select: { vehicle_types: true } });
+    const space = await db.parking_spaces.findUnique({ where: { id: spaceId }, select: { base_rate_unit: true } });
+    const plans = await db.rate_plans.findMany({
+      where: {
+        space_id: spaceId, name: EDITOR_RATE_NAME, rent_type: 'hourly',
+        is_active: true, deleted_at: null,
+        OR: [{ slot_id: slotId }, { slot_id: null, vehicle_type: { not: null } }],
+      },
+      select: { slot_id: true, vehicle_type: true, amount_unit: true },
+    });
 
     const slotPlan = plans.find((p) => p.slot_id === slotId);
     const vehicle = slot?.vehicle_types[0];
@@ -338,14 +338,30 @@ export class BookingsService {
 
   // ── list driver's bookings ─────────────────────────────────────────────────
 
-  async findAll(user: JwtPayload) {
+  async findAll(user: JwtPayload, query: ListBookingsQueryDto) {
+    const { page, limit } = query;
     const driver = await this.prisma.driver_profiles.findFirst({
       where: { user_id: user.sub, deleted_at: null },
     });
-    if (!driver) return [];
+    if (!driver) return { data: [], page, limit, total: 0 };
 
-    const bookings = await this.prisma.bookings.findMany({
-      where: { driver_id: driver.id, deleted_at: null },
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+    if (from && to && from >= to) throw new BadRequestException('"from" must be before "to"');
+
+    const where = {
+      driver_id: driver.id,
+      deleted_at: null,
+      ...(query.status?.length && { status: { in: query.status } }),
+      ...((from || to) && { scheduled_at: { ...(from && { gte: from }), ...(to && { lt: to }) } }),
+    };
+
+    const [total, bookings] = await Promise.all([
+      this.prisma.bookings.count({ where }),
+      this.prisma.bookings.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
       include: {
         slot: { select: { slot_label: true } },
         space: {
@@ -358,10 +374,11 @@ export class BookingsService {
           },
         },
       },
-      orderBy: { created_at: 'desc' },
-    });
+      orderBy: [{ created_at: 'desc' }, { id: 'asc' }],
+      }),
+    ]);
 
-    return bookings.map((b) => this.formatBooking(b));
+    return { data: bookings.map((b) => this.formatBooking(b)), page, limit, total };
   }
 
   // ── get one ───────────────────────────────────────────────────────────────

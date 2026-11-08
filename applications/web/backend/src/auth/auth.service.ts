@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto, RegisterRole } from './dto/register.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
@@ -143,6 +144,42 @@ export class AuthService {
       data: { revoked: true, revoked_at: new Date(), revoked_reason: 'logout' },
     });
     return { message: 'Logged out' };
+  }
+
+  // ── change password
+  // A wrong current password answers 400, not 401: clients treat 401 as an expired session.
+  // Every other session is signed out, so a stolen session cannot keep refreshing.
+
+  async changePassword(user: JwtPayload, dto: ChangePasswordDto) {
+    const account = await this.prisma.users.findUnique({
+      where: { id: user.sub },
+      select: { password_hash: true },
+    });
+    if (!account) throw new NotFoundException('User not found');
+    if (!account.password_hash) {
+      throw new BadRequestException('This account has no password (signed up with Google)');
+    }
+
+    const valid = await bcrypt.compare(dto.current_password, account.password_hash);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+    if (dto.new_password === dto.current_password) {
+      throw new BadRequestException('New password must be different from the current one');
+    }
+
+    const password_hash = await bcrypt.hash(dto.new_password, BCRYPT_ROUNDS);
+    const now = new Date();
+    const [, signedOut] = await this.prisma.$transaction([
+      this.prisma.users.update({
+        where: { id: user.sub },
+        data: { password_hash, password_reset_token: null, password_reset_expires_at: null },
+      }),
+      this.prisma.user_sessions.updateMany({
+        where: { user_id: user.sub, revoked: false, jti: { not: user.jti } },
+        data: { revoked: true, revoked_at: now, revoked_by: user.sub, revoked_reason: 'password_changed' },
+      }),
+    ]);
+
+    return { message: 'Password changed', signed_out_sessions: signedOut.count };
   }
 
   // ── sessions

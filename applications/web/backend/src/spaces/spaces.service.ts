@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
+import { EDITOR_RATE_NAME } from './rate-plan.constants';
 
 const SLOT_IMAGE_BUCKET = 'fixed-slot-image';
 
@@ -22,7 +23,7 @@ export class SpacesService {
     private config: ConfigService,
   ) { }
 
-  // ── create ────────────────────────────────────────────────────────────────
+  // ── create
 
   async create(dto: CreateSpaceDto, user: JwtPayload, photoKeys: string[]) {
     const { rtsp_url, ...spaceData } = dto;
@@ -58,7 +59,7 @@ export class SpacesService {
     return this.findOne(space.id, user);
   }
 
-  // ── list owner's spaces ───────────────────────────────────────────────────
+  // ── list owner's spaces
 
   async findAll(user: JwtPayload) {
     return this.prisma.parking_spaces.findMany({
@@ -268,7 +269,7 @@ export class SpacesService {
     return 6371 * c;
   }
 
-  // ── get one ────────────────────────────────────────────────────────────────
+  // ── get one
 
   async findOne(id: string, user: JwtPayload) {
     const space = await this.prisma.parking_spaces.findFirst({
@@ -284,15 +285,54 @@ export class SpacesService {
 
     if (!space) throw new NotFoundException('Space not found');
 
-    // owners only see their own; admin can see all
-    if (user.role !== 'admin' && space.owner_id !== user.sub) {
-      throw new ForbiddenException();
+    // owners see their own in full; admin can see all
+    if (user.role === 'admin' || space.owner_id === user.sub) {
+      return space;
     }
 
-    return space;
+    // everyone else (drivers) sees approved lots only, without owner or camera details;
+    // a pending or suspended lot answers like a missing one
+    if (space.status !== 'active') throw new NotFoundException('Space not found');
+
+    const [rates, photos] = await Promise.all([
+      this.prisma.rate_plans.findMany({
+        where: {
+          space_id: id, name: EDITOR_RATE_NAME, rent_type: 'hourly', slot_id: null,
+          vehicle_type: { not: null }, deleted_at: null, is_active: true,
+        },
+        select: { vehicle_type: true, amount_unit: true },
+      }),
+      Promise.all(
+        space.photos
+          .filter((p) => !p.deleted_at && p.s3_bucket !== 'local' && p.s3_bucket !== SLOT_IMAGE_BUCKET)
+          .map(async (p) => ({
+            id: p.id,
+            is_primary: p.is_primary,
+            url: await this.presignPhoto(p.s3_bucket, p.s3_key),
+          })),
+      ),
+    ]);
+
+    return {
+      id: space.id,
+      name: space.name,
+      description: space.description,
+      address: space.address,
+      contact_phone: space.contact_phone,
+      latitude: space.latitude,
+      longitude: space.longitude,
+      space_type: space.space_type,
+      total_capacity: space.total_capacity,
+      operating_hours: space.operating_hours,
+      amenities: space.amenities,
+      max_height_cm: space.max_height_cm,
+      base_rate_unit: space.base_rate_unit,
+      vehicle_rates: rates.map((r) => ({ vehicle_type: r.vehicle_type, hourly_rate_unit: r.amount_unit })),
+      photos,
+    };
   }
 
-  // ── update ─────────────────────────────────────────────────────────────────
+  // ── update
 
   async update(id: string, dto: UpdateSpaceDto, user: JwtPayload) {
     await this.assertOwnership(id, user);
@@ -324,7 +364,7 @@ export class SpacesService {
     return space;
   }
 
-  // ── delete (soft) ──────────────────────────────────────────────────────────
+  // ── delete (soft)
 
   async remove(id: string, user: JwtPayload) {
     await this.assertOwnership(id, user);
@@ -335,7 +375,7 @@ export class SpacesService {
     return { message: 'Space deleted' };
   }
 
-  // ── AI inference ────────────────────────────────────────────────────────
+  // ── AI inference
 
   async inferOccupancy(
     id: string,
@@ -410,7 +450,7 @@ export class SpacesService {
     };
   }
 
-  // ── photos ─────────────────────────────────────────────────────────────────
+  // ── photos
 
   async addPhotos(id: string, user: JwtPayload, photoKeys: string[]) {
     await this.assertOwnership(id, user);
@@ -450,6 +490,11 @@ export class SpacesService {
       );
     }
 
+    return { url: await this.presignPhoto(photo.s3_bucket, photo.s3_key) };
+  }
+
+  // short-lived (15 min) read link for a photo in object storage
+  private async presignPhoto(bucket: string, key: string) {
     const endpoint = this.config.get<string>('STORAGE_ENDPOINT');
     const region = this.config.get<string>('STORAGE_REGION');
     const accessKeyId = this.config.get<string>('STORAGE_ACCESS_KEY_ID');
@@ -469,13 +514,7 @@ export class SpacesService {
       forcePathStyle: true,
     });
 
-    const command = new GetObjectCommand({
-      Bucket: photo.s3_bucket,
-      Key: photo.s3_key,
-    });
-    const url = await getSignedUrl(s3, command, { expiresIn: 900 });
-
-    return { url };
+    return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: 900 });
   }
 
   async deletePhoto(spaceId: string, photoId: string, user: JwtPayload) {
@@ -489,7 +528,7 @@ export class SpacesService {
     return { message: 'Photo deleted' };
   }
 
-  // ── helper ─────────────────────────────────────────────────────────────────
+  // ── helper
 
   async assertOwnership(id: string, user: JwtPayload) {
     if (user.role === 'admin') return;

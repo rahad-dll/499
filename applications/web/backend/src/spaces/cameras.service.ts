@@ -11,8 +11,7 @@ import { SpacesService } from './spaces.service';
 import { CameraSlotDto, CameraSource, CreateCameraDto, PixelBoxDto, UpdateCameraDto } from './dto/camera.dto';
 import { VehicleKind } from './dto/slot.dto';
 
-// hourly rate plans managed by the camera and rate editor; other rate plans are left alone
-export const EDITOR_RATE_NAME = 'layout';
+import { EDITOR_RATE_NAME } from './rate-plan.constants';
 // slot type for a new slot, from the vehicle it is drawn for
 const SLOT_TYPE_FOR_VEHICLE: Record<VehicleKind, 'standard' | 'compact' | 'large' | 'motorcycle' | 'bicycle'> = {
   [VehicleKind.car]: 'standard',

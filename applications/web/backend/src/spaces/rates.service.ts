@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { SpacesService } from './spaces.service';
-import { EDITOR_RATE_NAME } from './cameras.service';
+import { EDITOR_RATE_NAME } from './rate-plan.constants';
 import { VehicleKind } from './dto/slot.dto';
 
 @Injectable()

@@ -7,9 +7,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { CreateBookingDto } from './dto/create-booking.dto';
+import { CreateBookingDto, QuoteBookingDto } from './dto/create-booking.dto';
+import { EDITOR_RATE_NAME } from '../spaces/rate-plan.constants';
 
-// ── booking rules (industry-style limits) ────────────────────────────────────
+// the Prisma client or an interactive transaction, so pricing works in both
+type Db = Pick<PrismaService, 'parking_slots' | 'parking_spaces' | 'rate_plans'>;
+
+// ── booking rules (industry-style limits)
 // One driver cannot hoard slots: a small number of live bookings, no two
 // bookings for the same time window, no booking in the past, and no endless
 // book-then-cancel loops that keep slots blocked for everybody else.
@@ -40,7 +44,134 @@ export class BookingsService {
     };
   }
 
-  // ── create booking ────────────────────────────────────────────────────────
+  // ── pricing
+  // Hourly rate of a slot, most specific first: the slot's own price, then the
+  // lot's rate for the slot's vehicle type, then the lot's base price.
+  // Prices are in paisa; null when the lot has no price at all.
+  private async price(db: Db, spaceId: string, slotId: string, hours: number) {
+    const [slot, space, plans] = await Promise.all([
+      db.parking_slots.findUnique({ where: { id: slotId }, select: { vehicle_types: true } }),
+      db.parking_spaces.findUnique({ where: { id: spaceId }, select: { base_rate_unit: true } }),
+      db.rate_plans.findMany({
+        where: {
+          space_id: spaceId, name: EDITOR_RATE_NAME, rent_type: 'hourly',
+          is_active: true, deleted_at: null,
+          OR: [{ slot_id: slotId }, { slot_id: null, vehicle_type: { not: null } }],
+        },
+        select: { slot_id: true, vehicle_type: true, amount_unit: true },
+      }),
+    ]);
+
+    const slotPlan = plans.find((p) => p.slot_id === slotId);
+    const vehicle = slot?.vehicle_types[0];
+    const vehiclePlan = plans.find((p) => p.slot_id === null && p.vehicle_type === vehicle);
+
+    const [hourly, source] = slotPlan
+      ? [slotPlan.amount_unit, 'slot' as const]
+      : vehiclePlan
+        ? [vehiclePlan.amount_unit, 'vehicle' as const]
+        : [space?.base_rate_unit ?? null, 'lot' as const];
+
+    const base = hourly === null ? null : hourly * hours;
+    return {
+      hourly_rate_unit: hourly,
+      rate_source: hourly === null ? null : source,
+      base_amount_unit: base,
+      discount_unit: base === null ? null : 0,
+      amount_unit: base,
+    };
+  }
+
+  // Start/end of a requested booking, after the time rules
+  private bookingWindow(scheduled: string, durationHours: number) {
+    const now = new Date();
+    const scheduledAt = new Date(scheduled);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException('Invalid start time');
+    }
+    if (durationHours > MAX_DURATION_HOURS) {
+      throw new BadRequestException(
+        `You can book at most ${MAX_DURATION_HOURS} hours at a time`,
+      );
+    }
+    if (scheduledAt.getTime() < now.getTime() - PAST_GRACE_MS) {
+      throw new BadRequestException(
+        'Start time is in the past. Please pick a later time.',
+      );
+    }
+    if (
+      scheduledAt.getTime() >
+      now.getTime() + MAX_ADVANCE_DAYS * 24 * 60 * 60 * 1000
+    ) {
+      throw new BadRequestException(
+        `You can only book up to ${MAX_ADVANCE_DAYS} days ahead`,
+      );
+    }
+    const endAt = new Date(scheduledAt.getTime() + durationHours * 60 * 60 * 1000);
+    return { now, scheduledAt, endAt };
+  }
+
+  // Slots that can be booked for [from, to); camera "occupied" only matters for imminent bookings
+  private freeSlotWhere(spaceId: string, now: Date, from: Date, to: Date) {
+    const imminent = from.getTime() - now.getTime() <= OCCUPIED_CHECK_WINDOW_MS;
+    return {
+      space_id: spaceId,
+      deleted_at: null,
+      status: 'active' as const,
+      is_bookable: true,
+      ...(imminent ? { occupied: false } : {}),
+      bookings: { none: this.overlapping(from, to) },
+    };
+  }
+
+  // ── quote
+  // Same slot choice and price as POST /bookings would make right now; nothing is held.
+
+  async quote(dto: QuoteBookingDto) {
+    const space = await this.prisma.parking_spaces.findFirst({
+      where: { id: dto.space_id, deleted_at: null, status: 'active' },
+      select: { id: true },
+    });
+    if (!space) throw new NotFoundException('Parking space not found or inactive');
+
+    const { now, scheduledAt, endAt } = this.bookingWindow(dto.scheduled_at, dto.duration_hours);
+    const where = this.freeSlotWhere(dto.space_id, now, scheduledAt, endAt);
+
+    let slot: { id: string; slot_label: string } | null;
+    if (dto.slot_id) {
+      const exists = await this.prisma.parking_slots.findFirst({
+        where: { id: dto.slot_id, space_id: dto.space_id, deleted_at: null },
+        select: { id: true },
+      });
+      if (!exists) throw new NotFoundException('Slot not found in this space');
+      slot = await this.prisma.parking_slots.findFirst({
+        where: { ...where, id: dto.slot_id },
+        select: { id: true, slot_label: true },
+      });
+      if (!slot) throw new ConflictException('Selected slot is not available for this time');
+    } else {
+      slot = await this.prisma.parking_slots.findFirst({
+        where,
+        orderBy: { slot_label: 'asc' },
+        select: { id: true, slot_label: true },
+      });
+      if (!slot) throw new ConflictException('No available slots in this space for the selected time');
+    }
+
+    const price = await this.price(this.prisma, dto.space_id, slot.id, dto.duration_hours);
+    return {
+      space_id: dto.space_id,
+      slot_id: slot.id,
+      slot_label: slot.slot_label,
+      scheduled_at: scheduledAt,
+      end_at: endAt,
+      duration_hours: dto.duration_hours,
+      ...price,
+      total_price: price.amount_unit === null ? null : price.amount_unit / 100,
+    };
+  }
+
+  // ── create booking
 
   async create(dto: CreateBookingDto, user: JwtPayload) {
     // Must have a driver profile
@@ -61,38 +192,11 @@ export class BookingsService {
       throw new NotFoundException('Parking space not found or inactive');
 
     // ── time rules ──
-    const now = new Date();
-    const scheduledAt = new Date(dto.scheduled_at);
-    if (Number.isNaN(scheduledAt.getTime())) {
-      throw new BadRequestException('Invalid start time');
-    }
-    if (dto.duration_hours > MAX_DURATION_HOURS) {
-      throw new BadRequestException(
-        `You can book at most ${MAX_DURATION_HOURS} hours at a time`,
-      );
-    }
-    if (scheduledAt.getTime() < now.getTime() - PAST_GRACE_MS) {
-      throw new BadRequestException(
-        'Start time is in the past. Please pick a later time.',
-      );
-    }
-    if (
-      scheduledAt.getTime() >
-      now.getTime() + MAX_ADVANCE_DAYS * 24 * 60 * 60 * 1000
-    ) {
-      throw new BadRequestException(
-        `You can only book up to ${MAX_ADVANCE_DAYS} days ahead`,
-      );
-    }
-    const holdExpiresAt = new Date(
-      scheduledAt.getTime() + dto.duration_hours * 60 * 60 * 1000,
+    const { now, scheduledAt, endAt: holdExpiresAt } = this.bookingWindow(
+      dto.scheduled_at,
+      dto.duration_hours,
     );
     const plate = dto.vehicle_plate?.trim().toUpperCase() || undefined;
-
-    // Calculate amount: base_rate_unit is in paisa (1/100 BDT), duration in hours
-    const amountUnit = space.base_rate_unit
-      ? space.base_rate_unit * dto.duration_hours
-      : null;
 
     // Everything below runs inside one transaction guarded by advisory locks,
     // so two requests at the same moment cannot both pass the checks
@@ -166,16 +270,7 @@ export class BookingsService {
 
       // 5) resolve slot — must be bookable, free of other bookings in this
       //    window, and (only for imminent bookings) not physically occupied
-      const imminent =
-        scheduledAt.getTime() - now.getTime() <= OCCUPIED_CHECK_WINDOW_MS;
-      const slotWhere = {
-        space_id: dto.space_id,
-        deleted_at: null,
-        status: 'active' as const,
-        is_bookable: true,
-        ...(imminent ? { occupied: false } : {}),
-        bookings: { none: this.overlapping(scheduledAt, holdExpiresAt) },
-      };
+      const slotWhere = this.freeSlotWhere(dto.space_id, now, scheduledAt, holdExpiresAt);
 
       let slotId = dto.slot_id;
       if (slotId) {
@@ -206,6 +301,9 @@ export class BookingsService {
         slotId = slot.id;
       }
 
+      // 6) price of the chosen slot, worked out here so the client cannot set it
+      const price = await this.price(tx, dto.space_id, slotId, dto.duration_hours);
+
       return tx.bookings.create({
         data: {
           driver_id: driver.id,
@@ -215,7 +313,9 @@ export class BookingsService {
           end_at: holdExpiresAt,
           hold_expires_at: holdExpiresAt,
           vehicle_plate: plate,
-          amount_unit: amountUnit,
+          base_amount_unit: price.base_amount_unit,
+          discount_unit: price.discount_unit,
+          amount_unit: price.amount_unit,
           status: 'confirmed',
         },
         include: {
@@ -400,11 +500,16 @@ export class BookingsService {
       scheduled_at: booking.scheduled_at,
       hold_expires_at: booking.hold_expires_at,
       duration_hours: hours,
+      base_amount_unit: booking.base_amount_unit ?? null,
+      discount_unit: booking.discount_unit ?? null,
       amount_unit: booking.amount_unit,
-      // price_per_hour in BDT (amount_unit is in paisa)
-      price_per_hour: booking.space?.base_rate_unit
-        ? booking.space.base_rate_unit / 100
-        : 0,
+      // price_per_hour in BDT (amount_unit is in paisa): the rate actually charged,
+      // falling back to the lot price for bookings made before slot/vehicle pricing
+      price_per_hour: booking.base_amount_unit && hours
+        ? booking.base_amount_unit / hours / 100
+        : booking.space?.base_rate_unit
+          ? booking.space.base_rate_unit / 100
+          : 0,
       total_price: booking.amount_unit ? booking.amount_unit / 100 : 0,
       cancellation_reason: booking.cancellation_reason ?? null,
       vehicle_plate: booking.vehicle_plate ?? null,

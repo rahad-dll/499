@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ROLE_FIELDS, UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
 export class ProfilesService {
@@ -29,6 +30,8 @@ export class ProfilesService {
                     select: {
                         driving_licence_no: true,
                         licence_type: true,
+                        date_of_birth: true,
+                        vehicle_classes: true,
                     },
                 },
                 authority_profile: {
@@ -57,27 +60,58 @@ export class ProfilesService {
         };
     }
 
-    async updateMyProfile(userId: string, role: string, data: Record<string, unknown>) {
+    async updateMyProfile(userId: string, role: string, dto: UpdateMyProfileDto) {
         const user = await this.prisma.users.findUniqueOrThrow({
             where: { id: userId },
-            select: { id: true },
+            select: { id: true, phone: true },
         });
 
         if (!user) {
             throw new NotFoundException('User profile not found');
         }
 
-        const { full_name, avatar_url, ...rest } = data as Record<string, unknown>;
+        // DTO class fields exist even when not sent, so keep only the ones the client sent
+        const { full_name, phone, area_id, ...rest } = dto;
+        const roleData = Object.fromEntries(
+            Object.entries(rest).filter(([, value]) => value !== undefined),
+        ) as Partial<typeof rest>;
 
-        await this.prisma.users.update({
-            where: { id: userId },
-            data: {
-                ...(full_name ? { full_name: full_name as string } : {}),
-                ...(avatar_url ? { avatar_url: avatar_url as string } : {}),
-            },
-        });
+        // fields of another role are a client mistake, not something to ignore silently
+        const allowed: readonly string[] = ROLE_FIELDS[role as keyof typeof ROLE_FIELDS] ?? [];
+        const foreign = Object.keys(roleData).filter((key) => !allowed.includes(key));
+        if (foreign.length) {
+            throw new BadRequestException(`Not a ${role} field: ${foreign.join(', ')}`);
+        }
 
-        await this.updateRoleSpecificProfile(userId, role, rest);
+        if (area_id) {
+            const area = await this.prisma.areas.findUnique({ where: { id: area_id }, select: { id: true } });
+            if (!area) throw new BadRequestException('area_id does not exist');
+        }
+
+        const phoneChanged = phone != null && phone !== user.phone;
+        try {
+            await this.prisma.users.update({
+                where: { id: userId },
+                data: {
+                    ...(full_name != null && { full_name: full_name.trim() }),
+                    ...(phoneChanged && { phone, phone_verified: false }),
+                    ...(area_id && { area_id }),
+                },
+            });
+        } catch (error) {
+            if ((error as { code?: string })?.code === 'P2002') {
+                throw new ConflictException('This phone number is already used by another account');
+            }
+            throw error;
+        }
+
+        if (Object.keys(roleData).length) {
+            const { date_of_birth, ...rest } = roleData;
+            await this.updateRoleSpecificProfile(userId, role, {
+                ...rest,
+                ...(date_of_birth !== undefined && { date_of_birth: date_of_birth ? new Date(date_of_birth) : null }),
+            });
+        }
 
         return this.getMyProfile(userId, role);
     }
@@ -93,6 +127,8 @@ export class ProfilesService {
                 return {
                     driving_licence_no: user.driver_profile?.driving_licence_no ?? null,
                     licence_type: user.driver_profile?.licence_type ?? null,
+                    date_of_birth: user.driver_profile?.date_of_birth?.toISOString().slice(0, 10) ?? null,
+                    vehicle_classes: user.driver_profile?.vehicle_classes ?? [],
                 };
             case 'authority':
                 return {
@@ -104,7 +140,7 @@ export class ProfilesService {
         }
     }
 
-    private async updateRoleSpecificProfile(userId: string, role: string, data: Record<string, unknown>) {
+    private async updateRoleSpecificProfile(userId: string, role: string, data: Record<string, any>) {
         switch (role) {
             case 'owner':
                 await this.prisma.owner_profiles.upsert({

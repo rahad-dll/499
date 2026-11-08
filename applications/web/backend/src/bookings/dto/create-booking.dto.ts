@@ -42,3 +42,29 @@ export class CreateBookingDto {
   @MaxLength(20)
   vehicle_plate?: string;
 }
+
+// POST /bookings/quote: the same fields as a booking, without the vehicle
+export class QuoteBookingDto {
+  @ApiProperty({ example: 'uuid-of-space' })
+  @IsUUID()
+  space_id: string;
+
+  @ApiPropertyOptional({
+    example: 'uuid-of-slot',
+    description: 'Slot to price. If omitted, the slot POST /bookings would pick right now is priced.',
+  })
+  @IsOptional()
+  @IsUUID()
+  slot_id?: string;
+
+  @ApiProperty({ example: '2026-08-11T10:00:00Z' })
+  @IsDateString()
+  scheduled_at: string;
+
+  @ApiProperty({ example: 2, description: 'Duration in hours' })
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  @Type(() => Number)
+  duration_hours: number;
+}

@@ -15,6 +15,15 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiExtraModels,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -25,6 +34,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateSpaceDto } from './dto/create-space.dto';
 import { UpdateSpaceDto } from './dto/update-space.dto';
+import { SpacePublicDto } from './dto/space-public.dto';
 import { SpacesService } from './spaces.service';
 
 // photos land in uploads/spaces/ relative to cwd
@@ -36,6 +46,9 @@ const photoStorage = diskStorage({
   },
 });
 
+@ApiTags('spaces')
+@ApiBearerAuth()
+@ApiExtraModels(SpacePublicDto)
 @Controller('spaces')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SpacesController {
@@ -81,6 +94,20 @@ export class SpacesController {
   }
 
   // GET /spaces/:id
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 CHANGED 08 Nov · Get one parking lot (drivers can now read approved lots)',
+    description:
+      'Owner and admin get the full lot, including cameras and counts. ' +
+      'Any other signed-in user (driver) gets approved lots only, with public fields, ' +
+      'hourly price per vehicle type and signed photo links (valid 15 minutes). ' +
+      'A pending or suspended lot answers 404 to drivers.',
+  })
+  @ApiOkResponse({
+    description: 'Driver view shown below; owners and admins get the full lot row',
+    schema: { $ref: getSchemaPath(SpacePublicDto) },
+  })
+  @ApiNotFoundResponse({ description: 'Lot does not exist, or is not approved (for drivers)' })
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.spacesService.findOne(id, user);

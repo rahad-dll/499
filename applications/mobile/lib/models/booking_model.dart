@@ -24,6 +24,11 @@ BookingStatus bookingStatusFromString(String value) {
 
 String bookingStatusToString(BookingStatus status) => status.name;
 
+int _intOf(dynamic v) {
+  if (v is num) return v.toInt();
+  return int.tryParse(v?.toString() ?? '') ?? 0;
+}
+
 class BookingModel {
   final String id;
   final String spaceId;
@@ -43,8 +48,14 @@ class BookingModel {
 
   // Backend stores money as integer "paisa" (amount_unit) and already
   // converts to BDT for us as price_per_hour / total_price.
+  // price_per_hour is the rate ACTUALLY charged (slot / vehicle / lot rate).
   final double pricePerHour;
   final double totalPrice;
+
+  // Paisa (5000 = 50 BDT). base = before discount, discount = taken off.
+  // Both 0 for old bookings that the backend didn't price this way.
+  final int baseAmountUnit;
+  final int discountUnit;
 
   final BookingStatus status;
   final String? cancellationReason;
@@ -65,6 +76,8 @@ class BookingModel {
     required this.durationHours,
     required this.pricePerHour,
     required this.totalPrice,
+    this.baseAmountUnit = 0,
+    this.discountUnit = 0,
     required this.status,
     this.cancellationReason,
     this.vehiclePlate,
@@ -78,6 +91,11 @@ class BookingModel {
 
   // kept for any older call sites that still reference startTime
   DateTime get startTime => scheduledAt;
+
+  // Paisa -> BDT for display.
+  double get baseAmount => baseAmountUnit / 100.0;
+  double get discount => discountUnit / 100.0;
+  bool get hasDiscount => discountUnit > 0;
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     // Backend sends timestamps in UTC (ISO strings with a trailing 'Z').
@@ -111,6 +129,8 @@ class BookingModel {
       durationHours: json['duration_hours'] ?? 1,
       pricePerHour: (json['price_per_hour'] ?? 0).toDouble(),
       totalPrice: (json['total_price'] ?? 0).toDouble(),
+      baseAmountUnit: _intOf(json['base_amount_unit']),
+      discountUnit: _intOf(json['discount_unit']),
       status: bookingStatusFromString(json['status']?.toString() ?? 'confirmed'),
       cancellationReason: json['cancellation_reason']?.toString(),
       vehiclePlate: json['vehicle_plate']?.toString(),
@@ -133,6 +153,8 @@ class BookingModel {
       'duration_hours': durationHours,
       'price_per_hour': pricePerHour,
       'total_price': totalPrice,
+      'base_amount_unit': baseAmountUnit,
+      'discount_unit': discountUnit,
       'status': bookingStatusToString(status),
       'cancellation_reason': cancellationReason,
       'vehicle_plate': vehiclePlate,
@@ -181,6 +203,8 @@ class BookingModel {
       durationHours: durationHours,
       pricePerHour: pricePerHour,
       totalPrice: totalPrice,
+      baseAmountUnit: baseAmountUnit,
+      discountUnit: discountUnit,
       status: status ?? this.status,
       cancellationReason: cancellationReason ?? this.cancellationReason,
       vehiclePlate: vehiclePlate ?? this.vehiclePlate,

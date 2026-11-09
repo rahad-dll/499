@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../models/booking_model.dart';
+import '../../models/booking_quote_model.dart';
 import '../../models/parking_model.dart';
 import '../../services/booking_service.dart';
 import '../../utils/app_toast.dart';
@@ -47,6 +48,10 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   bool _checking = false;
   int _checkSeq = 0; // ignores out-of-date responses
 
+  // POST /bookings/quote — server-calculated price for this time + duration.
+  BookingQuote? _quote;
+  bool _quoteFull = false; // quote answered 409 = nothing free for this time
+
   @override
   void initState() {
     super.initState();
@@ -58,32 +63,59 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
 
   Future<void> _checkAvailability() async {
     final seq = ++_checkSeq;
-    setState(() => _checking = true);
-    try {
-      final count = await BookingService().getFreeSlotCount(
-        spaceId: widget.space.id,
-        from: _scheduledAt,
-        durationHours: _durationHours,
-      );
-      if (!mounted || seq != _checkSeq) return;
-      setState(() {
-        _freeSlots = count;
-        _checking = false;
-      });
-    } catch (_) {
-      // Can't tell -> don't block; the server re-checks on confirm anyway.
-      if (!mounted || seq != _checkSeq) return;
-      setState(() {
-        _freeSlots = null;
-        _checking = false;
-      });
-    }
+    setState(() {
+      _checking = true;
+      _quote = null;
+      _quoteFull = false;
+    });
+
+    final service = BookingService();
+    final from = _scheduledAt;
+    final hours = _durationHours;
+
+    int? count;
+    BookingQuote? quote;
+    var full = false;
+
+    // Free-slot count and price quote are independent -> run together.
+    // Any failure here must not block booking; the server re-checks on
+    // confirm anyway.
+    await Future.wait([
+      () async {
+        try {
+          count = await service.getFreeSlotCount(
+            spaceId: widget.space.id,
+            from: from,
+            durationHours: hours,
+          );
+        } catch (_) {}
+      }(),
+      () async {
+        try {
+          quote = await service.getQuote(
+            spaceId: widget.space.id,
+            scheduledAt: from,
+            durationHours: hours,
+          );
+        } on QuoteException catch (e) {
+          if (e.isSlotUnavailable) full = true;
+        } catch (_) {}
+      }(),
+    ]);
+
+    if (!mounted || seq != _checkSeq) return;
+    setState(() {
+      _freeSlots = count;
+      _quote = quote;
+      _quoteFull = full;
+      _checking = false;
+    });
   }
 
-  bool get _fullForThisTime => _freeSlots == 0;
+  bool get _fullForThisTime => _freeSlots == 0 || _quoteFull;
 
   Widget _availabilityBanner(bool isDark) {
-    if (_freeSlots == null) {
+    if (_freeSlots == null && !_quoteFull) {
       return _checking
           ? Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -107,7 +139,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             )
           : const SizedBox.shrink();
     }
-    final full = _freeSlots == 0;
+    final full = _fullForThisTime;
     final color = full ? Colors.red : const Color(0xFF22C55E);
     final text = full
         ? 'No slot is free for this time — it is already booked. '
@@ -146,12 +178,29 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
     );
   }
 
+  // Server quote wins; the space's own rate is only a fallback estimate.
   double get _total {
+    if (_quote != null) return _quote!.totalPrice;
     if (widget.space.rate == null) return 0;
     return widget.space.rate! * _durationHours;
   }
 
-  bool get _hasRate => widget.space.rate != null;
+  double? get _hourlyRate => _quote?.hourlyRate ?? widget.space.rate;
+
+  bool get _hasRate => _hourlyRate != null;
+
+  String? get _rateSourceLabel {
+    switch (_quote?.rateSource) {
+      case QuoteRateSource.slot:
+        return 'Slot price';
+      case QuoteRateSource.vehicle:
+        return 'Vehicle rate';
+      case QuoteRateSource.lot:
+        return 'Standard lot rate';
+      default:
+        return null;
+    }
+  }
 
   @override
   void dispose() {
@@ -219,6 +268,116 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
         showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
       }
     }
+  }
+
+  // Backend labels can already be "slot 1" -> don't print "Slot slot 1".
+  String _slotText(String label) {
+    final l = label.trim();
+    return l.toLowerCase().startsWith('slot') ? l : 'Slot $l';
+  }
+
+  Widget _priceRow(
+    bool isDark,
+    String label,
+    String value, {
+    Color? valueColor,
+    double valueSize = 16,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: valueSize,
+              fontWeight: FontWeight.bold,
+              color: valueColor ?? _kAccent,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceSection(bool isDark) {
+    final quote = _quote;
+    final rate = _hourlyRate;
+    final muted = isDark ? Colors.grey[500] : Colors.grey[500];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _priceRow(
+          isDark,
+          'Rate',
+          rate != null ? formatTakaPerHour(rate) : 'N/A',
+          valueColor: rate != null ? _kAccent : Colors.grey,
+        ),
+        if (quote != null && quote.hasDiscount) ...[
+          _priceRow(
+            isDark,
+            'Subtotal',
+            formatTaka(quote.baseAmount),
+            valueColor: isDark ? Colors.white : Colors.black87,
+            valueSize: 14,
+          ),
+          _priceRow(
+            isDark,
+            'Discount',
+            '-${formatTaka(quote.discount)}',
+            valueColor: const Color(0xFF22C55E),
+            valueSize: 14,
+          ),
+        ],
+        _priceRow(
+          isDark,
+          'Total',
+          _hasRate ? formatTaka(_total) : 'N/A',
+          valueColor: _hasRate ? _kAccent : Colors.grey,
+          valueSize: 20,
+        ),
+        if (_checking && quote == null)
+          Text(
+            'Getting exact price…',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontStyle: FontStyle.italic,
+              color: muted,
+            ),
+          )
+        else if (quote != null)
+          Text(
+            [
+              if (quote.slotLabel.isNotEmpty) _slotText(quote.slotLabel),
+              if (_rateSourceLabel != null) _rateSourceLabel!,
+              'final price is confirmed when you book',
+            ].join(' · '),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontStyle: FontStyle.italic,
+              color: muted,
+            ),
+          )
+        else if (_hasRate)
+          Text(
+            'Estimated price — exact price is calculated when you book',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontStyle: FontStyle.italic,
+              color: muted,
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -423,47 +582,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
             
             const SizedBox(height: 20),
             
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Rate',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                ),
-                Text(
-                  _hasRate ? formatTakaPerHour(widget.space.rate!) : 'N/A',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _hasRate ? const Color(0xFF18D6C0) : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.grey[400] : Colors.grey[600],
-                  ),
-                ),
-                Text(
-                  _hasRate ? formatTaka(_total) : 'N/A',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: _hasRate ? const Color(0xFF18D6C0) : Colors.grey,
-                  ),
-                ),
-              ],
-            ),
+            _priceSection(isDark),
             
             const SizedBox(height: 16),
 

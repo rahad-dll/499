@@ -12,7 +12,7 @@ export class MailService {
 
   private getTransport() {
     if (!this.transport) {
-      const port = Number(this.config.get<string>('SMTP_PORT', '587'));
+      const port = Number(this.config.get<string>('SMTP_PORT', '2525'));
       this.transport = nodemailer.createTransport({
         host: this.config.getOrThrow<string>('SMTP_HOST'),
         port,

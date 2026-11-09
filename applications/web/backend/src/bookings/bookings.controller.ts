@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiConflictResponse,
   ApiNotFoundResponse,
@@ -26,6 +27,7 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, QuoteBookingDto } from './dto/create-booking.dto';
 import { ListBookingsQueryDto } from './dto/list-bookings-query.dto';
+import { CheckInDto, ExtendBookingDto } from './dto/booking-lifecycle.dto';
 
 @ApiTags('bookings')
 @ApiBearerAuth()
@@ -102,6 +104,58 @@ export class BookingsController {
   @Patch(':id/cancel')
   cancel(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.bookingsService.cancel(id, user);
+  }
+
+  // POST /bookings/:id/check-in — mark arrival
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 NEW 08 Nov · Check in (arrived at the slot)',
+    description:
+      'Only a confirmed booking, from 15 minutes before its start until its end. ' +
+      'If the slot has a QR code, send qr_code from the sticker; otherwise send latitude and longitude ' +
+      '(must be within 200 m of the lot). Sets arrived_at.',
+  })
+  @ApiBadRequestResponse({ description: 'Wrong status, too early, already ended, wrong QR code, or too far away' })
+  @ApiConflictResponse({ description: 'Already checked in' })
+  @Post(':id/check-in')
+  @HttpCode(200)
+  checkIn(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CheckInDto, @CurrentUser() user: JwtPayload) {
+    return this.bookingsService.checkIn(id, dto, user);
+  }
+
+  // POST /bookings/:id/check-out — mark departure, complete the booking
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 NEW 08 Nov · Check out (left the slot)',
+    description:
+      'Needs a check-in first. Sets departed_at and status completed. Leaving more than 10 minutes after the ' +
+      'booked end is charged per started hour at the booking\'s hourly rate (overstay_hours, overstay_unit; ' +
+      'added to amount_unit).',
+  })
+  @ApiOkResponse({ schema: { example: { id: 'b430942a-…', status: 'completed', departed_at: '2026-11-09T12:20:00.000Z', amount_unit: 15000, overstay_hours: 1, overstay_unit: 5000 } } })
+  @ApiBadRequestResponse({ description: 'Not checked in' })
+  @ApiConflictResponse({ description: 'Already checked out' })
+  @Post(':id/check-out')
+  @HttpCode(200)
+  checkOut(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: JwtPayload) {
+    return this.bookingsService.checkOut(id, user);
+  }
+
+  // POST /bookings/:id/extend — add hours on the same slot
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 NEW 08 Nov · Extend a booking',
+    description:
+      'Adds extra_hours on the same slot if nobody has booked it right after; the whole booking stays within 24 hours. ' +
+      'The extra hours are priced like a new booking (slot price, vehicle rate, then lot price) and added to the amounts. ' +
+      'Moves end_at / hold_expires_at and sets extended_to.',
+  })
+  @ApiBadRequestResponse({ description: 'Wrong status, already checked out, ended without check-in, or over 24 hours' })
+  @ApiConflictResponse({ description: 'The slot is booked by someone else in the extra time' })
+  @Post(':id/extend')
+  @HttpCode(200)
+  extend(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ExtendBookingDto, @CurrentUser() user: JwtPayload) {
+    return this.bookingsService.extend(id, dto, user);
   }
 
   // DELETE /bookings/:id — hide from the driver's history (soft delete)

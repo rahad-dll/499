@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateBookingDto, QuoteBookingDto } from './dto/create-booking.dto';
 import { ListBookingsQueryDto } from './dto/list-bookings-query.dto';
+import { CheckInDto, ExtendBookingDto } from './dto/booking-lifecycle.dto';
 import { EDITOR_RATE_NAME } from '../spaces/rate-plan.constants';
 
 // the Prisma client or an interactive transaction, so pricing works in both
@@ -25,6 +26,27 @@ const MAX_DURATION_HOURS = 24; // single booking length cap
 const PAST_GRACE_MS = 5 * 60 * 1000; // allow "now" to be a few minutes old
 const MAX_CANCELLATIONS_PER_24H = 5; // abuse guard, applies to NEW bookings
 const OCCUPIED_CHECK_WINDOW_MS = 15 * 60 * 1000; // camera "occupied" only matters for imminent bookings
+const HOUR_MS = 60 * 60 * 1000;
+const CHECK_IN_EARLY_MS = 15 * 60 * 1000; // check-in opens 15 minutes before the start
+const CHECK_IN_RADIUS_M = 200; // GPS check-in must be this close to the lot
+const OVERSTAY_GRACE_MS = 10 * 60 * 1000; // leaving up to 10 minutes late is free
+
+// relations every booking response needs
+const BOOKING_INCLUDE = {
+  slot: { select: { slot_label: true } },
+  space: {
+    select: { name: true, address: true, latitude: true, longitude: true, base_rate_unit: true },
+  },
+} as const;
+
+// great-circle distance in metres
+function distanceMetres(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const rad = (d: number) => (d * Math.PI) / 180;
+  const a =
+    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lng2 - lng1) / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(a));
+}
 
 @Injectable()
 export class BookingsService {
@@ -460,6 +482,140 @@ export class BookingsService {
     return this.formatBooking(updated);
   }
 
+  // ── check-in / check-out / extend ─────────────────────────────────────────
+
+  // The caller's own booking (admin may act on any)
+  private async ownBooking(id: string, user: JwtPayload) {
+    const booking = await this.prisma.bookings.findFirst({
+      where: { id, deleted_at: null },
+      include: {
+        driver: { select: { user_id: true } },
+        slot: { select: { qr_code: true } },
+        space: { select: { latitude: true, longitude: true } },
+      },
+    });
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.driver.user_id !== user.sub && user.role !== 'admin') {
+      throw new ForbiddenException();
+    }
+    return booking;
+  }
+
+  // Arrival: proven by the slot's QR code, or (when the slot has none) by phone GPS near the lot.
+  async checkIn(id: string, dto: CheckInDto, user: JwtPayload) {
+    const booking = await this.ownBooking(id, user);
+    if (booking.status !== 'confirmed') {
+      throw new BadRequestException(`Cannot check in to a booking with status: ${booking.status}`);
+    }
+    if (booking.arrived_at) throw new ConflictException('Already checked in');
+
+    const now = new Date();
+    const end = booking.end_at ?? booking.hold_expires_at;
+    if (now.getTime() < booking.scheduled_at.getTime() - CHECK_IN_EARLY_MS) {
+      throw new BadRequestException(
+        `Check-in opens ${CHECK_IN_EARLY_MS / 60_000} minutes before the booking starts`,
+      );
+    }
+    if (end && now > end) throw new BadRequestException('This booking has already ended');
+
+    if (booking.slot.qr_code) {
+      if (dto.qr_code !== booking.slot.qr_code) {
+        throw new BadRequestException('Scan the QR code on your booked slot to check in');
+      }
+    } else {
+      if (dto.latitude === undefined || dto.longitude === undefined) {
+        throw new BadRequestException('Send your location (latitude, longitude) to check in');
+      }
+      const metres = distanceMetres(dto.latitude, dto.longitude, booking.space.latitude, booking.space.longitude);
+      if (metres > CHECK_IN_RADIUS_M) {
+        throw new BadRequestException(
+          `You are ${Math.round(metres)} m from the parking; check in within ${CHECK_IN_RADIUS_M} m`,
+        );
+      }
+    }
+
+    const updated = await this.prisma.bookings.update({
+      where: { id },
+      data: { arrived_at: now },
+      include: BOOKING_INCLUDE,
+    });
+    return this.formatBooking(updated);
+  }
+
+  // Departure: completes the booking. Time past the booked end (after a short grace)
+  // is charged per started hour at the booking's hourly rate.
+  async checkOut(id: string, user: JwtPayload) {
+    const booking = await this.ownBooking(id, user);
+    if (!booking.arrived_at) throw new BadRequestException('Check in before checking out');
+    if (booking.departed_at) throw new ConflictException('Already checked out');
+
+    const now = new Date();
+    const end = booking.end_at ?? booking.hold_expires_at ?? now;
+    const lateMs = now.getTime() - end.getTime() - OVERSTAY_GRACE_MS;
+    const overstayHours = lateMs > 0 ? Math.ceil(lateMs / HOUR_MS) : 0;
+
+    const bookedHours = Math.round((end.getTime() - booking.scheduled_at.getTime()) / HOUR_MS);
+    const hourly = booking.base_amount_unit && bookedHours ? Math.round(booking.base_amount_unit / bookedHours) : 0;
+    const overstayUnit = overstayHours * hourly;
+
+    const updated = await this.prisma.bookings.update({
+      where: { id },
+      data: {
+        departed_at: now,
+        status: 'completed',
+        ...(overstayUnit > 0 && { amount_unit: (booking.amount_unit ?? 0) + overstayUnit }),
+      },
+      include: BOOKING_INCLUDE,
+    });
+    return { ...this.formatBooking(updated), overstay_hours: overstayHours, overstay_unit: overstayUnit };
+  }
+
+  // More time on the same slot, if nobody else has booked it right after.
+  async extend(id: string, dto: ExtendBookingDto, user: JwtPayload) {
+    const booking = await this.ownBooking(id, user);
+    if (booking.status !== 'confirmed') {
+      throw new BadRequestException(`Cannot extend a booking with status: ${booking.status}`);
+    }
+    if (booking.departed_at) throw new BadRequestException('Already checked out');
+
+    const end = booking.end_at ?? booking.hold_expires_at;
+    if (!end) throw new BadRequestException('This booking has no end time');
+    if (end < new Date() && !booking.arrived_at) {
+      throw new BadRequestException('This booking has already ended');
+    }
+    const newEnd = new Date(end.getTime() + dto.extra_hours * HOUR_MS);
+    if (newEnd.getTime() - booking.scheduled_at.getTime() > MAX_DURATION_HOURS * HOUR_MS) {
+      throw new BadRequestException(`A booking can last at most ${MAX_DURATION_HOURS} hours`);
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // same lock as booking creation, so nobody books the extra time at the same moment
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'space:' + booking.space_id}))`;
+
+      const clash = await tx.bookings.findFirst({
+        where: { slot_id: booking.slot_id, id: { not: id }, ...this.overlapping(end, newEnd) },
+        select: { id: true },
+      });
+      if (clash) throw new ConflictException('The slot is booked by someone else in that time');
+
+      const extra = await this.price(tx, booking.space_id, booking.slot_id, dto.extra_hours);
+      return tx.bookings.update({
+        where: { id },
+        data: {
+          end_at: newEnd,
+          hold_expires_at: newEnd,
+          extended_to: newEnd,
+          ...(extra.amount_unit !== null && {
+            base_amount_unit: (booking.base_amount_unit ?? 0) + extra.amount_unit,
+            amount_unit: (booking.amount_unit ?? 0) + extra.amount_unit,
+          }),
+        },
+        include: BOOKING_INCLUDE,
+      });
+    });
+    return this.formatBooking(updated);
+  }
+
   // ── hide from history (soft delete) ───────────────────────────────────────
 
   async hide(id: string, user: JwtPayload) {
@@ -530,6 +686,9 @@ export class BookingsService {
       total_price: booking.amount_unit ? booking.amount_unit / 100 : 0,
       cancellation_reason: booking.cancellation_reason ?? null,
       vehicle_plate: booking.vehicle_plate ?? null,
+      arrived_at: booking.arrived_at ?? null,
+      departed_at: booking.departed_at ?? null,
+      extended_to: booking.extended_to ?? null,
       created_at: booking.created_at,
     };
   }

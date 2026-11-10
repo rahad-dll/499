@@ -420,6 +420,7 @@ export class BookingsService {
           },
         },
         driver: { select: { user_id: true } },
+        payment: true,
       },
     });
     if (!booking) throw new NotFoundException('Booking not found');
@@ -462,24 +463,36 @@ export class BookingsService {
       throw new BadRequestException('This booking has already ended');
     }
 
-    const updated = await this.prisma.bookings.update({
-      where: { id },
-      data: { status: 'cancelled', cancellation_reason: 'Cancelled by driver' },
-      include: {
-        slot: { select: { slot_label: true } },
-        space: {
-          select: {
-            name: true,
-            address: true,
-            latitude: true,
-            longitude: true,
-            base_rate_unit: true,
-          },
+    // a paid booking is refunded in full
+    const payment = await this.prisma.payment_transactions.findUnique({ where: { booking_id: id } });
+    const refund = payment?.status === 'paid';
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      if (refund) {
+        await tx.payment_transactions.update({
+          where: { booking_id: id },
+          data: { status: 'refunded', refunded_at: now, refund_amount_unit: payment.amount_unit },
+        });
+      }
+      await tx.bookings.update({
+        where: { id },
+        data: {
+          status: 'cancelled',
+          cancellation_reason: 'Cancelled by driver',
+          ...(refund && { payment_status: 'refunded' as const }),
         },
-      },
+      });
+    });
+    const updated = await this.prisma.bookings.findUniqueOrThrow({
+      where: { id },
+      include: { ...BOOKING_INCLUDE, payment: true },
     });
 
-    return this.formatBooking(updated);
+    return {
+      ...this.formatBooking(updated),
+      refund: refund ? { amount_unit: payment.amount_unit, refunded_at: now } : null,
+    };
   }
 
   // ── check-in / check-out / extend ─────────────────────────────────────────
@@ -686,6 +699,14 @@ export class BookingsService {
       total_price: booking.amount_unit ? booking.amount_unit / 100 : 0,
       cancellation_reason: booking.cancellation_reason ?? null,
       vehicle_plate: booking.vehicle_plate ?? null,
+      payment_status: booking.payment_status ?? null,
+      // only when the payment was loaded
+      ...(booking.payment !== undefined && {
+        payment: booking.payment
+          ? { method: booking.payment.method, status: booking.payment.status, trx_id: booking.payment.gateway_trx_id,
+              paid_at: booking.payment.paid_at, refund_amount_unit: booking.payment.refund_amount_unit }
+          : null,
+      }),
       arrived_at: booking.arrived_at ?? null,
       departed_at: booking.departed_at ?? null,
       extended_to: booking.extended_to ?? null,

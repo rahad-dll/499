@@ -9,6 +9,7 @@ import '../../services/session_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/device_name_service.dart';
 import 'sign_up_screen.dart';
+import 'forgot_password_screen.dart';
 import '../dashboard/dashboard_screen.dart';  // ← শুধু এই import টা যোগ করুন
 
 class SignInScreen extends StatefulWidget {
@@ -484,13 +485,24 @@ class _SignInScreenState extends State<SignInScreen> {
             isDark: isDark,
             isMobile: isMobile,
             showForgotPassword: true,
-            onForgotPassword: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Forgot password - coming soon!'),
-                  duration: Duration(seconds: 2),
+            onForgotPassword: () async {
+              final resetEmail = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ForgotPasswordScreen(
+                    initialEmail: emailController.text.trim(),
+                  ),
                 ),
               );
+              // Password was reset -> pre-fill email, clear old password.
+              if (resetEmail != null && mounted) {
+                setState(() {
+                  emailController.text = resetEmail;
+                  passwordController.clear();
+                  emailError = null;
+                  passwordError = null;
+                });
+              }
             },
             suffixIcon: IconButton(
               icon: Icon(

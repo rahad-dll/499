@@ -10,6 +10,7 @@ import '../../widgets/dashboard/app_bottom_nav.dart';
 import '../auth/sign_in_screen.dart';
 import 'active_devices_screen.dart';
 import 'bookings_screen.dart';
+import 'change_password_screen.dart';
 import 'dashboard_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -511,6 +512,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const ActiveDevicesScreen()),
+              );
+            },
+          ),
+          _buildMenuItem(
+            isDark: isDark,
+            icon: Icons.lock_reset_rounded,
+            title: 'Change Password',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
               );
             },
           ),

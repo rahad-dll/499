@@ -1,8 +1,10 @@
 // lib/services/authed_http.dart
 //
-// Authenticated GET/DELETE helper with ONE automatic refresh-and-retry:
+// Authenticated GET/POST/DELETE helper with ONE automatic refresh-and-retry:
 // if the backend answers 401 we call POST /auth/refresh once and replay
 // the same request with the new access token.
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 import 'api_service.dart';
@@ -19,25 +21,50 @@ class AuthedHttp {
 
   static Future<http.Response> delete(String path) => _send('DELETE', path);
 
-  static Future<http.Response> _once(String method, String path) async {
+  /// POST with a JSON body (pass null / omit for an empty body).
+  static Future<http.Response> post(String path, [Map<String, dynamic>? body]) =>
+      _send('POST', path, body: body);
+
+  static Future<http.Response> _once(
+    String method,
+    String path,
+    Map<String, dynamic>? body,
+  ) async {
     final token = await SessionService.getAccessToken();
     final uri = Uri.parse('${ApiService.baseUrl}$path');
     final headers = <String, String>{
       'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
-    final future = method == 'DELETE'
-        ? http.delete(uri, headers: headers)
-        : http.get(uri, headers: headers);
+
+    final Future<http.Response> future;
+    switch (method) {
+      case 'DELETE':
+        future = http.delete(uri, headers: headers);
+        break;
+      case 'POST':
+        future = http.post(
+          uri,
+          headers: headers,
+          body: jsonEncode(body ?? <String, dynamic>{}),
+        );
+        break;
+      default:
+        future = http.get(uri, headers: headers);
+    }
     return future.timeout(_timeout);
   }
 
-  static Future<http.Response> _send(String method, String path) async {
-    var response = await _once(method, path);
+  static Future<http.Response> _send(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    var response = await _once(method, path, body);
     if (response.statusCode == 401) {
       final refreshed = await AuthService.refresh();
       if (refreshed) {
-        response = await _once(method, path);
+        response = await _once(method, path, body);
       }
     }
     return response;

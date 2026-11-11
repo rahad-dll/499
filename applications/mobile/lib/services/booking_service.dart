@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/booking_model.dart';
+import '../models/booking_quote_model.dart';
 import '../models/parking_model.dart';
 import 'api_service.dart';
 import 'authed_http.dart';
@@ -116,6 +117,43 @@ class BookingService {
       throw Exception('Session expired. Please sign in again.');
     }
     throw Exception(ApiService.extractErrorMessage(response));
+  }
+
+  /// POST /bookings/quote — price a booking BEFORE making it.
+  /// Returns the slot POST /bookings would pick right now and its price
+  /// (slot price -> vehicle rate -> lot price). Nothing is reserved, so the
+  /// slot can still be taken before the real booking.
+  ///
+  /// Throws [QuoteException]; `isSlotUnavailable` is true for 409
+  /// (slot not free / no free slot for this time).
+  Future<BookingQuote> getQuote({
+    required String spaceId,
+    required DateTime scheduledAt,
+    required int durationHours,
+    String? slotId,
+  }) async {
+    final response = await AuthedHttp.post('/bookings/quote', {
+      'space_id': spaceId,
+      if (slotId != null && slotId.isNotEmpty) 'slot_id': slotId,
+      'scheduled_at': scheduledAt.toUtc().toIso8601String(),
+      'duration_hours': durationHours,
+    });
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) return BookingQuote.fromJson(data);
+      throw const QuoteException('Unexpected response from server');
+    }
+    if (response.statusCode == 401) {
+      throw const QuoteException(
+        'Session expired. Please sign in again.',
+        statusCode: 401,
+      );
+    }
+    throw QuoteException(
+      ApiService.extractErrorMessage(response),
+      statusCode: response.statusCode,
+    );
   }
 
   /// Max bookings a driver may hold at once (upcoming + ongoing).

@@ -457,6 +457,32 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (_booking.hasDiscount) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildInfoTile(
+                              isDark: isDark,
+                              icon: Icons.receipt_long_rounded,
+                              label: 'Subtotal',
+                              value: formatTaka(_booking.baseAmount),
+                              iconBg: const Color(0xFF0AA6C4),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildInfoTile(
+                              isDark: isDark,
+                              icon: Icons.local_offer_rounded,
+                              label: 'Discount',
+                              value: '-${formatTaka(_booking.discount)}',
+                              iconBg: const Color(0xFF22C55E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 12),
 
                     // Slot & Vehicle Info

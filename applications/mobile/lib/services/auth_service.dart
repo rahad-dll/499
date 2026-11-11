@@ -20,6 +20,23 @@ class AuthResult {
         data = null;
 }
 
+/// Result of the password endpoints (forgot / reset / change).
+class PasswordResult {
+  final bool success;
+  final String? message; // server message on success
+  final String? error; // readable error on failure
+  final int signedOutSessions; // only set by change-password
+
+  PasswordResult.success({this.message, this.signedOutSessions = 0})
+      : success = true,
+        error = null;
+
+  PasswordResult.failure(this.error)
+      : success = false,
+        message = null,
+        signedOutSessions = 0;
+}
+
 class AuthService {
   static const bool useLocalMock = false;
   static const _keyLocalUsers = 'cp_local_users';
@@ -172,6 +189,126 @@ class AuthService {
       }
     }
     await SessionService.clearSession();
+  }
+
+  // ---------------- PASSWORD (NEW 08 Nov) ----------------
+
+  static String? _messageOf(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map && decoded['message'] != null) {
+        return decoded['message'].toString();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// POST /auth/forgot-password
+  /// Emails a 6-digit reset code (valid 15 min). The backend ALWAYS answers
+  /// 200 with the same message, whether or not the email has an account, and
+  /// ignores a new request within 1 minute of the previous one.
+  static Future<PasswordResult> forgotPassword({required String email}) async {
+    if (useLocalMock) {
+      return PasswordResult.success(
+        message: 'If an account exists for this email, a reset code has been sent.',
+      );
+    }
+    try {
+      final response =
+          await ApiService.post('/auth/forgot-password', {'email': email});
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return PasswordResult.success(
+          message: _messageOf(response.body) ??
+              'If an account exists for this email, a reset code has been sent.',
+        );
+      }
+      return PasswordResult.failure(ApiService.extractErrorMessage(response));
+    } catch (_) {
+      return PasswordResult.failure('Network error: could not reach server');
+    }
+  }
+
+  /// POST /auth/reset-password
+  /// [code] is the 6-digit code from the email (sent as `token`).
+  /// New password must be 8-72 chars. On success the backend signs out every
+  /// session of the account, so the user has to sign in again. Five wrong
+  /// codes cancel the code -> a new one must be requested.
+  static Future<PasswordResult> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    if (useLocalMock) {
+      return PasswordResult.success(
+        message: 'Password has been reset. Please sign in with the new password.',
+      );
+    }
+    try {
+      final response = await ApiService.post('/auth/reset-password', {
+        'email': email,
+        'token': code,
+        'new_password': newPassword,
+      });
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return PasswordResult.success(
+          message: _messageOf(response.body) ??
+              'Password has been reset. Please sign in with the new password.',
+        );
+      }
+      return PasswordResult.failure(ApiService.extractErrorMessage(response));
+    } catch (_) {
+      return PasswordResult.failure('Network error: could not reach server');
+    }
+  }
+
+  /// POST /auth/change-password  (signed-in user)
+  /// Other devices are signed out, this device stays signed in.
+  /// A wrong current password answers 400 (NOT 401) so it is shown as a form
+  /// error and does not look like an expired session.
+  static Future<PasswordResult> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (useLocalMock) return PasswordResult.success(message: 'Password changed');
+
+    final body = {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    };
+
+    try {
+      var response =
+          await ApiService.post('/auth/change-password', body, withAuth: true);
+
+      // Access token expired -> refresh once and replay.
+      if (response.statusCode == 401 && await refresh()) {
+        response =
+            await ApiService.post('/auth/change-password', body, withAuth: true);
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        int signedOut = 0;
+        String? message;
+        try {
+          final json = jsonDecode(response.body);
+          if (json is Map) {
+            message = json['message']?.toString();
+            final n = json['signed_out_sessions'];
+            if (n is num) signedOut = n.toInt();
+          }
+        } catch (_) {}
+        return PasswordResult.success(
+          message: message ?? 'Password changed',
+          signedOutSessions: signedOut,
+        );
+      }
+      if (response.statusCode == 401) {
+        return PasswordResult.failure('Session expired. Please sign in again.');
+      }
+      return PasswordResult.failure(ApiService.extractErrorMessage(response));
+    } catch (_) {
+      return PasswordResult.failure('Network error: could not reach server');
+    }
   }
 
   static Future<List<dynamic>?> getSessions() async {

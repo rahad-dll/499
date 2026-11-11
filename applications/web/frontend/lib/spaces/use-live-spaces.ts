@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@/lib/api/use-query";
 import { mergeSpaces } from "@/lib/insights/metrics";
 import { parkingSpacesRepository } from "./repository";
 import type { NearbySpace } from "./types";
@@ -19,74 +19,69 @@ export const DHAKA_SCAN_POINTS: LatLng[] = [
   [23.733, 90.4172], // Motijheel / Old Dhaka
 ];
 
-interface LiveSpacesState {
-  spaces: NearbySpace[];
-  loading: boolean;
-  error: string | null;
-  /** epoch ms of the last successful refresh */
-  updatedAt: number | null;
-}
+/**
+ * A point that found no lots costs the API as much as one that did, so it is
+ * re-checked every 5 minutes instead of on every poll. New lots there appear
+ * within that time.
+ */
+const EMPTY_RECHECK_MS = 5 * 60_000;
 
-async function fetchMerged(points: LatLng[], signal: AbortSignal): Promise<NearbySpace[]> {
+/** When each point last came back empty, shared by every scan in the tab. */
+const emptySince = new Map<string, number>();
+
+const NO_SPACES: NearbySpace[] = [];
+
+const pointKey = (point: LatLng) => point.join(",");
+
+async function fetchMerged(points: LatLng[]): Promise<NearbySpace[]> {
+  const now = Date.now();
+  const due = points.filter((p) => now - (emptySince.get(pointKey(p)) ?? -Infinity) >= EMPTY_RECHECK_MS);
+  if (due.length === 0) return [];
+
   const results = await Promise.allSettled(
-    points.map(([lat, lng]) => parkingSpacesRepository.nearby(lat, lng, signal)),
+    due.map(([lat, lng]) => parkingSpacesRepository.nearby(lat, lng)),
   );
-  const lists = results.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+  const lists: NearbySpace[][] = [];
+  results.forEach((result, i) => {
+    if (result.status !== "fulfilled") return;
+    if (result.value.length === 0) emptySince.set(pointKey(due[i]), now);
+    else emptySince.delete(pointKey(due[i]));
+    lists.push(result.value);
+  });
   if (lists.length === 0) {
     const failure = results.find((r) => r.status === "rejected");
     throw failure?.reason instanceof Error ? failure.reason : new Error("Could not load live occupancy");
   }
+  // points skipped this time were empty, so they add nothing
   return mergeSpaces(lists);
 }
 
 /**
- * Live AI occupancy for every active lot around the given points,
- * re-polled every `intervalMs` (default 30 s).
+ * Live AI occupancy for every active lot around the given points, re-polled
+ * every `intervalMs` (default 30 s).
+ *
+ * The result lives in the shared query store: every page that shows the same
+ * points observes one poller, so moving between portal pages does not refetch,
+ * and the poller pauses while the tab is hidden.
  */
 export function useLiveSpaces({
   points = DHAKA_SCAN_POINTS,
   intervalMs = 30_000,
   enabled = true,
 }: { points?: LatLng[]; intervalMs?: number; enabled?: boolean } = {}) {
-  const [state, setState] = useState<LiveSpacesState>({
-    spaces: [],
-    loading: true,
-    error: null,
-    updatedAt: null,
-  });
-  const [tick, setTick] = useState(0);
-  const pointsKey = points.map((p) => p.join(",")).join("|");
+  const pointsKey = points.map(pointKey).join("|");
+  const query = useQuery(
+    enabled && pointsKey ? `live:${pointsKey}` : null,
+    () => fetchMerged(points),
+    { staleMs: intervalMs, pollMs: intervalMs },
+  );
 
-  useEffect(() => {
-    if (!enabled) return;
-    const controller = new AbortController();
-    const scan = pointsKey
-      .split("|")
-      .filter(Boolean)
-      .map((p) => p.split(",").map(Number) as LatLng);
-
-    fetchMerged(scan, controller.signal)
-      .then((spaces) => {
-        setState({ spaces, loading: false, error: null, updatedAt: Date.now() });
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        // keep the last good data on a failed poll
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error ? error.message : "Could not load live occupancy",
-        }));
-      });
-
-    const timer = setTimeout(() => setTick((t) => t + 1), intervalMs);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [pointsKey, intervalMs, enabled, tick]);
-
-  const refresh = useCallback(() => setTick((t) => t + 1), []);
-
-  return { ...state, refresh };
+  return {
+    spaces: query.data ?? NO_SPACES,
+    loading: query.loading,
+    error: query.error,
+    /** epoch ms of the last successful refresh */
+    updatedAt: query.updatedAt || null,
+    refresh: query.reload,
+  };
 }

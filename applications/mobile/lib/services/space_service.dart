@@ -1,37 +1,34 @@
 // lib/services/space_service.dart
 //
-// GET /spaces/{id}                         -> full space details
+// GET /spaces/{id}                         -> approved lot details (driver view)
 // GET /spaces/{id}/photos/{photoId}/presign -> short-lived photo URL
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
 import '../models/space_detail_model.dart';
-import 'api_service.dart';
 import 'authed_http.dart';
 
 class SpaceService {
   Future<SpaceDetailModel> getSpace(String spaceId) async {
     final response = await AuthedHttp.get('/spaces/$spaceId');
-
-    // Debug: shows up in the `flutter run` terminal so the real backend
-    // response can be inspected (remove once the shape is confirmed).
     debugPrint('GET /spaces/$spaceId -> ${response.statusCode}');
-    debugPrint('BODY: ${response.body}');
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+    if (AuthedHttp.isOk(response)) {
+      final data = AuthedHttp.decode(response);
       if (data is Map<String, dynamic>) {
         return SpaceDetailModel.fromJson(data);
       }
-      throw Exception('Unexpected response from server');
+      throw const ApiException('Unexpected response from server');
     }
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
+    if (response.statusCode == 404) {
+      // drivers get 404 for a lot that is pending / suspended
+      throw const ApiException(
+        'This parking is not available right now.',
+        statusCode: 404,
+      );
     }
-    throw Exception(
-      '${ApiService.extractErrorMessage(response)} (HTTP ${response.statusCode})',
-    );
+    throw ApiException.fromResponse(response);
   }
 
   /// Returns a temporary image URL, or null if it can't be resolved.

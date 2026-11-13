@@ -61,7 +61,10 @@ class AuthWrapper extends StatelessWidget {
   Future<bool> _checkAuth() async {
     try {
       final user = await SessionService.getSession();
-      return user != null;
+      final token = await SessionService.getAccessToken();
+      // A saved user without a token (e.g. left over from an old sign-up)
+      // would open the dashboard and then fail every request with 401.
+      return user != null && token != null && token.isNotEmpty;
     } catch (e) {
       return false;
     }

@@ -34,7 +34,7 @@ import '../../widgets/dashboard/no_results_card.dart';
 import '../../widgets/dashboard/parking_details_sheet.dart';
 import '../../widgets/dashboard/parking_strip.dart';
 import '../../widgets/dashboard/search_panel.dart';
-import 'bookings_screen.dart';
+import 'booking_details_screen.dart';
 import 'new_booking_sheet.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -692,11 +692,14 @@ class _DashboardScreenState extends State<DashboardScreen>
       hours: booking.durationHours,
       onViewBookings: () async {
         if (!mounted) return;
+        // Straight to the new booking: pay, check in, extend from there.
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BookingsScreen()),
+          MaterialPageRoute(
+            builder: (_) => BookingDetailsScreen(booking: booking),
+          ),
         );
-        _refreshParkings();
+        if (mounted && !_isDisposed) _refreshParkings();
       },
     );
   }

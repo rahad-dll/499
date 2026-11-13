@@ -221,8 +221,8 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       context: context,
       initialTime: TimeOfDay.fromDateTime(_scheduledAt),
     );
-    if (time == null) return;
-    
+    if (time == null || !mounted) return;
+
     setState(() {
       _scheduledAt = DateTime(
         date.year, date.month, date.day, 
@@ -263,10 +263,9 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       );
       if (mounted) Navigator.pop(context, booking);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isSaving = false);
-      if (mounted) {
-        showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
-      }
+      showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
     }
   }
 

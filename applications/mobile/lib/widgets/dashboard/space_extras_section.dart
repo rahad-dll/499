@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import '../../models/space_detail_model.dart';
 import '../../services/space_service.dart';
 import '../../utils/app_snackbar.dart';
+import '../../utils/currency_formatter.dart';
 import 'dashboard_colors.dart';
 
 class SpaceExtrasSection extends StatefulWidget {
@@ -115,6 +116,10 @@ class _SpaceExtrasSectionState extends State<SpaceExtrasSection> {
               const SizedBox(height: 16),
             ],
             _InfoGrid(space: space),
+            if (space.vehicleRates.isNotEmpty || space.ratePerHour != null) ...[
+              const SizedBox(height: 16),
+              _RatesCard(space: space),
+            ],
             if (space.operatingHours.isNotEmpty) ...[
               const SizedBox(height: 16),
               _HoursCard(hours: space.operatingHours),
@@ -348,6 +353,86 @@ class _InfoChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Hourly prices (lot price + per vehicle type)
+// ---------------------------------------------------------------------------
+
+class _RatesCard extends StatelessWidget {
+  const _RatesCard({required this.space});
+
+  final SpaceDetailModel space;
+
+  Widget _row(String label, String value, {bool strong = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: strong ? FontWeight.w700 : FontWeight.w500,
+              color: DashColors.label,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: strong ? DashColors.teal : DashColors.title,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: DashColors.cardAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: DashColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.sell_rounded, size: 16, color: DashColors.teal),
+              SizedBox(width: 6),
+              Text(
+                'Hourly prices',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: DashColors.label,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (space.ratePerHour != null)
+            _row('Standard', formatTakaPerHour(space.ratePerHour!), strong: true),
+          ...space.vehicleRates.map(
+            (r) => _row(r.vehicleLabel, formatTakaPerHour(r.hourlyRate)),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'The exact price is shown before you confirm a booking.',
+            style: TextStyle(fontSize: 11, color: DashColors.muted),
+          ),
+        ],
       ),
     );
   }

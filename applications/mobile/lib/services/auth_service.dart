@@ -1,5 +1,6 @@
 // lib/services/auth_service.dart
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'session_service.dart';
@@ -98,13 +99,36 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/register', body);
-      print('REGISTER ${response.statusCode}: ${response.body}');
+      debugPrint('REGISTER -> ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final auth = AuthResponse.fromJson(json);
-        await SessionService.saveSession(auth.user, true);
-        await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
+        final decoded =
+            response.body.trim().isEmpty ? null : jsonDecode(response.body);
+        final json = decoded is Map<String, dynamic>
+            ? decoded
+            : <String, dynamic>{};
+
+        // The backend answers { message, user_id } (no tokens): the user
+        // signs in afterwards. Only keep a session if tokens did come back,
+        // otherwise an empty session would open the dashboard with no token.
+        final user = User(
+          id: (json['user_id'] ?? json['id'] ?? '').toString(),
+          email: email,
+          phone: phone,
+          role: role,
+          fullName: fullName,
+        );
+        final auth = AuthResponse(
+          accessToken: (json['access_token'] ?? json['accessToken'] ?? '')
+              .toString(),
+          refreshToken:
+              (json['refresh_token'] ?? json['refreshToken'])?.toString(),
+          user: user,
+        );
+        if (auth.accessToken.isNotEmpty) {
+          await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
+          await SessionService.saveSession(user, true);
+        }
         return AuthResult.success(auth);
       }
       return AuthResult.failure(ApiService.extractErrorMessage(response));
@@ -134,18 +158,58 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/login', body);
-      print('LOGIN ${response.statusCode}: ${response.body}');
+      debugPrint('LOGIN -> ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final auth = AuthResponse.fromJson(json);
-        await SessionService.saveSession(auth.user, rememberMe);
-        await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
-        return AuthResult.success(auth);
+        final tokens = AuthResponse.fromJson(json);
+        if (tokens.accessToken.isEmpty) {
+          return AuthResult.failure('Login failed: no access token received');
+        }
+        await SessionService.saveTokens(tokens.accessToken, tokens.refreshToken);
+
+        // POST /auth/login only returns tokens -> load the real user from
+        // GET /profiles/me so the session has id / name / role.
+        final user = await _loadUser(email) ?? tokens.user;
+        final safeUser = user.email.isEmpty ? user.copyWith(email: email) : user;
+        await SessionService.saveSession(safeUser, rememberMe);
+        return AuthResult.success(
+          AuthResponse(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            user: safeUser,
+          ),
+        );
       }
       return AuthResult.failure(ApiService.extractErrorMessage(response));
     } catch (e) {
       return AuthResult.failure('Network error: could not reach server');
+    }
+  }
+
+  /// GET /profiles/me right after login. Null when it can't be loaded.
+  static Future<User?> _loadUser(String email) async {
+    try {
+      final response = await ApiService.get('/profiles/me');
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) return null;
+      final profile = data['profile'] is Map
+          ? Map<String, dynamic>.from(data['profile'] as Map)
+          : <String, dynamic>{};
+      return User(
+        id: data['id']?.toString() ?? '',
+        email: data['email']?.toString() ?? email,
+        phone: data['phone']?.toString(),
+        role: data['role']?.toString() ?? 'driver',
+        fullName: data['full_name']?.toString(),
+        drivingLicenceNo: profile['driving_licence_no']?.toString(),
+        licenceType: profile['licence_type']?.toString(),
+        dateOfBirth: profile['date_of_birth']?.toString(),
+        isLoggedIn: true,
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -316,7 +380,9 @@ class AuthService {
     try {
       final response = await ApiService.get('/auth/sessions');
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as List<dynamic>;
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        if (data is Map && data['data'] is List) return data['data'] as List;
       }
     } catch (_) {}
     return null;

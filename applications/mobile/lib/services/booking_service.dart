@@ -1,131 +1,190 @@
 // lib/services/booking_service.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+//
+// Driver booking API:
+//   POST   /bookings/quote            price a booking (nothing reserved)
+//   POST   /bookings                  create
+//   GET    /bookings                  my bookings { data, page, limit, total }
+//                                    filters: status (csv), from, to; paging
+//   GET    /bookings/{id}             one booking (incl. payment)
+//   PATCH  /bookings/{id}/cancel      cancel (paid → refunded in full)
+//   POST   /bookings/{id}/check-in    arrived (QR code or GPS within 200 m)
+//   POST   /bookings/{id}/check-out   left (overstay charged per hour)
+//   POST   /bookings/{id}/extend      more hours on the same slot
+//   DELETE /bookings/{id}             hide a finished booking
+//
+// Every call goes through AuthedHttp (one automatic token refresh on 401).
 import '../models/booking_model.dart';
 import '../models/booking_quote_model.dart';
 import '../models/parking_model.dart';
-import 'api_service.dart';
 import 'authed_http.dart';
 import 'booking_events.dart';
 import 'session_service.dart';
 
 class BookingService {
-  static const String _baseUrl = 'https://four99-b6wg.onrender.com';
+  /// Max bookings a driver may hold at once (upcoming + ongoing).
+  static const int maxLiveBookings = 2;
 
-  Future<String> _getToken() async {
-    // Real JWT access token — NOT the user id. The backend's JwtAuthGuard
-    // rejects anything that isn't a signed token, which is what was
-    // causing every request here to 401.
-    final token = await SessionService.getAccessToken();
-    return token ?? '';
+  /// Backend max page size.
+  static const int maxPageSize = 100;
+
+  BookingModel _bookingFrom(dynamic data) {
+    if (data is Map<String, dynamic>) return BookingModel.fromJson(data);
+    throw const ApiException('Unexpected response from server');
   }
 
-  Map<String, String> _headers(String token) => {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+  // ---------------------------------------------------------------------------
+  // List
+  // ---------------------------------------------------------------------------
 
-  /// Pulls a readable message out of a NestJS error body,
-  /// e.g. { "message": "Slot not found in this space", "statusCode": 404 }
-  String _extractError(http.Response response) {
-    try {
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map && decoded['message'] != null) {
-        final msg = decoded['message'];
-        return msg is List ? msg.join(', ') : msg.toString();
-      }
-    } catch (_) {
-      // not JSON, fall through
+  /// One page of GET /bookings.
+  /// [statuses] → `status=confirmed,completed`; [from]/[to] filter the start
+  /// time ([from] inclusive, [to] exclusive).
+  Future<BookingPage> getBookingsPage({
+    List<BookingStatus>? statuses,
+    DateTime? from,
+    DateTime? to,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final int safeLimit =
+        limit < 1 ? 1 : (limit > maxPageSize ? maxPageSize : limit);
+    final path = AuthedHttp.withQuery('/bookings', {
+      'status': (statuses == null || statuses.isEmpty)
+          ? null
+          : statuses.map(bookingStatusToString).toSet().join(','),
+      'from': from?.toUtc().toIso8601String(),
+      'to': to?.toUtc().toIso8601String(),
+      'page': '$page',
+      'limit': '$safeLimit',
+    });
+
+    final response = await AuthedHttp.get(path);
+    if (!AuthedHttp.isOk(response)) {
+      throw ApiException.fromResponse(response);
     }
-    return 'Something went wrong (status ${response.statusCode})';
+
+    final data = AuthedHttp.decode(response);
+    List<dynamic> rows = const [];
+    var total = 0;
+    var currentPage = page;
+    var currentLimit = safeLimit;
+
+    if (data is List) {
+      // older backend: bare list
+      rows = data;
+      total = data.length;
+      currentLimit = data.isEmpty ? safeLimit : data.length;
+    } else if (data is Map) {
+      if (data['data'] is List) rows = data['data'] as List;
+      final t = data['total'];
+      final p = data['page'];
+      final l = data['limit'];
+      total = t is num ? t.toInt() : rows.length;
+      if (p is num) currentPage = p.toInt();
+      if (l is num && l > 0) currentLimit = l.toInt();
+    }
+
+    final items = rows
+        .whereType<Map<String, dynamic>>()
+        .map(BookingModel.fromJson)
+        .toList();
+
+    return BookingPage(
+      items: items,
+      page: currentPage,
+      limit: currentLimit,
+      total: total,
+    );
   }
 
+  /// All my bookings (walks every page). Same filters as [getBookingsPage].
+  /// Throws [ApiException] on failure.
+  Future<List<BookingModel>> getAllBookings({
+    List<BookingStatus>? statuses,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    final all = <BookingModel>[];
+    var page = 1;
+    // hard stop so a misbehaving server can never loop forever
+    while (page <= 50) {
+      final result = await getBookingsPage(
+        statuses: statuses,
+        from: from,
+        to: to,
+        page: page,
+        limit: maxPageSize,
+      );
+      all.addAll(result.items);
+      if (!result.hasMore || result.items.isEmpty) break;
+      page++;
+    }
+    return all;
+  }
+
+  /// Old call sites: every booking, empty list on any error.
   Future<List<BookingModel>> getBookings() async {
     try {
-      final token = await _getToken();
-      final response = await http.get(
-        Uri.parse('$_baseUrl/bookings'),
-        headers: _headers(token),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        List<dynamic> bookingsData = [];
-        if (data is List) {
-          bookingsData = data;
-        } else if (data is Map && data['data'] != null) {
-          bookingsData = data['data'] is List ? data['data'] : [];
-        } else if (data is Map) {
-          bookingsData = [data];
-        }
-
-        return bookingsData
-            .whereType<Map<String, dynamic>>()
-            .map((json) => BookingModel.fromJson(json))
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      // ignore: avoid_print
-      print('Error fetching bookings: $e');
+      return await getAllBookings();
+    } catch (_) {
       return [];
     }
   }
 
-  /// GET /bookings/{id} — fresh copy of one booking (status can change on
-  /// the server). Retries once after a token refresh if the token expired.
+  /// How many bookings I have in total (one tiny request).
+  Future<int> getBookingCount({List<BookingStatus>? statuses}) async {
+    final page = await getBookingsPage(statuses: statuses, limit: 1);
+    return page.total;
+  }
+
+  // ---------------------------------------------------------------------------
+  // One booking
+  // ---------------------------------------------------------------------------
+
+  /// GET /bookings/{id} — fresh copy (status, payment, check-in times).
   Future<BookingModel> getBooking(String bookingId) async {
     final response = await AuthedHttp.get('/bookings/$bookingId');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is Map<String, dynamic>) {
-        return BookingModel.fromJson(data);
-      }
-      throw Exception('Unexpected response from server');
+    if (AuthedHttp.isOk(response)) {
+      return _bookingFrom(AuthedHttp.decode(response));
     }
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
-    }
-    throw Exception(ApiService.extractErrorMessage(response));
+    throw ApiException.fromResponse(response);
   }
+
+  // ---------------------------------------------------------------------------
+  // Availability + price
+  // ---------------------------------------------------------------------------
 
   /// How many slots of [spaceId] are free for the whole window
   /// [from, from + durationHours). Uses GET /spaces/{id}/slots?from&to, which
-  /// already skips slots that have a live booking overlapping the window —
-  /// so a slot taken 10:00-11:00 still counts as free for 14:00-15:00.
+  /// already skips slots that have a live booking overlapping the window.
   Future<int> getFreeSlotCount({
     required String spaceId,
     required DateTime from,
     required int durationHours,
   }) async {
     final to = from.add(Duration(hours: durationHours));
-    final query = 'from=${Uri.encodeQueryComponent(from.toUtc().toIso8601String())}'
-        '&to=${Uri.encodeQueryComponent(to.toUtc().toIso8601String())}';
-    final response = await AuthedHttp.get('/spaces/$spaceId/slots?$query');
+    final path = AuthedHttp.withQuery('/spaces/$spaceId/slots', {
+      'from': from.toUtc().toIso8601String(),
+      'to': to.toUtc().toIso8601String(),
+    });
+    final response = await AuthedHttp.get(path);
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+    if (AuthedHttp.isOk(response)) {
+      final data = AuthedHttp.decode(response);
       if (data is List) return data.length;
       if (data is Map && data['data'] is List) {
         return (data['data'] as List).length;
       }
-      throw Exception('Unexpected response from server');
+      throw const ApiException('Unexpected response from server');
     }
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
-    }
-    throw Exception(ApiService.extractErrorMessage(response));
+    throw ApiException.fromResponse(response);
   }
 
   /// POST /bookings/quote — price a booking BEFORE making it.
   /// Returns the slot POST /bookings would pick right now and its price
-  /// (slot price -> vehicle rate -> lot price). Nothing is reserved, so the
-  /// slot can still be taken before the real booking.
+  /// (slot price -> vehicle rate -> lot price). Nothing is reserved.
   ///
-  /// Throws [QuoteException]; `isSlotUnavailable` is true for 409
-  /// (slot not free / no free slot for this time).
+  /// Throws [QuoteException]; `isSlotUnavailable` is true for 409.
   Future<BookingQuote> getQuote({
     required String spaceId,
     required DateTime scheduledAt,
@@ -139,54 +198,51 @@ class BookingService {
       'duration_hours': durationHours,
     });
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = jsonDecode(response.body);
+    if (AuthedHttp.isOk(response)) {
+      final data = AuthedHttp.decode(response);
       if (data is Map<String, dynamic>) return BookingQuote.fromJson(data);
       throw const QuoteException('Unexpected response from server');
     }
-    if (response.statusCode == 401) {
-      throw const QuoteException(
-        'Session expired. Please sign in again.',
-        statusCode: 401,
-      );
-    }
-    throw QuoteException(
-      ApiService.extractErrorMessage(response),
-      statusCode: response.statusCode,
-    );
+    final error = ApiException.fromResponse(response);
+    throw QuoteException(error.message, statusCode: response.statusCode);
   }
 
-  /// Max bookings a driver may hold at once (upcoming + ongoing).
-  static const int maxLiveBookings = 2;
+  // ---------------------------------------------------------------------------
+  // Create
+  // ---------------------------------------------------------------------------
 
   /// Throws a readable error if this driver already has too many live
-  /// bookings, or one that overlaps the requested time window.
+  /// bookings, or one that overlaps the requested time window. The backend
+  /// enforces the same rules; this only gives an instant message.
   Future<void> _assertCanBook({
     required DateTime startTime,
     required int durationHours,
   }) async {
-    final now = DateTime.now();
-    final newEnd = startTime.add(Duration(hours: durationHours));
-
-    final live = (await getBookings()).where((b) {
-      final isLiveStatus = b.status == BookingStatus.confirmed ||
-          b.status == BookingStatus.pending ||
-          b.status == BookingStatus.active;
-      return isLiveStatus && b.endTime.isAfter(now);
-    }).toList();
+    List<BookingModel> live = const [];
+    try {
+      live = (await getAllBookings(
+        statuses: const [BookingStatus.confirmed, BookingStatus.pending],
+      ))
+          .where((b) => b.isLive)
+          .toList();
+    } catch (_) {
+      // can't check right now -> let the server decide
+      return;
+    }
 
     if (live.length >= maxLiveBookings) {
-      throw Exception(
+      throw ApiException(
         'You already have ${live.length} active/upcoming bookings '
         '(max $maxLiveBookings). Cancel one or wait until it ends.',
       );
     }
 
+    final newEnd = startTime.add(Duration(hours: durationHours));
     final clash = live.any(
       (b) => b.scheduledAt.isBefore(newEnd) && b.endTime.isAfter(startTime),
     );
     if (clash) {
-      throw Exception(
+      throw const ApiException(
         'You already have a booking that overlaps this time. '
         'Pick a different time or cancel the other booking.',
       );
@@ -198,97 +254,138 @@ class BookingService {
     required DateTime startTime,
     required int durationHours,
     String? vehiclePlate,
+    String? slotId,
   }) async {
-    final token = await _getToken();
-    if (token.isEmpty) {
-      throw Exception('You need to sign in again before booking.');
+    final token = await SessionService.getAccessToken();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('You need to sign in again before booking.');
     }
 
-    // Client-side guard (the backend enforces the same rules, but this
-    // gives an instant message and also protects while an older backend
-    // build is still deployed).
     await _assertCanBook(startTime: startTime, durationHours: durationHours);
 
-    // No slot_id here on purpose — the nearby-spaces list only gives us
-    // counts, not individual slot ids, and sending the space's own id as
-    // slot_id was the "Slot not found" bug. Leaving it out lets the
-    // backend auto-pick the first free slot in this space.
     final payload = BookingModel.createPayload(
       spaceId: space.id,
       scheduledAt: startTime,
       durationHours: durationHours,
       vehiclePlate: vehiclePlate,
+      slotId: slotId,
     );
 
-    final response = await http.post(
-      Uri.parse('$_baseUrl/bookings'),
-      headers: _headers(token),
-      body: jsonEncode(payload),
-    );
+    final response = await AuthedHttp.post('/bookings', payload);
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is Map<String, dynamic>) {
-        // A slot is now taken -> let the dashboard re-pull its counts.
-        BookingEvents.notifyChanged();
-        return BookingModel.fromJson(data);
-      }
-      throw Exception('Unexpected response from server');
+    if (AuthedHttp.isOk(response)) {
+      final booking = _bookingFrom(AuthedHttp.decode(response));
+      // A slot is now taken -> let the dashboard re-pull its counts.
+      BookingEvents.notifyChanged();
+      return booking;
     }
 
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
-    }
+    final error = ApiException.fromResponse(response);
     if (response.statusCode == 400 &&
-        _extractError(response).toLowerCase().contains('driver profile')) {
-      throw Exception('Complete your driver profile before booking.');
+        error.message.toLowerCase().contains('driver profile')) {
+      throw const ApiException(
+        'Complete your driver profile before booking.',
+        statusCode: 400,
+      );
     }
-
-    throw Exception(_extractError(response));
+    throw error;
   }
 
-  /// Cancels a booking. The backend only supports cancellation — there's
-  /// no generic "set any status" endpoint — so this throws for anything
-  /// other than BookingStatus.cancelled.
-  Future<BookingModel> updateStatus(String bookingId, BookingStatus status) async {
+  // ---------------------------------------------------------------------------
+  // Cancel / hide
+  // ---------------------------------------------------------------------------
+
+  /// PATCH /bookings/{id}/cancel. A paid booking is refunded in full.
+  Future<BookingModel> cancelBooking(String bookingId) async {
+    final response = await AuthedHttp.patch('/bookings/$bookingId/cancel');
+    if (AuthedHttp.isOk(response)) {
+      final booking = _bookingFrom(AuthedHttp.decode(response));
+      BookingEvents.notifyChanged();
+      return booking;
+    }
+    throw ApiException.fromResponse(response);
+  }
+
+  /// Kept for older call sites. The backend only supports cancellation.
+  Future<BookingModel> updateStatus(
+    String bookingId,
+    BookingStatus status,
+  ) async {
     if (status != BookingStatus.cancelled) {
-      throw Exception(
+      throw const ApiException(
         'Only cancelling a booking is supported right now.',
       );
     }
-
-    final token = await _getToken();
-    final response = await http.patch(
-      Uri.parse('$_baseUrl/bookings/$bookingId/cancel'),
-      headers: _headers(token),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      if (data is Map<String, dynamic>) {
-        // Slot is free again on the server -> refresh availability everywhere.
-        BookingEvents.notifyChanged();
-        return BookingModel.fromJson(data);
-      }
-    }
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
-    }
-    throw Exception(_extractError(response));
+    return cancelBooking(bookingId);
   }
 
   /// DELETE /bookings/{id} — removes a finished or cancelled booking from
-  /// the driver's history (soft delete on the server). The backend refuses
-  /// to hide a booking that is still active, so the user must cancel first.
+  /// the driver's history (soft delete on the server).
   Future<void> deleteBooking(String bookingId) async {
     final response = await AuthedHttp.delete('/bookings/$bookingId');
-    if (response.statusCode == 200 || response.statusCode == 204) {
+    if (AuthedHttp.isOk(response)) {
       BookingEvents.notifyChanged();
       return;
     }
-    if (response.statusCode == 401) {
-      throw Exception('Session expired. Please sign in again.');
+    throw ApiException.fromResponse(response);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Check-in / check-out / extend
+  // ---------------------------------------------------------------------------
+
+  /// POST /bookings/{id}/check-in. Allowed from 15 minutes before the start
+  /// until the end, only for a confirmed booking.
+  /// If the slot has a QR sticker send [qrCode]; otherwise send the phone's
+  /// [latitude]/[longitude] (must be within 200 m of the lot). Sending both
+  /// is fine — the server uses whichever the slot needs.
+  /// 409 = already checked in.
+  Future<BookingModel> checkIn(
+    String bookingId, {
+    String? qrCode,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final code = qrCode?.trim();
+    final body = <String, dynamic>{
+      if (code != null && code.isNotEmpty) 'qr_code': code,
+      if (latitude != null && longitude != null) 'latitude': latitude,
+      if (latitude != null && longitude != null) 'longitude': longitude,
+    };
+    final response =
+        await AuthedHttp.post('/bookings/$bookingId/check-in', body);
+    if (AuthedHttp.isOk(response)) {
+      final booking = _bookingFrom(AuthedHttp.decode(response));
+      BookingEvents.notifyChanged();
+      return booking;
     }
-    throw Exception(ApiService.extractErrorMessage(response));
+    throw ApiException.fromResponse(response);
+  }
+
+  /// POST /bookings/{id}/check-out. Completes the booking. Leaving more than
+  /// 10 minutes after the end is charged per started hour (overstayHours /
+  /// overstayUnit on the result). 409 = already checked out.
+  Future<BookingModel> checkOut(String bookingId) async {
+    final response = await AuthedHttp.post('/bookings/$bookingId/check-out');
+    if (AuthedHttp.isOk(response)) {
+      final booking = _bookingFrom(AuthedHttp.decode(response));
+      BookingEvents.notifyChanged();
+      return booking;
+    }
+    throw ApiException.fromResponse(response);
+  }
+
+  /// POST /bookings/{id}/extend — [extraHours] (1-23) on the same slot; the
+  /// whole booking stays within 24 hours. 409 = someone booked that time.
+  Future<BookingModel> extend(String bookingId, int extraHours) async {
+    final response = await AuthedHttp.post('/bookings/$bookingId/extend', {
+      'extra_hours': extraHours,
+    });
+    if (AuthedHttp.isOk(response)) {
+      final booking = _bookingFrom(AuthedHttp.decode(response));
+      BookingEvents.notifyChanged();
+      return booking;
+    }
+    throw ApiException.fromResponse(response);
   }
 }

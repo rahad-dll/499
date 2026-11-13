@@ -26,6 +26,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // GET /bookings?status=... filter (null = all)
+  _BookingFilter _filter = _BookingFilter.all;
+
   @override
   void initState() {
     super.initState();
@@ -38,11 +41,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
       _errorMessage = null;
     });
     try {
-      final bookings = await _service.getBookings();
+      final bookings = await _service.getAllBookings(statuses: _filter.statuses);
       if (!mounted) return;
-      
+
       final filteredBookings = _deletedService.filterBookings(bookings);
-      
+
       setState(() {
         _bookings = filteredBookings;
         _isLoading = false;
@@ -50,7 +53,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Failed to load bookings: $e';
+        _errorMessage =
+            'Failed to load bookings: ${e.toString().replaceFirst('Exception: ', '')}';
         _isLoading = false;
       });
     }
@@ -106,10 +110,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (confirm != true) return;
 
     try {
-      await _service.updateStatus(booking.id, BookingStatus.cancelled);
-      showAppToast(context, 'Booking cancelled successfully', color: Color(0xFF22C55E));
+      final updated = await _service.cancelBooking(booking.id);
+      if (!mounted) return;
+      showAppToast(
+        context,
+        updated.isRefunded
+            ? 'Booking cancelled — payment refunded'
+            : 'Booking cancelled successfully',
+        color: const Color(0xFF22C55E),
+      );
       _loadBookings();
     } catch (e) {
+      if (!mounted) return;
       showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
     }
   }
@@ -145,6 +157,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
     
     if (confirm == true) {
+      if (!booking.canDelete) {
+        if (!mounted) return false;
+        showAppToast(
+          context,
+          'Cancel the booking first; only past or cancelled bookings can be removed',
+          color: Colors.orange,
+        );
+        return false;
+      }
       try {
         // Server only allows removing cancelled / finished bookings.
         await _service.deleteBooking(booking.id);
@@ -192,7 +213,59 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: Column(
+        children: [
+          _buildFilterBar(isDark),
+          Expanded(child: _buildBody(isDark)),
+        ],
+      ),
+      bottomNavigationBar: const AppBottomNav(
+        currentIndex: 1,
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(bool isDark) {
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+        itemCount: _BookingFilter.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final f = _BookingFilter.values[i];
+          final selected = f == _filter;
+          return ChoiceChip(
+            label: Text(f.label),
+            selected: selected,
+            showCheckmark: false,
+            selectedColor: const Color(0xFF18D6C0),
+            backgroundColor: isDark ? const Color(0xFF1A2740) : Colors.white,
+            labelStyle: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Colors.white
+                  : (isDark ? Colors.grey[300] : Colors.grey[700]),
+            ),
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xFF18D6C0)
+                  : (isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0)),
+            ),
+            onSelected: (_) {
+              if (selected || _isLoading) return;
+              setState(() => _filter = f);
+              _loadBookings();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(bool isDark) {
+    return _isLoading
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -253,11 +326,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                           );
                         },
                       ),
-                    ),
-      bottomNavigationBar: const AppBottomNav(
-        currentIndex: 1,
-      ),
-    );
+                    );
   }
 
   Widget _buildErrorState(bool isDark) {
@@ -396,11 +465,20 @@ class _BookingsScreenState extends State<BookingsScreen> {
         statusText = 'Cancelled';
         statusIcon = Icons.cancel;
         break;
+      case BookingStatus.noShow:
+        statusColor = const Color(0xFF64748B);
+        statusText = 'No-show';
+        statusIcon = Icons.event_busy_rounded;
+        break;
+    }
+    if (booking.isParkedNow) {
+      statusColor = const Color(0xFF2563EB);
+      statusText = 'Parked';
+      statusIcon = Icons.local_parking_rounded;
     }
 
-    final canCancel = booking.status == BookingStatus.confirmed ||
-        booking.status == BookingStatus.pending;
-    final isCancelled = booking.status == BookingStatus.cancelled;
+    final canCancel = booking.canCancel;
+    final canDelete = booking.canDelete;
 
     return InkWell(
       onTap: () => _openDetails(booking),
@@ -506,8 +584,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 const SizedBox(width: 6),
                 _buildInfoChip(
                   isDark: isDark,
-                  icon: Icons.attach_money_rounded,
-                  label: formatTaka(booking.totalPrice),
+                  // a tick instead of the money icon once it is paid
+                  icon: booking.isPaid
+                      ? Icons.verified_rounded
+                      : Icons.attach_money_rounded,
+                  label: formatTaka(booking.payableAmount),
                 ),
               ],
             ),
@@ -551,7 +632,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                 ],
-                if (isCancelled) ...[
+                if (canDelete && !canCancel) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
@@ -600,6 +681,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
           const SizedBox(width: 4),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -609,5 +692,40 @@ class _BookingsScreenState extends State<BookingsScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Status filters of GET /bookings.
+enum _BookingFilter { all, upcoming, completed, cancelled, noShow }
+
+extension on _BookingFilter {
+  String get label {
+    switch (this) {
+      case _BookingFilter.all:
+        return 'All';
+      case _BookingFilter.upcoming:
+        return 'Upcoming';
+      case _BookingFilter.completed:
+        return 'Completed';
+      case _BookingFilter.cancelled:
+        return 'Cancelled';
+      case _BookingFilter.noShow:
+        return 'No-show';
+    }
+  }
+
+  List<BookingStatus>? get statuses {
+    switch (this) {
+      case _BookingFilter.all:
+        return null;
+      case _BookingFilter.upcoming:
+        return const [BookingStatus.confirmed, BookingStatus.pending];
+      case _BookingFilter.completed:
+        return const [BookingStatus.completed];
+      case _BookingFilter.cancelled:
+        return const [BookingStatus.cancelled];
+      case _BookingFilter.noShow:
+        return const [BookingStatus.noShow];
+    }
   }
 }

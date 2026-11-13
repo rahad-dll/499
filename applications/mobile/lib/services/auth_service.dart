@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'authed_http.dart';
+import 'deleted_bookings_service.dart';
+import 'recent_searches_service.dart';
 import 'session_service.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
@@ -215,17 +218,41 @@ class AuthService {
 
   // ---------------- REFRESH ----------------
 
-  static Future<bool> refresh() async {
-    if (useLocalMock) return true;
+  // One refresh at a time: the backend rotates the refresh token, so two
+  // parallel refreshes (e.g. slot list + price quote both getting 401)
+  // would make the second one fail with an already-used token.
+  static Future<bool>? _refreshInFlight;
 
+  /// True when the last refresh was refused by the server (session revoked
+  /// or expired) — not just a network problem.
+  static bool lastRefreshRejected = false;
+
+  static Future<bool> refresh() {
+    if (useLocalMock) return Future.value(true);
+    final running = _refreshInFlight;
+    if (running != null) return running;
+    final future = _refreshOnce().whenComplete(() => _refreshInFlight = null);
+    _refreshInFlight = future;
+    return future;
+  }
+
+  static Future<bool> _refreshOnce() async {
+    lastRefreshRejected = false;
     final refreshToken = await SessionService.getRefreshToken();
-    if (refreshToken == null) return false;
+    if (refreshToken == null) {
+      lastRefreshRejected = true;
+      return false;
+    }
 
     try {
       final response = await ApiService.post(
         '/auth/refresh',
         {'refresh_token': refreshToken},
       );
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        lastRefreshRejected = true;
+        return false;
+      }
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final newAccess = json['accessToken'] ?? json['access_token'];
@@ -247,12 +274,17 @@ class AuthService {
   static Future<void> logout() async {
     if (!useLocalMock) {
       try {
-        await ApiService.post('/auth/logout', {}, withAuth: true);
+        // AuthedHttp refreshes an expired access token once, so the server
+        // session is really revoked instead of failing with 401.
+        await AuthedHttp.post('/auth/logout');
       } catch (_) {
         // ignore network errors on logout — clear local session regardless
       }
     }
     await SessionService.clearSession();
+    // the next account on this phone must not inherit this one's local data
+    DeletedBookingsService().clearAll();
+    await RecentSearchesService().clear();
   }
 
   // ---------------- PASSWORD (NEW 08 Nov) ----------------

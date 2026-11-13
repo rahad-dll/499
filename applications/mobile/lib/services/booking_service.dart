@@ -14,6 +14,8 @@
 //   DELETE /bookings/{id}             hide a finished booking
 //
 // Every call goes through AuthedHttp (one automatic token refresh on 401).
+import 'package:flutter/foundation.dart';
+
 import '../models/booking_model.dart';
 import '../models/booking_quote_model.dart';
 import '../models/parking_model.dart';
@@ -348,13 +350,33 @@ class BookingService {
 
   /// DELETE /bookings/{id} — removes a finished or cancelled booking from
   /// the driver's history (soft delete on the server).
+  ///
+  /// After the server answers OK the booking is read back once: a removed
+  /// booking answers 404. If it is still there the delete did NOT happen on
+  /// the server, and an error is thrown instead of hiding it only on this
+  /// phone (that is what made deleted bookings "come back" after login).
   Future<void> deleteBooking(String bookingId) async {
     final response = await AuthedHttp.delete('/bookings/$bookingId');
-    if (AuthedHttp.isOk(response)) {
-      BookingEvents.notifyChanged();
-      return;
+    debugPrint('DELETE /bookings/$bookingId -> ${response.statusCode}');
+    if (!AuthedHttp.isOk(response)) {
+      throw ApiException.fromResponse(response);
     }
-    throw ApiException.fromResponse(response);
+
+    try {
+      final check = await AuthedHttp.get('/bookings/$bookingId');
+      debugPrint('verify GET /bookings/$bookingId -> ${check.statusCode}');
+      if (AuthedHttp.isOk(check)) {
+        throw const ApiException(
+          'The server did not remove this booking. Please try again.',
+        );
+      }
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      // verification itself failed (network) — the DELETE was accepted
+    }
+
+    BookingEvents.notifyChanged();
   }
 
   // ---------------------------------------------------------------------------

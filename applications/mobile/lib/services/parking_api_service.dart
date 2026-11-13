@@ -39,9 +39,13 @@ class ParkingApiService {
         spaces = data['data'] as List<dynamic>;
       }
 
+      // /spaces/nearby also returns pending / inactive lots. A driver can't
+      // open (GET /spaces/{id} → 404) or book them, so only approved
+      // (status "active") lots are shown.
       final parkings = spaces
           .whereType<Map<String, dynamic>>()
           .map((json) => ParkingModel.fromJson(json))
+          .where((p) => p.status == 'active')
           .toList();
       parkings.sort((a, b) => a.distance.compareTo(b.distance));
       return parkings;

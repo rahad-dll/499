@@ -10,7 +10,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/device_session_model.dart';
+import '../../services/auth_service.dart';
 import '../../services/device_session_service.dart';
+import '../../services/session_service.dart';
+import '../auth/sign_in_screen.dart';
 import '../../utils/app_snackbar.dart';
 import '../../widgets/dashboard/dashboard_colors.dart';
 
@@ -88,6 +91,22 @@ class _ActiveDevicesScreenState extends State<ActiveDevicesScreen> {
     setState(() => _revokingId = session.id);
     try {
       await _service.revoke(session.id);
+
+      // The list doesn't say which row is this phone. If our own refresh
+      // token is refused now, this device was the one signed out → leave
+      // instead of staying in a half-signed-in state.
+      final stillSignedIn = await AuthService.refresh();
+      if (!stillSignedIn && AuthService.lastRefreshRejected) {
+        await SessionService.clearSession();
+        if (!mounted) return;
+        showAppSnackBar(context, 'This device was signed out');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const SignInScreen()),
+          (route) => false,
+        );
+        return;
+      }
+
       if (!mounted) return;
       setState(() {
         _sessions.removeWhere((s) => s.id == session.id);

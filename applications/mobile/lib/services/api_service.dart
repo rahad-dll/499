@@ -8,6 +8,9 @@ class ApiService {
 
   static Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
+  // Render free tier cold start can take 30-60s; never wait forever.
+  static const Duration _timeout = Duration(seconds: 60);
+
   static Future<Map<String, String>> _headers({bool withAuth = false}) async {
     final headers = {'Content-Type': 'application/json'};
     if (withAuth) {
@@ -24,15 +27,19 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = false,
   }) async {
-    return http.post(
-      _uri(path),
-      headers: await _headers(withAuth: withAuth),
-      body: jsonEncode(body),
-    );
+    return http
+        .post(
+          _uri(path),
+          headers: await _headers(withAuth: withAuth),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
   }
 
   static Future<http.Response> get(String path, {bool withAuth = true}) async {
-    return http.get(_uri(path), headers: await _headers(withAuth: withAuth));
+    return http
+        .get(_uri(path), headers: await _headers(withAuth: withAuth))
+        .timeout(_timeout);
   }
 
   static Future<http.Response> patch(
@@ -40,15 +47,19 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = true,
   }) async {
-    return http.patch(
-      _uri(path),
-      headers: await _headers(withAuth: withAuth),
-      body: jsonEncode(body),
-    );
+    return http
+        .patch(
+          _uri(path),
+          headers: await _headers(withAuth: withAuth),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
   }
 
   static Future<http.Response> delete(String path, {bool withAuth = true}) async {
-    return http.delete(_uri(path), headers: await _headers(withAuth: withAuth));
+    return http
+        .delete(_uri(path), headers: await _headers(withAuth: withAuth))
+        .timeout(_timeout);
   }
 
   /// Pulls a readable message out of a NestJS-style error response,

@@ -29,6 +29,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
   // GET /bookings?status=... filter (null = all)
   _BookingFilter _filter = _BookingFilter.all;
 
+  // GET /bookings?from&to — start-date range (null = any date)
+  DateTimeRange? _range;
+
   @override
   void initState() {
     super.initState();
@@ -41,7 +44,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
       _errorMessage = null;
     });
     try {
-      final bookings = await _service.getAllBookings(statuses: _filter.statuses);
+      final range = _range;
+      final bookings = await _service.getAllBookings(
+        statuses: _filter.statuses,
+        // from = first day 00:00 (inclusive), to = day after the last day
+        from: range == null
+            ? null
+            : DateTime(range.start.year, range.start.month, range.start.day),
+        to: range == null
+            ? null
+            : DateTime(range.end.year, range.end.month, range.end.day)
+                .add(const Duration(days: 1)),
+      );
       if (!mounted) return;
 
       final filteredBookings = _deletedService.filterBookings(bookings);
@@ -204,6 +218,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
         centerTitle: false,
         actions: [
           IconButton(
+            onPressed: _isLoading ? null : _pickRange,
+            icon: Icon(
+              _range == null ? Icons.date_range_rounded : Icons.event_note_rounded,
+              color: _range == null
+                  ? (isDark ? Colors.white : Colors.black87)
+                  : const Color(0xFF18D6C0),
+            ),
+            tooltip: 'Filter by date',
+          ),
+          IconButton(
             onPressed: _loadBookings,
             icon: Icon(
               Icons.refresh_rounded,
@@ -225,15 +249,64 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
   }
 
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2),
+      // bookings can be made up to 30 days ahead
+      lastDate: now.add(const Duration(days: 60)),
+      initialDateRange: _range,
+      helpText: 'Bookings starting between',
+      saveText: 'Apply',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _range = picked);
+    _loadBookings();
+  }
+
+  void _clearRange() {
+    if (_range == null || _isLoading) return;
+    setState(() => _range = null);
+    _loadBookings();
+  }
+
+  String _rangeText(DateTimeRange r) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    String d(DateTime x) => '${x.day} ${months[x.month - 1]}';
+    final sameDay = r.start.year == r.end.year &&
+        r.start.month == r.end.month &&
+        r.start.day == r.end.day;
+    return sameDay ? d(r.start) : '${d(r.start)} – ${d(r.end)}';
+  }
+
   Widget _buildFilterBar(bool isDark) {
+    final range = _range;
+    final extra = range == null ? 0 : 1;
     return SizedBox(
       height: 52,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-        itemCount: _BookingFilter.values.length,
+        itemCount: _BookingFilter.values.length + extra,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, i) {
+        itemBuilder: (context, index) {
+          if (range != null && index == 0) {
+            return InputChip(
+              avatar: const Icon(Icons.event_rounded, size: 16, color: Colors.white),
+              label: Text(_rangeText(range)),
+              labelStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+              backgroundColor: const Color(0xFF0AA6C4),
+              deleteIconColor: Colors.white,
+              side: BorderSide.none,
+              onPressed: _pickRange,
+              onDeleted: _clearRange,
+            );
+          }
+          final i = index - extra;
           final f = _BookingFilter.values[i];
           final selected = f == _filter;
           return ChoiceChip(
@@ -397,7 +470,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'No bookings yet',
+            (_range != null || _filter != _BookingFilter.all)
+                ? 'No bookings match this filter'
+                : 'No bookings yet',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,

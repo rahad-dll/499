@@ -1,6 +1,7 @@
 // lib/services/booking_service.dart
 //
 // Driver booking API:
+//   GET    /spaces/{id}/slots?from&to free slots for a time (slot picker)
 //   POST   /bookings/quote            price a booking (nothing reserved)
 //   POST   /bookings                  create
 //   GET    /bookings                  my bookings { data, page, limit, total }
@@ -16,6 +17,7 @@
 import '../models/booking_model.dart';
 import '../models/booking_quote_model.dart';
 import '../models/parking_model.dart';
+import '../models/slot_model.dart';
 import 'authed_http.dart';
 import 'booking_events.dart';
 import 'session_service.dart';
@@ -154,30 +156,55 @@ class BookingService {
   // Availability + price
   // ---------------------------------------------------------------------------
 
-  /// How many slots of [spaceId] are free for the whole window
-  /// [from, from + durationHours). Uses GET /spaces/{id}/slots?from&to, which
-  /// already skips slots that have a live booking overlapping the window.
-  Future<int> getFreeSlotCount({
+  /// Slots of [spaceId] a driver can book for the whole window
+  /// [from, from + durationHours). GET /spaces/{id}/slots?from&to already
+  /// skips slots with a live booking in that window (drivers only get
+  /// active + bookable slots). [vehicleType] narrows the list on the server.
+  Future<List<ParkingSlot>> getFreeSlots({
     required String spaceId,
     required DateTime from,
     required int durationHours,
+    String? vehicleType,
   }) async {
     final to = from.add(Duration(hours: durationHours));
     final path = AuthedHttp.withQuery('/spaces/$spaceId/slots', {
       'from': from.toUtc().toIso8601String(),
       'to': to.toUtc().toIso8601String(),
+      'vehicle_type': vehicleType,
     });
     final response = await AuthedHttp.get(path);
 
     if (AuthedHttp.isOk(response)) {
       final data = AuthedHttp.decode(response);
-      if (data is List) return data.length;
-      if (data is Map && data['data'] is List) {
-        return (data['data'] as List).length;
+      List<dynamic> rows;
+      if (data is List) {
+        rows = data;
+      } else if (data is Map && data['data'] is List) {
+        rows = data['data'] as List;
+      } else {
+        throw const ApiException('Unexpected response from server');
       }
-      throw const ApiException('Unexpected response from server');
+      return rows
+          .whereType<Map<String, dynamic>>()
+          .map(ParkingSlot.fromJson)
+          .where((slot) => slot.id.isNotEmpty)
+          .toList();
     }
     throw ApiException.fromResponse(response);
+  }
+
+  /// How many slots are free for the whole window (see [getFreeSlots]).
+  Future<int> getFreeSlotCount({
+    required String spaceId,
+    required DateTime from,
+    required int durationHours,
+  }) async {
+    final slots = await getFreeSlots(
+      spaceId: spaceId,
+      from: from,
+      durationHours: durationHours,
+    );
+    return slots.length;
   }
 
   /// POST /bookings/quote — price a booking BEFORE making it.

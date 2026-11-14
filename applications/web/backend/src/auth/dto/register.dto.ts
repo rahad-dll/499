@@ -8,8 +8,8 @@ import {
   IsString,
   IsUUID,
   MaxLength,
-  MinLength,
 } from 'class-validator';
+import { IsSignupPassword } from './password-rules';
 
 export enum RegisterRole {
   driver = 'driver',
@@ -27,9 +27,7 @@ export class RegisterDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'password123', minLength: 8 })
-  @IsString()
-  @MinLength(8)
+  @IsSignupPassword()
   password: string;
 
   @ApiProperty({ example: '01712345678' })

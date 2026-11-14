@@ -27,6 +27,7 @@ import { Public } from './decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { RegisterDto } from './dto/register.dto';
+import { SIGNUP_PASSWORD_RULES } from './dto/password-rules';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { JwtPayload } from './strategies/jwt.strategy';
 
@@ -37,6 +38,11 @@ import type { JwtPayload } from './strategies/jwt.strategy';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @ApiTags('🆕 New / changed')
+  @ApiOperation({
+    summary: '🆕 CHANGED 14 Nov · Register',
+    description: `Password: ${SIGNUP_PASSWORD_RULES}. A password that breaks a rule answers 400 with the rule in the message.`,
+  })
   @Public()
   @Post('register')
   register(@Body() dto: RegisterDto) {

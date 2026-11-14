@@ -1,10 +1,5 @@
-# Paper #35: HVI: A New Color Space for Low-light Image Enhancement (HVI-CIDNet)
+# Paper: HVI- A New Color Space for Low-light Image Enhancement (HVI-CIDNet)
 
-*Reader: MD. Rokib Hasan Oli · new5 (added 25 Oct 2026) · Board group: Model backbones / OCR methods (image enhancement)*
-*PDF: `Papers/6_6 Added papers (new5)/35_2025_HVI Color Space for Low-light Image Enhancement.pdf`
-(arXiv 2502.20272 v2, 30 pages incl. supplement; CVPR 2025). Page numbers below are the PDF pages.*
-
----
 
 ## HVI: A New Color Space for Low-light Image Enhancement (2025)
 ```
@@ -110,8 +105,14 @@ enhancement does not invent edges or erase characters; it is cheap enough per ph
   the night OCR crops (plate exact); ms per photo and per crop.
 - **Original check:** the released weights on LOLv1 eval15 and LOLv2-Real test (public Hugging Face copies), PSNR /
   SSIM exactly as their measure.py, + LPIPS, with and without GT mean.
-- See the [Kaggle guide](Kaggle_Training_Guide.md) and the [original-check guide](Original_Check_Guide.md).
+- See the [Kaggle guide](../../../src/MD.Rokib.Hasan.Oli/paper35/Kaggle_Training_Guide.md) and the [original-check guide](../../../src/MD.Rokib.Hasan.Oli/paper35/Original_Check_Guide.md).
 
+## Check yourself (2-minute version)
+> HVI-CIDNet brightens dark photos in a new colour space (polarised hue so red does not wrap, plus a learnable
+> collapse of dark pixels' colour) with a small dual-branch network: 1.88 M parameters, best PSNR / SSIM on LOL and
+> 8 other sets, 0.05 s per image. The LOLv1 number uses ground-truth brightness, and one set of weights is lost. It
+> was never tested on detection or OCR. For us: a zero-shot test in front of our night plate detector and reader,
+> against plain CLAHE and gamma, with a gate so day photos are untouched.
 
 ## Team literature table row
 | Paper | Year | Venue | Dataset (size) | Detector | OCR method | Metrics | Code? | Limitation | How it helps us |
@@ -147,8 +148,8 @@ MIT code + HF weights. My T4x2 kit: HVI-CIDNet (zero-shot) vs CLAHE/gamma before
 <!-- settings:start -->
 | Item | Setting |
 |---|---|
-| Notebook | [`kaggle/paper35_kaggle.ipynb`](kaggle/paper35_kaggle.ipynb), steps in [Kaggle_Training_Guide.md](Kaggle_Training_Guide.md) |
-| Data | the Kaggle dataset : detection 8574 / 896 / 1153 photos (train: 4067 human + 4507 auto boxes); character boxes 5465 / 536 / 467 crops; OCR text 5607 / 766 / 651 crops; e2e test 204 photos |
+| Notebook | [`kaggle/paper35_kaggle.ipynb`](../../../src/MD.Rokib.Hasan.Oli/paper35/kaggle/paper35_kaggle.ipynb), steps in [Kaggle_Training_Guide.md](../../../src/MD.Rokib.Hasan.Oli/paper35/Kaggle_Training_Guide.md) |
+| Data | 498R BanglaLPR All-in-One v1.1 (downloaded by the notebook from the team Drive, or the Kaggle dataset `498r-bangla-lpr-all-in-one`): detection 8574 / 896 / 1153 photos (train: 4067 human + 4507 auto boxes); character boxes 5465 / 536 / 467 crops; OCR text 5607 / 766 / 651 crops; e2e test 204 photos |
 | Split | team rule: grouped 70/15/15, seed 42, no near-duplicate across splits; val/test = human labels only |
 | Hardware | Kaggle GPU T4 x2: one job per GPU at the same time (no DataParallel), CPU numbers on the Kaggle CPU |
 | Software | ultralytics==8.4.170, einops; PyTorch, CUDA and all versions are saved in `environment.json` and each `results.json` |
@@ -215,8 +216,8 @@ Condition subsets are fixed for the whole team (detection/conditions.json, ocr/c
 **How to read this table (hand note, 26 Oct; kept outside the markers so a re-run of add_results does not remove it).**
 Run checked: 4 jobs code=0 in 2.0 h, dataset v1.1, detector 60/60 epochs (best 55), no NaN; the CRNN file is
 byte-identical to the paper #24 run's (same SHA-256). Local re-scoring (RTX 5060 Ti, same weights): plates found and
-plates read identical, mAP50 within 0.04. Full write-up: [Paper35_Study_Report.pdf](Paper35_Study_Report.pdf)
-(sources in `report_src/`).
+plates read identical, mAP50 within 0.04. 
+
 - **Detector:** no enhancer finds an extra night plate (64 / 71 with none, gamma, CLAHE, HVI-gen; LOLv2-Real 63).
   Night mAP50 gains are inside the noise: HVI-gen +1.28 (95 % CI -0.1 to +2.8), CLAHE +1.68 (-0.3 to +4.6), paired
   photo bootstrap on val's own boxes. Predict-vs-val letterbox alone moves night AP50 by up to 1.6 and reorders them.

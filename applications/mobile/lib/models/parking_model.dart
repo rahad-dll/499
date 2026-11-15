@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import '../utils/currency_formatter.dart';
 
+// One odd value from the server (a number sent as text, a null) must not
+// throw and take the whole nearby list down with it.
+double? _numOrNull(dynamic v) {
+  if (v is num) return v.toDouble();
+  if (v == null) return null;
+  return double.tryParse(v.toString());
+}
+
+double _doubleOf(dynamic v) => _numOrNull(v) ?? 0.0;
+
+int _intOf(dynamic v) => (_numOrNull(v) ?? 0).round();
+
 class SlotStatus {
   final String slotId;
   final String status; // 'available' | 'not_available' | 'unknown'
@@ -22,7 +34,7 @@ class SlotStatus {
     return SlotStatus(
       slotId: json['slot_id']?.toString() ?? '',
       status: json['status']?.toString() ?? 'unknown',
-      confidence: (json['confidence'] ?? 0.0).toDouble(),
+      confidence: _doubleOf(json['confidence']),
       label: json['label']?.toString() ?? 'unknown',
       isBooked: json['is_booked'] == true,
       lastUpdated:
@@ -77,27 +89,19 @@ class ParkingModel {
   factory ParkingModel.fromJson(Map<String, dynamic> json) {
     // Rate isn't returned by /spaces/nearby today — kept multi-key defensive
     // in case Rahad wires pricing_rules into the response later.
-    double? rateValue;
-    if (json['rate'] != null) {
-      rateValue = (json['rate'] as num).toDouble();
-    } else if (json['pricePerHour'] != null) {
-      rateValue = (json['pricePerHour'] as num).toDouble();
-    } else if (json['price'] != null) {
-      rateValue = (json['price'] as num).toDouble();
-    } else if (json['hourlyRate'] != null) {
-      rateValue = (json['hourlyRate'] as num).toDouble();
-    } else if (json['base_rate_unit'] != null) {
-      rateValue = (json['base_rate_unit'] as num).toDouble();
-    }
+    double? rateValue = _numOrNull(
+      json['rate'] ??
+          json['pricePerHour'] ??
+          json['price'] ??
+          json['hourlyRate'] ??
+          json['base_rate_unit'],
+    );
     // Backend sends the rate in poisha (smallest unit), e.g. 5000 -> ৳50.
     if (rateValue != null) {
       rateValue = rateValue / 100;
     }
 
-    double? ratingValue;
-    if (json['rating'] != null) {
-      ratingValue = (json['rating'] as num).toDouble();
-    }
+    final double? ratingValue = _numOrNull(json['rating']);
 
     List<SlotStatus> slots = [];
     if (json['slot_statuses'] is List) {
@@ -109,26 +113,26 @@ class ParkingModel {
 
     return ParkingModel(
       id: json['id']?.toString() ?? '',
-      name: json['name'] ?? 'Unnamed space',
-      description: json['description'],
-      address: json['address'] ?? '',
-      latitude: (json['latitude'] ?? 0.0).toDouble(),
-      longitude: (json['longitude'] ?? 0.0).toDouble(),
+      name: json['name']?.toString() ?? 'Unnamed space',
+      description: json['description']?.toString(),
+      address: json['address']?.toString() ?? '',
+      latitude: _doubleOf(json['latitude']),
+      longitude: _doubleOf(json['longitude']),
       // Real API key is `available_slots`. Kept the old camelCase as a
       // fallback in case any other endpoint still sends it that way.
-      availableSpots: json['available_slots'] ?? json['availableSpots'] ?? 0,
-      occupiedSpots: json['occupied_slots'] ?? 0,
-      unknownSpots: json['unknown_slots'] ?? 0,
-      totalSpots: json['total_capacity'] ?? json['totalSpots'] ?? 0,
+      availableSpots: _intOf(json['available_slots'] ?? json['availableSpots']),
+      occupiedSpots: _intOf(json['occupied_slots']),
+      unknownSpots: _intOf(json['unknown_slots']),
+      totalSpots: _intOf(json['total_capacity'] ?? json['totalSpots']),
       rate: rateValue,
-      distance: (json['distance_km'] ?? json['distance'] ?? 0.0).toDouble(),
+      distance: _doubleOf(json['distance_km'] ?? json['distance']),
       status: json['status']?.toString() ?? 'active',
       rating: ratingValue,
       amenities: json['amenities'] is List
-          ? List<String>.from(json['amenities'])
+          ? (json['amenities'] as List).map((e) => e.toString()).toList()
           : const [],
-      photoCount: json['photo_count'] ?? 0,
-      cameraCount: json['camera_count'] ?? 0,
+      photoCount: _intOf(json['photo_count']),
+      cameraCount: _intOf(json['camera_count']),
       slotStatuses: slots,
       isStale: json['is_stale'] == true,
     );

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:citypulse/models/booking_model.dart';
 import 'package:citypulse/models/booking_quote_model.dart';
+import 'package:citypulse/models/parking_model.dart';
 import 'package:citypulse/models/payment_model.dart';
 
 void main() {
@@ -93,6 +94,61 @@ void main() {
       expect(payload['duration_hours'], 2);
       expect(payload.containsKey('slot_id'), isFalse);
       expect(payload.containsKey('vehicle_plate'), isFalse);
+    });
+  });
+
+  group('ParkingModel', () {
+    test('reads a /spaces/nearby row', () {
+      final lot = ParkingModel.fromJson({
+        'id': 's1',
+        'name': 'Gulshan Parking Zone A',
+        'address': 'Gulshan 1, Dhaka',
+        'latitude': 23.780553,
+        'longitude': 90.4169,
+        'total_capacity': 8,
+        'base_rate_unit': 5000,
+        'status': 'active',
+        'distance_km': 0.42,
+        'available_slots': 3,
+        'occupied_slots': 5,
+        'amenities': ['cctv', 'covered'],
+      });
+
+      expect(lot.availableSpots, 3);
+      expect(lot.totalSpots, 8);
+      expect(lot.rate, 50.0);
+      expect(lot.isOpen, isTrue);
+      expect(lot.amenities, ['cctv', 'covered']);
+    });
+
+    test('odd values do not throw', () {
+      final lot = ParkingModel.fromJson({
+        'id': 42,
+        'name': null,
+        'latitude': '23.78',
+        'longitude': null,
+        'total_capacity': '8',
+        'available_slots': 3.0,
+        'base_rate_unit': '5000',
+        'distance_km': '1.5',
+        'amenities': [1, 'cctv'],
+        'slot_statuses': [
+          {'slot_id': 'a', 'status': 'available', 'confidence': '0.9'},
+          'not a slot',
+        ],
+      });
+
+      expect(lot.id, '42');
+      expect(lot.name, 'Unnamed space');
+      expect(lot.latitude, 23.78);
+      expect(lot.longitude, 0.0);
+      expect(lot.totalSpots, 8);
+      expect(lot.availableSpots, 3);
+      expect(lot.rate, 50.0);
+      expect(lot.distance, 1.5);
+      expect(lot.amenities, ['1', 'cctv']);
+      expect(lot.slotStatuses.length, 1);
+      expect(lot.slotStatuses.first.confidence, 0.9);
     });
   });
 

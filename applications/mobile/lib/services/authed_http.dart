@@ -3,6 +3,7 @@
 // Authenticated GET/POST/PATCH/PUT/DELETE helper with ONE automatic
 // refresh-and-retry: if the backend answers 401 we call POST /auth/refresh
 // once and replay the same request with the new access token.
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -62,24 +63,56 @@ class AuthedHttp {
     };
     final encoded = jsonEncode(body ?? <String, dynamic>{});
 
+    // shared keep-alive client (see ApiService.client)
+    final client = ApiService.client;
     final Future<http.Response> future;
     switch (method) {
       case 'DELETE':
-        future = http.delete(uri, headers: headers);
+        future = client.delete(uri, headers: headers);
         break;
       case 'POST':
-        future = http.post(uri, headers: headers, body: encoded);
+        future = client.post(uri, headers: headers, body: encoded);
         break;
       case 'PATCH':
-        future = http.patch(uri, headers: headers, body: encoded);
+        future = client.patch(uri, headers: headers, body: encoded);
         break;
       case 'PUT':
-        future = http.put(uri, headers: headers, body: encoded);
+        future = client.put(uri, headers: headers, body: encoded);
         break;
       default:
-        future = http.get(uri, headers: headers);
+        future = client.get(uri, headers: headers);
     }
-    return future.timeout(_timeout);
+    try {
+      return await future.timeout(_timeout);
+    } on TimeoutException {
+      throw const ApiException(
+        'The server is taking too long to answer. Please try again.',
+        isNetwork: true,
+      );
+    } on http.ClientException {
+      // no internet, DNS failure, connection dropped...
+      throw const ApiException(
+        'No internet connection. Check your network and try again.',
+        isNetwork: true,
+      );
+    }
+  }
+
+  /// Answers that mean "the server is overloaded right now".
+  static bool _isBusy(int statusCode) =>
+      statusCode == 429 ||
+      statusCode == 502 ||
+      statusCode == 503 ||
+      statusCode == 504;
+
+  /// How long to wait before repeating a busy GET: the server's
+  /// Retry-After (max 5 s) or 1 s, 2 s.
+  static Duration _retryDelay(http.Response response, int attempt) {
+    final header = int.tryParse(response.headers['retry-after'] ?? '');
+    if (header != null && header > 0) {
+      return Duration(seconds: header > 5 ? 5 : header);
+    }
+    return Duration(seconds: attempt);
   }
 
   static Future<http.Response> _send(
@@ -88,6 +121,17 @@ class AuthedHttp {
     Map<String, dynamic>? body,
   }) async {
     var response = await _once(method, path, body);
+
+    // A busy server (429 / 502 / 503 / 504) usually recovers in a moment.
+    // Only GET is repeated: it changes nothing, so repeating it is safe;
+    // a POST / PATCH / DELETE could run twice.
+    if (method == 'GET') {
+      for (var attempt = 1; attempt <= 2 && _isBusy(response.statusCode); attempt++) {
+        await Future<void>.delayed(_retryDelay(response, attempt));
+        response = await _once(method, path, body);
+      }
+    }
+
     if (response.statusCode == 401) {
       final refreshed = await AuthService.refresh();
       if (refreshed) {
@@ -121,7 +165,11 @@ class AuthedHttp {
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
-  const ApiException(this.message, {this.statusCode});
+
+  /// True when the request never got an answer (offline / timeout).
+  final bool isNetwork;
+
+  const ApiException(this.message, {this.statusCode, this.isNetwork = false});
 
   bool get isUnauthorized => statusCode == 401;
   bool get isConflict => statusCode == 409;
@@ -141,10 +189,23 @@ class ApiException implements Exception {
         statusCode: 401,
       );
     }
-    return ApiException(
-      ApiService.extractErrorMessage(response),
-      statusCode: response.statusCode,
-    );
+    if (response.statusCode == 429) {
+      return const ApiException(
+        'Too many requests. Please wait a moment and try again.',
+        statusCode: 429,
+      );
+    }
+    final text = ApiService.extractErrorMessage(response);
+    // 5xx without a readable JSON message (e.g. the host's HTML error page)
+    if (response.statusCode >= 500 &&
+        (text.startsWith('Something went wrong') ||
+            text.toLowerCase() == 'internal server error')) {
+      return ApiException(
+        'The server is busy right now. Please try again in a moment.',
+        statusCode: response.statusCode,
+      );
+    }
+    return ApiException(text, statusCode: response.statusCode);
   }
 
   @override

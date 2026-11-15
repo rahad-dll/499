@@ -8,6 +8,12 @@ class ApiService {
 
   static Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
+  /// One HTTP client for the whole app. The top-level http.get / http.post
+  /// helpers open a new connection (DNS + TLS handshake) for every single
+  /// request; a shared client keeps the connection alive and reuses it, so
+  /// requests are faster and the server handles far fewer handshakes.
+  static final http.Client client = http.Client();
+
   // Render free tier cold start can take 30-60s; never wait forever.
   static const Duration _timeout = Duration(seconds: 60);
 
@@ -27,7 +33,7 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = false,
   }) async {
-    return http
+    return client
         .post(
           _uri(path),
           headers: await _headers(withAuth: withAuth),
@@ -37,7 +43,7 @@ class ApiService {
   }
 
   static Future<http.Response> get(String path, {bool withAuth = true}) async {
-    return http
+    return client
         .get(_uri(path), headers: await _headers(withAuth: withAuth))
         .timeout(_timeout);
   }
@@ -47,7 +53,7 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = true,
   }) async {
-    return http
+    return client
         .patch(
           _uri(path),
           headers: await _headers(withAuth: withAuth),
@@ -57,7 +63,7 @@ class ApiService {
   }
 
   static Future<http.Response> delete(String path, {bool withAuth = true}) async {
-    return http
+    return client
         .delete(_uri(path), headers: await _headers(withAuth: withAuth))
         .timeout(_timeout);
   }
@@ -68,7 +74,7 @@ class ApiService {
   /// the first screen. True when the server answered.
   static Future<bool> ping() async {
     try {
-      final response = await http.get(_uri('/')).timeout(_timeout);
+      final response = await client.get(_uri('/')).timeout(_timeout);
       return response.statusCode < 500;
     } catch (_) {
       return false;

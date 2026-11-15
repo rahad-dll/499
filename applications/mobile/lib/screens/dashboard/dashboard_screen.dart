@@ -1,5 +1,6 @@
 // lib/screens/dashboard/dashboard_screen.dart
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -101,6 +102,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isDisposed = false;
   Timer? _refreshTimer;
 
+  // Auto-refresh of the nearby lots (see _scheduleRefresh).
+  bool _appActive = true; // false while the app is in the background
+  int _refreshFailures = 0; // failed loads in a row → longer wait
+
   // Layout constants
   static const double _stripInset = 235;
   static const double _previewInset = 190;
@@ -121,10 +126,34 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadRecents();
     _initializeLocation();
     BookingEvents.changes.addListener(_onBookingsChanged);
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: 60),
-      (_) => _refreshParkings(),
-    );
+    _scheduleRefresh();
+  }
+
+  /// Auto-refresh of the nearby lots, about once a minute, built so that
+  /// many phones do not overload the server:
+  ///  - nothing is requested while the app is in the background or another
+  ///    screen / sheet is on top of the map (nobody is looking at the pins);
+  ///  - after failed loads the wait doubles (1 → 2 → 4 → 5 min max), so
+  ///    phones back off instead of hammering a server that is struggling;
+  ///  - a few random seconds are added, so phones do not all ask at the
+  ///    same moment.
+  void _scheduleRefresh() {
+    _refreshTimer?.cancel();
+    if (_isDisposed) return;
+
+    final steps = _refreshFailures > 3 ? 3 : _refreshFailures;
+    var seconds = 60 * (1 << steps);
+    if (seconds > 300) seconds = 300;
+    seconds += math.Random().nextInt(10);
+
+    _refreshTimer = Timer(Duration(seconds: seconds), () async {
+      if (_isDisposed || !mounted) return;
+      final onTop = ModalRoute.of(context)?.isCurrent ?? true;
+      if (_appActive && onTop && !_isFetching) {
+        await _refreshParkings();
+      }
+      _scheduleRefresh();
+    });
   }
 
   @override
@@ -159,6 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive = state == AppLifecycleState.resumed;
     if (state == AppLifecycleState.resumed &&
         _currentPosition != null &&
         _searchedLocation == null &&
@@ -258,6 +288,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (parkings != null) {
         _nearbyParkings = parkings;
         _filteredParkings = parkings;
+        _refreshFailures = 0;
+      } else {
+        _refreshFailures++;
       }
       _isFetching = false;
     });

@@ -32,46 +32,136 @@ class _BookingsScreenState extends State<BookingsScreen> {
   // GET /bookings?from&to — start-date range (null = any date)
   DateTimeRange? _range;
 
+  // Paging: the list is loaded one page at a time (GET /bookings?page&limit)
+  // and the next page only when the driver scrolls to the end. Loading the
+  // whole history on every open gets slower with every booking made.
+  static const int _pageSize = 20;
+  int _page = 1;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+  bool _loadMoreFailed = false;
+  int _loadSeq = 0; // drops answers of an older filter / refresh
+
   @override
   void initState() {
     super.initState();
     _loadBookings();
   }
 
+  /// One page of the current filter + date range.
+  Future<BookingPage> _fetchPage(int page) {
+    final range = _range;
+    return _service.getBookingsPage(
+      statuses: _filter.statuses,
+      // from = first day 00:00 (inclusive), to = day after the last day
+      from: range == null
+          ? null
+          : DateTime(range.start.year, range.start.month, range.start.day),
+      to: range == null
+          ? null
+          : DateTime(range.end.year, range.end.month, range.end.day)
+              .add(const Duration(days: 1)),
+      page: page,
+      limit: _pageSize,
+    );
+  }
+
+  /// Loads the first page (also used by refresh and filter changes).
   Future<void> _loadBookings() async {
+    final seq = ++_loadSeq;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
-      final range = _range;
-      final bookings = await _service.getAllBookings(
-        statuses: _filter.statuses,
-        // from = first day 00:00 (inclusive), to = day after the last day
-        from: range == null
-            ? null
-            : DateTime(range.start.year, range.start.month, range.start.day),
-        to: range == null
-            ? null
-            : DateTime(range.end.year, range.end.month, range.end.day)
-                .add(const Duration(days: 1)),
-      );
-      if (!mounted) return;
-
-      final filteredBookings = _deletedService.filterBookings(bookings);
+      final result = await _fetchPage(1);
+      if (!mounted || seq != _loadSeq) return;
 
       setState(() {
-        _bookings = filteredBookings;
+        _bookings = _deletedService.filterBookings(result.items);
+        _page = 1;
+        _hasMore = result.hasMore;
+        _loadingMore = false;
+        _loadMoreFailed = false;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
       setState(() {
         _errorMessage =
             'Failed to load bookings: ${e.toString().replaceFirst('Exception: ', '')}';
         _isLoading = false;
       });
     }
+  }
+
+  /// Loads the next page and appends it.
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _isLoading) return;
+    final seq = _loadSeq;
+    _loadingMore = true;
+    if (_loadMoreFailed) setState(() => _loadMoreFailed = false);
+    try {
+      final result = await _fetchPage(_page + 1);
+      if (!mounted || seq != _loadSeq) return;
+
+      // a booking made / removed meanwhile shifts the pages by one row,
+      // so skip rows that are already in the list
+      final known = _bookings.map((b) => b.id).toSet();
+      final fresh = _deletedService
+          .filterBookings(result.items)
+          .where((b) => !known.contains(b.id))
+          .toList();
+
+      setState(() {
+        _bookings = [..._bookings, ...fresh];
+        _page = result.page;
+        _hasMore = result.hasMore && result.items.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted || seq != _loadSeq) return;
+      setState(() {
+        _loadingMore = false;
+        _loadMoreFailed = true;
+      });
+    }
+  }
+
+  /// Last row of the list while more pages exist: loads the next page as
+  /// soon as it scrolls into view, or offers a retry after a failure.
+  Widget _buildLoadMore(bool isDark) {
+    if (_loadMoreFailed) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Center(
+          child: TextButton.icon(
+            onPressed: _loadMore,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Could not load more — tap to retry'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF18D6C0),
+            ),
+          ),
+        ),
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadMore();
+    });
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF18D6C0)),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _openDetails(BookingModel booking) async {
@@ -364,8 +454,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       onRefresh: _loadBookings,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _bookings.length,
+                        itemCount: _bookings.length + (_hasMore ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index >= _bookings.length) {
+                            return _buildLoadMore(isDark);
+                          }
                           final booking = _bookings[index];
                           return Dismissible(
                             key: ValueKey(booking.id),

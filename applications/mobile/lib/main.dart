@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -37,7 +39,47 @@ Future<void> _handleSessionExpired() async {
   );
 }
 
+/// Shown in place of a widget that failed to build (release builds only),
+/// instead of Flutter's blank grey box.
+class _ScreenError extends StatelessWidget {
+  const _ScreenError();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFF7F9FC),
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Something went wrong on this screen.\nPlease go back and try again.',
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.ltr,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF64748B),
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // An error nobody caught (e.g. inside a timer or a stream) must not
+  // close the app: log it and keep running.
+  ui.PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Uncaught error: $error\n$stack');
+    return true;
+  };
+  if (kReleaseMode) {
+    ErrorWidget.builder = (details) => const _ScreenError();
+  }
+
   SessionExpiry.onExpired = () {
     _handleSessionExpired();
   };

@@ -249,9 +249,13 @@ class BookingService {
   }) async {
     List<BookingModel> live = const [];
     try {
-      live = (await getAllBookings(
+      // one page is enough: live bookings are capped at [maxLiveBookings]
+      // and the newest come first — no need to walk the whole history
+      live = (await getBookingsPage(
         statuses: const [BookingStatus.confirmed, BookingStatus.pending],
+        limit: maxPageSize,
       ))
+          .items
           .where((b) => b.isLive)
           .toList();
     } catch (_) {
@@ -370,8 +374,9 @@ class BookingService {
           'The server did not remove this booking. Please try again.',
         );
       }
-    } on ApiException {
-      rethrow;
+    } on ApiException catch (e) {
+      // offline / timeout while verifying: the DELETE itself was accepted
+      if (!e.isNetwork) rethrow;
     } catch (_) {
       // verification itself failed (network) — the DELETE was accepted
     }

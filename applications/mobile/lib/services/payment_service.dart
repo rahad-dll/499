@@ -60,6 +60,23 @@ class PaymentService {
     throw ApiException.fromResponse(response);
   }
 
+  /// The payment of one booking, looked up in GET /payments (the payment
+  /// block of GET /bookings/{id} has no amount). Null when it is not in
+  /// the newest [maxPages] pages.
+  Future<PaymentModel?> findForBooking(
+    String bookingId, {
+    int maxPages = 3,
+  }) async {
+    for (var page = 1; page <= maxPages; page++) {
+      final result = await getPayments(page: page, limit: 100);
+      for (final payment in result.items) {
+        if (payment.bookingId == bookingId) return payment;
+      }
+      if (!result.hasMore || result.items.isEmpty) break;
+    }
+    return null;
+  }
+
   /// One page of my payments (newest first). [limit] max 100.
   Future<PaymentPage> getPayments({int page = 1, int limit = 20}) async {
     final int safeLimit = limit < 1 ? 1 : (limit > 100 ? 100 : limit);

@@ -62,6 +62,19 @@ class ApiService {
         .timeout(_timeout);
   }
 
+  /// GET / — the backend's tiny public "hello" endpoint.
+  /// Called once when the app starts: the Render free tier sleeps when
+  /// idle, and this makes it start waking up while the driver is still on
+  /// the first screen. True when the server answered.
+  static Future<bool> ping() async {
+    try {
+      final response = await http.get(_uri('/')).timeout(_timeout);
+      return response.statusCode < 500;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Pulls a readable message out of a NestJS-style error response,
   /// e.g. { "message": "Invalid credentials", "statusCode": 401 }
   /// or   { "message": ["email must be an email"], "statusCode": 400 }

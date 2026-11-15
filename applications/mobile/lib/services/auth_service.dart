@@ -6,6 +6,7 @@ import 'api_service.dart';
 import 'authed_http.dart';
 import 'deleted_bookings_service.dart';
 import 'recent_searches_service.dart';
+import 'session_expiry.dart';
 import 'session_service.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
@@ -132,6 +133,20 @@ class AuthService {
           await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
           await SessionService.saveSession(user, true);
         }
+
+        // POST /auth/register stores only email, phone and password for a
+        // driver: the name, date of birth and licence number typed on the
+        // sign-up form are not saved by the server. Keep them on this phone
+        // and send them with PATCH /profiles/me at the first sign-in.
+        await _savePendingProfile(email, {
+          if (fullName != null && fullName.isNotEmpty) 'full_name': fullName,
+          if (role == 'driver' && dateOfBirth != null && dateOfBirth.isNotEmpty)
+            'date_of_birth': dateOfBirth,
+          if (role == 'driver' &&
+              drivingLicenceNo != null &&
+              drivingLicenceNo.isNotEmpty)
+            'driving_licence_no': drivingLicenceNo,
+        });
         return AuthResult.success(auth);
       }
       return AuthResult.failure(ApiService.extractErrorMessage(response));
@@ -170,6 +185,10 @@ class AuthService {
           return AuthResult.failure('Login failed: no access token received');
         }
         await SessionService.saveTokens(tokens.accessToken, tokens.refreshToken);
+        SessionExpiry.reset();
+
+        // details typed at sign-up that the server has not saved yet
+        await _applyPendingProfile(email);
 
         // POST /auth/login only returns tokens -> load the real user from
         // GET /profiles/me so the session has id / name / role.
@@ -213,6 +232,84 @@ class AuthService {
       );
     } catch (_) {
       return null;
+    }
+  }
+
+  // ---------------- SIGN-UP DETAILS (sent after the first login) ----------------
+
+  static const _keyPendingProfile = 'cp_pending_profile';
+
+  static Map<String, dynamic> _decodeMap(String? raw) {
+    if (raw == null || raw.isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  static bool _isBlank(dynamic v) => v == null || v.toString().trim().isEmpty;
+
+  /// Remembers the profile fields of a fresh sign-up, keyed by email.
+  static Future<void> _savePendingProfile(
+    String email,
+    Map<String, dynamic> fields,
+  ) async {
+    if (fields.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = _decodeMap(prefs.getString(_keyPendingProfile));
+      all[email.trim().toLowerCase()] = fields;
+      await prefs.setString(_keyPendingProfile, jsonEncode(all));
+    } catch (_) {
+      // local helper only — sign-up itself already succeeded
+    }
+  }
+
+  /// Sends the remembered sign-up fields with PATCH /profiles/me, but only
+  /// the ones the server still has empty (never overwrites newer data).
+  /// Kept for the next login when the server can't be reached.
+  static Future<void> _applyPendingProfile(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = _decodeMap(prefs.getString(_keyPendingProfile));
+      final key = email.trim().toLowerCase();
+      final raw = all[key];
+      if (raw is! Map || raw.isEmpty) return;
+      final pending = Map<String, dynamic>.from(raw);
+
+      final current = await ApiService.get('/profiles/me');
+      if (current.statusCode != 200) return;
+      final data = jsonDecode(current.body);
+      if (data is! Map) return;
+      final profile = data['profile'] is Map ? data['profile'] as Map : const {};
+
+      final body = <String, dynamic>{
+        if (pending['full_name'] != null && _isBlank(data['full_name']))
+          'full_name': pending['full_name'],
+        if (pending['date_of_birth'] != null &&
+            _isBlank(profile['date_of_birth']))
+          'date_of_birth': pending['date_of_birth'],
+        if (pending['driving_licence_no'] != null &&
+            _isBlank(profile['driving_licence_no']))
+          'driving_licence_no': pending['driving_licence_no'],
+      };
+
+      if (body.isNotEmpty) {
+        final response = await ApiService.patch('/profiles/me', body);
+        debugPrint('PATCH /profiles/me (sign-up details) -> ${response.statusCode}');
+        // server problem -> try again at the next login
+        if (response.statusCode >= 500) return;
+      }
+
+      all.remove(key);
+      if (all.isEmpty) {
+        await prefs.remove(_keyPendingProfile);
+      } else {
+        await prefs.setString(_keyPendingProfile, jsonEncode(all));
+      }
+    } catch (_) {
+      // network problem -> try again at the next login
     }
   }
 
@@ -273,12 +370,17 @@ class AuthService {
 
   static Future<void> logout() async {
     if (!useLocalMock) {
+      // signing out on purpose: a 401 here must not be reported as an
+      // expired session (the caller opens the sign-in screen itself)
+      SessionExpiry.paused = true;
       try {
         // AuthedHttp refreshes an expired access token once, so the server
         // session is really revoked instead of failing with 401.
         await AuthedHttp.post('/auth/logout');
       } catch (_) {
         // ignore network errors on logout — clear local session regardless
+      } finally {
+        SessionExpiry.paused = false;
       }
     }
     await SessionService.clearSession();

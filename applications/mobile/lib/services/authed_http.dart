@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 
 import 'api_service.dart';
 import 'auth_service.dart';
+import 'session_expiry.dart';
 import 'session_service.dart';
 
 class AuthedHttp {
@@ -91,6 +92,10 @@ class AuthedHttp {
       final refreshed = await AuthService.refresh();
       if (refreshed) {
         response = await _once(method, path, body);
+      } else if (AuthService.lastRefreshRejected) {
+        // The server refused the refresh token: this login is over
+        // (revoked on another device, password reset, or expired).
+        SessionExpiry.notify();
       }
     }
     return response;

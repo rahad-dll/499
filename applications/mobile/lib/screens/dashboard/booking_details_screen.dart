@@ -19,6 +19,7 @@ import '../../services/authed_http.dart';
 import '../../services/booking_service.dart';
 import '../../services/deleted_bookings_service.dart';
 import '../../services/location_service.dart';
+import '../../services/payment_service.dart';
 import '../../utils/app_toast.dart';
 import '../../utils/currency_formatter.dart';
 import '../../widgets/dashboard/payment_sheet.dart';
@@ -46,6 +47,19 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
   // to reload when we pop.
   bool _changed = false;
 
+  // Paisa already paid online for this booking (from GET /payments).
+  // Only loaded for a paid booking that was extended or checked out,
+  // because those can cost more than what was paid.
+  int? _paidUnit;
+
+  /// Paisa still owed after an extension / overstay on a paid booking.
+  int get _extraDueUnit {
+    final paid = _paidUnit;
+    if (paid == null || !_booking.isPaid) return 0;
+    final due = _booking.amountUnit - paid;
+    return due > 0 ? due : 0;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -66,8 +80,25 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
       final fresh = await _service.getBooking(_booking.id);
       if (!mounted) return;
       setState(() => _booking = _booking.mergeFresh(fresh));
+      _loadPaidAmount();
     } catch (_) {
       // keep showing what the list gave us
+    }
+  }
+
+  /// Extending or overstaying a booking that is already paid raises its
+  /// price, but the server keeps the payment at the old amount and
+  /// POST /payments/initiate answers 409 for a paid booking. The amount
+  /// really paid is read from GET /payments so the difference can be shown.
+  Future<void> _loadPaidAmount() async {
+    final b = _booking;
+    if (!b.isPaid || !(b.wasExtended || b.isCheckedOut)) return;
+    try {
+      final payment = await PaymentService().findForBooking(b.id);
+      if (!mounted || payment == null || !payment.isPaid) return;
+      setState(() => _paidUnit = payment.amountUnit);
+    } catch (_) {
+      // only an extra hint — the screen works without it
     }
   }
 
@@ -1005,6 +1036,30 @@ class _BookingDetailsScreenState extends State<BookingDetailsScreen> {
             Text(
               'Pay cash at the parking. It stays pending until collected.',
               style: TextStyle(fontSize: 12, color: muted),
+            ),
+          ],
+          if (_extraDueUnit > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                'Paid ${formatTaka((_paidUnit ?? 0) / 100.0)} of '
+                '${formatTaka(b.payableAmount)}. '
+                '${formatTaka(_extraDueUnit / 100.0)} for the added time is '
+                'still due — pay it at the parking (the balance cannot be '
+                'paid online yet).',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange,
+                ),
+              ),
             ),
           ],
           if (b.canPay) ...[

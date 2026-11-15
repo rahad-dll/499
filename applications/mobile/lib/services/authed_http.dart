@@ -129,8 +129,15 @@ class ApiException implements Exception {
   /// Builds the exception from a failed response with the server message.
   factory ApiException.fromResponse(http.Response response) {
     if (response.statusCode == 401) {
-      return const ApiException(
-        'Session expired. Please sign in again.',
+      // Not every 401 is a dead login: the backend also answers 401 with
+      // its own reason (e.g. "Payments are not configured"). Only the
+      // plain "Unauthorized" of the token check means the session ended.
+      final message = ApiService.extractErrorMessage(response);
+      final lower = message.toLowerCase();
+      final isTokenError =
+          lower == 'unauthorized' || lower.startsWith('something went wrong');
+      return ApiException(
+        isTokenError ? 'Session expired. Please sign in again.' : message,
         statusCode: 401,
       );
     }

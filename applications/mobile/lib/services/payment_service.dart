@@ -57,6 +57,20 @@ class PaymentService {
       }
       throw const ApiException('Unexpected response from server');
     }
+    // The dummy gateway signs its own callback with PAYMENT_WEBHOOK_SECRET.
+    // When that variable is missing on the server it answers 401
+    // "Payments are not configured" — a server setup problem, not an
+    // expired login.
+    if (response.statusCode == 401) {
+      final reason = ApiException.fromResponse(response).message.toLowerCase();
+      if (reason.contains('not configured') || reason.contains('signature')) {
+        throw const ApiException(
+          'Online (demo) payment is not switched on on the server yet. '
+          'Choose "Cash at the parking" for now.',
+          statusCode: 503,
+        );
+      }
+    }
     throw ApiException.fromResponse(response);
   }
 

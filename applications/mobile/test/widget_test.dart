@@ -9,6 +9,7 @@ import 'package:citypulse/models/booking_model.dart';
 import 'package:citypulse/models/booking_quote_model.dart';
 import 'package:citypulse/models/parking_model.dart';
 import 'package:citypulse/models/payment_model.dart';
+import 'package:citypulse/widgets/dashboard/map_filter_bar.dart';
 
 void main() {
   group('BookingModel', () {
@@ -149,6 +150,84 @@ void main() {
       expect(lot.amenities, ['1', 'cctv']);
       expect(lot.slotStatuses.length, 1);
       expect(lot.slotStatuses.first.confidence, 0.9);
+    });
+  });
+
+  group('Map filters', () {
+    ParkingModel lot(
+      String id, {
+      double distance = 1,
+      int free = 5,
+      double? rate,
+      List<String> amenities = const [],
+    }) {
+      return ParkingModel(
+        id: id,
+        name: id,
+        address: '',
+        latitude: 23.78,
+        longitude: 90.41,
+        availableSpots: free,
+        totalSpots: 10,
+        distance: distance,
+        rate: rate,
+        amenities: amenities,
+      );
+    }
+
+    final lots = [
+      lot('near-full', distance: 0.2, free: 0, rate: 40),
+      lot('mid', distance: 0.8, free: 6, rate: 50, amenities: ['cctv', 'covered']),
+      lot('far-cheap', distance: 3, free: 2, rate: 20, amenities: ['security_guard']),
+    ];
+
+    test('free now + amenity chips', () {
+      final free = applyMapFilters(
+        lots,
+        const MapFilters(availableOnly: true),
+        const <String>{},
+      );
+      expect(free.map((p) => p.id), ['mid', 'far-cheap']);
+
+      final cctv = applyMapFilters(
+        lots,
+        const MapFilters(cctv: true, covered: true),
+        const <String>{},
+      );
+      expect(cctv.map((p) => p.id), ['mid']);
+
+      final saved = applyMapFilters(
+        lots,
+        const MapFilters(savedOnly: true),
+        const {'far-cheap'},
+      );
+      expect(saved.map((p) => p.id), ['far-cheap']);
+    });
+
+    test('sort orders', () {
+      final cheapest = applyMapFilters(
+        lots,
+        const MapFilters(sort: MapSort.cheapest),
+        const <String>{},
+      );
+      expect(cheapest.first.id, 'far-cheap');
+
+      final mostFree = applyMapFilters(
+        lots,
+        const MapFilters(sort: MapSort.mostFree),
+        const <String>{},
+      );
+      expect(mostFree.first.id, 'mid');
+    });
+
+    test('best pick skips full lots', () {
+      expect(pickBestLot(lots)?.id, 'mid');
+      expect(pickBestLot([lots.first]), isNull);
+    });
+
+    test('drive time is never under a minute', () {
+      expect(approxDriveTime(0.05), '~1 min');
+      expect(approxDriveTime(2), '~9 min');
     });
   });
 

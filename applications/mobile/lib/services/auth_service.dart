@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 import 'authed_http.dart';
 import 'deleted_bookings_service.dart';
+import 'map_prefs_service.dart';
 import 'recent_searches_service.dart';
 import 'session_expiry.dart';
 import 'session_service.dart';
@@ -387,6 +388,7 @@ class AuthService {
     // the next account on this phone must not inherit this one's local data
     DeletedBookingsService().clearAll();
     await RecentSearchesService().clear();
+    await MapPrefsService().clearSaved();
   }
 
   // ---------------- PASSWORD (NEW 08 Nov) ----------------

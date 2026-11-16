@@ -25,14 +25,19 @@ class ParkingApiService {
   /// কাছের parking আনে, দূরত্ব অনুযায়ী sort করে।
   /// Server error (non-200) বা network error হলে exception ছোড়ে, যাতে
   /// dashboard আগের pin গুলো রেখে দেয় (খালি map দেখায় না)।
-  Future<List<ParkingModel>> fetchNearby(LatLng center) async {
+  /// [radiusKm] is the search radius the driver picked (backend default 5).
+  Future<List<ParkingModel>> fetchNearby(
+    LatLng center, {
+    double radiusKm = 5,
+  }) async {
     _client?.close();
     final client = http.Client();
     _client = client;
 
     try {
       final url = Uri.parse(
-        '$baseUrl/spaces/nearby?lat=${center.latitude}&lng=${center.longitude}',
+        '$baseUrl/spaces/nearby?lat=${center.latitude}&lng=${center.longitude}'
+        '&radiusKm=$radiusKm',
       );
 
       final response = await client

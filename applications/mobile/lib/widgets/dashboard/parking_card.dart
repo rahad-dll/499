@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
+import 'map_filter_bar.dart' show approxDriveTime;
 
 /// নিচের horizontal strip-এর একটা parking card।
 class ParkingCard extends StatelessWidget {
@@ -11,11 +12,19 @@ class ParkingCard extends StatelessWidget {
     required this.parking,
     required this.isSelected,
     required this.onTap,
+    this.isBest = false,
+    this.isSaved = false,
   });
 
   final ParkingModel parking;
   final bool isSelected;
   final VoidCallback onTap;
+
+  /// The lot the app recommends right now.
+  final bool isBest;
+
+  /// The driver saved this lot.
+  final bool isSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +81,14 @@ class ParkingCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (isSaved) ...[
+                  const Icon(
+                    Icons.favorite_rounded,
+                    size: 13,
+                    color: Color(0xFFE11D48),
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 Container(
                   width: 8,
                   height: 8,
@@ -99,7 +116,10 @@ class ParkingCard extends StatelessWidget {
                 const SizedBox(width: 2),
                 Expanded(
                   child: Text(
-                    parking.formattedDistance,
+                    '${parking.formattedDistance} · '
+                    '${approxDriveTime(parking.distance)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 11,
                       color: DashColors.muted,
@@ -108,6 +128,35 @@ class ParkingCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (isBest) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5B301).withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 12,
+                      color: Color(0xFFB7791F),
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Best pick',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFB7791F),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const Spacer(),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

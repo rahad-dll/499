@@ -1,4 +1,8 @@
 import { asList, authedRequest } from "@/lib/api/authed";
+import { invalidateQuery } from "@/lib/api/query-store";
+
+/** Query-store key for the signed-in user's device sessions. */
+export const SESSIONS_KEY = "auth:sessions";
 
 /** An active sign-in, as returned by GET /auth/sessions. */
 export interface DeviceSession {
@@ -20,6 +24,7 @@ export const sessionsRepository = {
     await authedRequest<unknown>(`/auth/sessions/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
+    invalidateQuery(SESSIONS_KEY);
   },
 };
 

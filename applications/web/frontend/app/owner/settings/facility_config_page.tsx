@@ -39,7 +39,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { ParkingSpaceError, parkingSpacesRepository } from "@/lib/spaces/repository";
+import { fetchQuery } from "@/lib/api/query-store";
+import { ParkingSpaceError, parkingSpacesRepository, spaceKeys } from "@/lib/spaces/repository";
 import type {
   InferenceResult,
   OperatingHours,
@@ -225,10 +226,10 @@ function LotEditor({ lotId, onChanged }: { lotId: string; onChanged: () => void 
   const photoInput = useRef<HTMLInputElement>(null);
   const aiInput = useRef<HTMLInputElement>(null);
 
+  // the lot list already seeded this key, so the editor usually opens without a request
   useEffect(() => {
     let active = true;
-    parkingSpacesRepository
-      .get(lotId)
+    fetchQuery(spaceKeys.one(lotId), () => parkingSpacesRepository.get(lotId))
       .then((data) => {
         if (!active) return;
         setSpace(data);

@@ -1,4 +1,5 @@
 import { ApiError, apiRequest } from "@/lib/api/client";
+import { setQueryData } from "@/lib/api/query-store";
 import { authRepository } from "@/lib/auth/repository";
 import type { User } from "@/lib/auth/types";
 import { ProfileShapeError, normalizeProfile } from "./normalize";
@@ -81,6 +82,9 @@ async function wrap<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
+/** Query-store key for the signed-in user's profile. */
+export const PROFILE_KEY = "profile:me";
+
 export const profileRepository = {
   /** GET /profiles/me (any documented or legacy response shape). */
   getMyProfile(signal?: AbortSignal): Promise<MyProfile> {
@@ -91,7 +95,9 @@ export const profileRepository = {
   updateMyProfile(input: UpdateMyProfileInput): Promise<MyProfile> {
     return wrap(async () => {
       await call<unknown>("/profiles/me", { method: "PATCH", body: JSON.stringify(input) });
-      return fetchProfile();
+      const profile = await fetchProfile();
+      setQueryData(PROFILE_KEY, () => profile);
+      return profile;
     });
   },
 };

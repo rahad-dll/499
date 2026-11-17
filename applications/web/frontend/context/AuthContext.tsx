@@ -9,8 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { clearQueries, fetchQuery } from "@/lib/api/query-store";
 import { authRepository } from "@/lib/auth/repository";
-import { profileRepository } from "@/lib/profiles/repository";
+import { PROFILE_KEY, profileRepository } from "@/lib/profiles/repository";
 import type {
   LoginInput,
   SignupInput,
@@ -56,13 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Login tokens carry no display name, so fill it from GET /profiles/me once.
+  // Login tokens carry no display name, so fill it from GET /profiles/me once
+  // (through the query store, so the profile page reuses the same request).
   const missingName = !!user && !user.full_name;
   useEffect(() => {
     if (!missingName) return;
     let active = true;
-    profileRepository
-      .getMyProfile()
+    fetchQuery(PROFILE_KEY, () => profileRepository.getMyProfile())
       .then((profile) => {
         if (!active || !profile.user.full_name) return;
         setUser((prev) => (prev ? { ...prev, full_name: profile.user.full_name } : prev));
@@ -75,14 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [missingName]);
 
+  // Cached API data belongs to one account: drop it whenever the account changes.
   const signup = useCallback(async (input: SignupInput) => {
     const session = await authRepository.signup(input);
+    clearQueries();
     setUser(session.user);
     return session.user;
   }, []);
 
   const login = useCallback(async (input: LoginInput) => {
     const session = await authRepository.login(input);
+    clearQueries();
     setUser(session.user);
     return session.user;
   }, []);
@@ -93,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Local session removal is authoritative even if the API is unavailable.
     }
+    clearQueries();
     setUser(null);
   }, []);
 
@@ -104,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(
     async (token: string, password: string) => {
       await authRepository.resetPassword(token, password);
+      clearQueries();
       setUser(null);
     },
     [],

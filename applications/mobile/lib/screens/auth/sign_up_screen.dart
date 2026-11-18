@@ -66,7 +66,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   bool _validatePhone(String phone) {
-    final RegExp regex = RegExp(r'^[0-9]{10,15}$');
+    // same rule as the backend (IsMobilePhone('bn-BD')): 01XXXXXXXXX,
+    // optionally with +880 / 880 in front
+    final RegExp regex = RegExp(r'^(\+?880|0)1[3-9][0-9]{8}$');
     return regex.hasMatch(phone.trim());
   }
 
@@ -115,7 +117,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => phoneError = 'Phone number is required');
       isValid = false;
     } else if (!_validatePhone(phoneController.text)) {
-      setState(() => phoneError = 'Please enter a valid phone number (10-15 digits)');
+      setState(() => phoneError = 'Enter a Bangladeshi mobile number (01XXXXXXXXX)');
       isValid = false;
     }
 
@@ -124,6 +126,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       isValid = false;
     } else if (!_validatePassword(passwordController.text)) {
       setState(() => passwordError = 'Min 8 chars, 1 uppercase, 1 digit');
+      isValid = false;
+    } else if (passwordController.text.length > 72) {
+      // same rule as the backend (register: 8 to 72 characters)
+      setState(() => passwordError = 'Password must be at most 72 characters');
       isValid = false;
     }
 

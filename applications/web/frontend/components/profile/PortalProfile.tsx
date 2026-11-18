@@ -21,8 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { isValidBangladeshPhone, normalizeBangladeshPhone } from "@/lib/auth/phone";
-import { describeDevice, sessionsRepository, type DeviceSession } from "@/lib/auth/sessions";
-import { ProfileError, profileRepository } from "@/lib/profiles/repository";
+import { fetchQuery } from "@/lib/api/query-store";
+import { SESSIONS_KEY, describeDevice, sessionsRepository, type DeviceSession } from "@/lib/auth/sessions";
+import { PROFILE_KEY, ProfileError, profileRepository } from "@/lib/profiles/repository";
 import type { MyProfile, UpdateMyProfileInput } from "@/lib/profiles/types";
 
 type ProfileRole = "owner" | "authority";
@@ -90,25 +91,28 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
   const [sessions, setSessions] = useState<DeviceSession[] | null>(null);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
 
+  // through the query store: a profile the header already loaded is reused
   useEffect(() => {
-    const controller = new AbortController();
-    profileRepository
-      .getMyProfile(controller.signal)
+    let active = true;
+    fetchQuery(PROFILE_KEY, () => profileRepository.getMyProfile())
       .then((data) => {
+        if (!active) return;
         setProfile(data);
         setForm(formFromProfile(data));
       })
       .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setLoadError(error instanceof ProfileError ? error.message : "Could not load your profile.");
+        if (active) setLoadError(error instanceof ProfileError ? error.message : "Could not load your profile.");
       });
-    sessionsRepository
-      .list()
-      .then(setSessions)
+    fetchQuery(SESSIONS_KEY, () => sessionsRepository.list())
+      .then((data) => {
+        if (active) setSessions(data);
+      })
       .catch((error: unknown) => {
-        setSessionsError(error instanceof Error ? error.message : "Could not load sessions.");
+        if (active) setSessionsError(error instanceof Error ? error.message : "Could not load sessions.");
       });
-    return () => controller.abort();
+    return () => {
+      active = false;
+    };
   }, []);
 
   function setField(field: keyof FormState, value: string) {

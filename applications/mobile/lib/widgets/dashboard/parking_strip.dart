@@ -14,6 +14,9 @@ class ParkingStrip extends StatelessWidget {
     required this.scrollController,
     required this.onParkingTap,
     this.searchedLocationLabel,
+    this.bestId,
+    this.savedIds = const <String>{},
+    this.sortLabel,
   });
 
   final List<ParkingModel> parkings;
@@ -21,6 +24,13 @@ class ParkingStrip extends StatelessWidget {
   final ScrollController scrollController;
   final ValueChanged<ParkingModel> onParkingTap;
   final String? searchedLocationLabel;
+
+  /// Lot marked "Best pick" (see pickBestLot).
+  final String? bestId;
+  final Set<String> savedIds;
+
+  /// e.g. "Cheapest first" — shown next to the count when not the default.
+  final String? sortLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -49,17 +59,32 @@ class ParkingStrip extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(),
-                if (searchedLocationLabel != null)
+                if (sortLabel != null) ...[
+                  const SizedBox(width: 8),
                   Text(
-                    searchedLocationLabel!,
+                    sortLabel!,
                     style: const TextStyle(
                       fontSize: 11,
-                      color: DashColors.muted,
+                      fontWeight: FontWeight.w600,
+                      color: DashColors.subtle,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: searchedLocationLabel == null
+                      ? const SizedBox.shrink()
+                      : Text(
+                          searchedLocationLabel!,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: DashColors.muted,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
               ],
             ),
           ),
@@ -76,6 +101,8 @@ class ParkingStrip extends StatelessWidget {
                 return ParkingCard(
                   parking: parking,
                   isSelected: selectedParking?.id == parking.id,
+                  isBest: parking.id == bestId,
+                  isSaved: savedIds.contains(parking.id),
                   onTap: () => onParkingTap(parking),
                 );
               },

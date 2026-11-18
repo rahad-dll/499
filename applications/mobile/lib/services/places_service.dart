@@ -92,7 +92,12 @@ class PlacesService {
   static const String _userAgent = 'CityPulseApp/1.0 (NSU CSE499 capstone)';
 
   final Map<String, _CacheEntry> _cache = {};
-  http.Client? _client;
+
+  /// One keep-alive client for every keystroke. Opening a new connection
+  /// (DNS + TLS handshake) per letter was the main reason suggestions
+  /// arrived late; stale answers are dropped by the caller's sequence
+  /// number and still fill the cache.
+  final http.Client _http = http.Client();
   String _sessionToken = _newToken();
   DateTime? _googleBackoffUntil;
 
@@ -125,24 +130,48 @@ class PlacesService {
       return hit.items;
     }
 
-    _client?.close();
-    final client = http.Client();
-    _client = client;
+    final client = _http;
 
     try {
       List<PlaceSuggestion>? out;
-      if (_googleOk) out = await _googleAutocomplete(client, q, bias);
+      if (_googleOk) {
+        try {
+          out = await _googleAutocomplete(client, q, bias);
+        } catch (e) {
+          // timeout / network: use the free service for a while
+          debugPrint('Places(New) autocomplete failed: $e');
+          _googleBackoffUntil =
+              DateTime.now().add(const Duration(minutes: 2));
+        }
+      }
       out ??= await _photonAutocomplete(client, q, bias);
       if (out.isNotEmpty) _cachePut(key, out);
       return out;
     } catch (e) {
-      // Includes "request cancelled" when a newer keystroke closed us.
-      debugPrint('Place search cancelled/failed: $e');
+      debugPrint('Place search failed: $e');
       return const [];
-    } finally {
-      if (identical(_client, client)) _client = null;
-      client.close();
     }
+  }
+
+  /// Suggestions that can be shown at once, with no request: the cached
+  /// answer of this query, or of the longest shorter query already
+  /// answered, narrowed to the places that still match what was typed.
+  List<PlaceSuggestion> instant(String input) {
+    final q = input.trim().toLowerCase();
+    if (q.length < 2) return const [];
+    final now = DateTime.now();
+    for (var len = q.length; len >= 2; len--) {
+      final prefix = '${q.substring(0, len)}|';
+      for (final entry in _cache.entries) {
+        if (!entry.key.startsWith(prefix)) continue;
+        if (now.difference(entry.value.at) >= _cacheTtl) continue;
+        final hits = entry.value.items
+            .where((s) => s.description.toLowerCase().contains(q))
+            .toList();
+        if (hits.isNotEmpty) return hits;
+      }
+    }
+    return const [];
   }
 
   void _cachePut(String key, List<PlaceSuggestion> items) {
@@ -186,13 +215,16 @@ class PlacesService {
           },
           body: jsonEncode(body),
         )
-        .timeout(const Duration(seconds: 6));
+        // a slow Google answer must not hold back the free fallback
+        .timeout(const Duration(seconds: 3));
 
     if (res.statusCode != 200) {
       debugPrint('Places(New) autocomplete HTTP ${res.statusCode}: ${res.body}');
-      if (res.statusCode == 401 ||
-          res.statusCode == 403 ||
-          res.statusCode == 429) {
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        // the key is not allowed to call Places: it will not start working
+        // by itself, so stop paying a failed request on every search
+        _googleBackoffUntil = DateTime.now().add(const Duration(hours: 6));
+      } else if (res.statusCode == 429) {
         _googleBackoffUntil = DateTime.now().add(const Duration(minutes: 3));
       }
       return null;
@@ -377,7 +409,6 @@ class PlacesService {
   }
 
   void dispose() {
-    _client?.close();
-    _client = null;
+    _http.close();
   }
 }

@@ -2,6 +2,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
@@ -15,17 +16,32 @@ class ParkingDetailsSheet extends StatelessWidget {
     required this.parking,
     required this.onNavigate,
     required this.onBook,
+    this.isSaved = false,
+    this.onToggleSaved,
+    this.onStreetView,
   });
 
   final ParkingModel parking;
   final VoidCallback onNavigate;
   final VoidCallback onBook;
 
+  /// Saved (favourite) state when the sheet opens.
+  final bool isSaved;
+
+  /// Called with the new state when the driver taps Save.
+  final ValueChanged<bool>? onToggleSaved;
+
+  /// Opens the street-level photos of the entrance.
+  final VoidCallback? onStreetView;
+
   static Future<void> show(
     BuildContext context, {
     required ParkingModel parking,
     required VoidCallback onNavigate,
     required VoidCallback onBook,
+    bool isSaved = false,
+    ValueChanged<bool>? onToggleSaved,
+    VoidCallback? onStreetView,
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -35,6 +51,9 @@ class ParkingDetailsSheet extends StatelessWidget {
         parking: parking,
         onNavigate: onNavigate,
         onBook: onBook,
+        isSaved: isSaved,
+        onToggleSaved: onToggleSaved,
+        onStreetView: onStreetView,
       ),
     );
   }
@@ -87,7 +106,14 @@ class ParkingDetailsSheet extends StatelessWidget {
                             const SizedBox(height: 18),
                             ParkingInfoSection(parking: parking),
                           ],
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 18),
+                          _QuickActions(
+                            parking: parking,
+                            isSaved: isSaved,
+                            onToggleSaved: onToggleSaved,
+                            onStreetView: onStreetView,
+                          ),
+                          const SizedBox(height: 16),
                           _ActionButtons(
                             parking: parking,
                             onNavigate: onNavigate,
@@ -426,6 +452,135 @@ class _AmenitiesSection extends StatelessWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+/// Save / Street View / Copy location — small round actions above the
+/// Navigate and Book buttons.
+class _QuickActions extends StatefulWidget {
+  const _QuickActions({
+    required this.parking,
+    required this.isSaved,
+    this.onToggleSaved,
+    this.onStreetView,
+  });
+
+  final ParkingModel parking;
+  final bool isSaved;
+  final ValueChanged<bool>? onToggleSaved;
+  final VoidCallback? onStreetView;
+
+  @override
+  State<_QuickActions> createState() => _QuickActionsState();
+}
+
+class _QuickActionsState extends State<_QuickActions> {
+  late bool _saved = widget.isSaved;
+  bool _copied = false;
+
+  void _toggleSaved() {
+    HapticFeedback.selectionClick();
+    setState(() => _saved = !_saved);
+    widget.onToggleSaved?.call(_saved);
+  }
+
+  Future<void> _copyLocation() async {
+    final p = widget.parking;
+    final link =
+        'https://www.google.com/maps/search/?api=1&query=${p.latitude},${p.longitude}';
+    final address = p.address.trim();
+    final text = address.isEmpty ? '${p.name}\n$link' : '${p.name}\n$address\n$link';
+    await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future<void>.delayed(const Duration(seconds: 2));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (widget.onToggleSaved != null) ...[
+          Expanded(
+            child: _QuickAction(
+              icon: _saved
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              label: _saved ? 'Saved' : 'Save',
+              color: _saved ? const Color(0xFFE11D48) : DashColors.title,
+              onTap: _toggleSaved,
+            ),
+          ),
+          const SizedBox(width: 10),
+        ],
+        if (widget.onStreetView != null) ...[
+          Expanded(
+            child: _QuickAction(
+              icon: Icons.streetview_rounded,
+              label: 'Street View',
+              color: DashColors.title,
+              onTap: widget.onStreetView!,
+            ),
+          ),
+          const SizedBox(width: 10),
+        ],
+        Expanded(
+          child: _QuickAction(
+            icon: _copied ? Icons.check_rounded : Icons.share_location_rounded,
+            label: _copied ? 'Copied' : 'Copy location',
+            color: _copied ? DashColors.teal : DashColors.title,
+            onTap: _copyLocation,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: DashColors.background,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

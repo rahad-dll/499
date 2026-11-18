@@ -18,7 +18,10 @@ export interface SpacePhoto {
   is_primary: boolean;
 }
 
-/** A parking lot as returned by GET /spaces and GET /spaces/:id. */
+/**
+ * A parking lot from GET /spaces and GET /spaces/:id, after `toParkingSpace`
+ * (lib/spaces/adapters.ts) has normalized it.
+ */
 export interface ParkingSpace {
   id: string;
   owner_id: string;
@@ -27,8 +30,8 @@ export interface ParkingSpace {
   address?: string | null;
   area_id?: string | null;
   contact_phone?: string | null;
-  latitude: string | number;
-  longitude: string | number;
+  latitude: number;
+  longitude: number;
   space_type: SpaceType;
   total_capacity: number;
   operating_hours?: OperatingHours | null;

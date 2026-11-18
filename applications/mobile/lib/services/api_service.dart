@@ -8,6 +8,15 @@ class ApiService {
 
   static Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
+  /// One HTTP client for the whole app. The top-level http.get / http.post
+  /// helpers open a new connection (DNS + TLS handshake) for every single
+  /// request; a shared client keeps the connection alive and reuses it, so
+  /// requests are faster and the server handles far fewer handshakes.
+  static final http.Client client = http.Client();
+
+  // Render free tier cold start can take 30-60s; never wait forever.
+  static const Duration _timeout = Duration(seconds: 60);
+
   static Future<Map<String, String>> _headers({bool withAuth = false}) async {
     final headers = {'Content-Type': 'application/json'};
     if (withAuth) {
@@ -24,15 +33,19 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = false,
   }) async {
-    return http.post(
-      _uri(path),
-      headers: await _headers(withAuth: withAuth),
-      body: jsonEncode(body),
-    );
+    return client
+        .post(
+          _uri(path),
+          headers: await _headers(withAuth: withAuth),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
   }
 
   static Future<http.Response> get(String path, {bool withAuth = true}) async {
-    return http.get(_uri(path), headers: await _headers(withAuth: withAuth));
+    return client
+        .get(_uri(path), headers: await _headers(withAuth: withAuth))
+        .timeout(_timeout);
   }
 
   static Future<http.Response> patch(
@@ -40,15 +53,32 @@ class ApiService {
     Map<String, dynamic> body, {
     bool withAuth = true,
   }) async {
-    return http.patch(
-      _uri(path),
-      headers: await _headers(withAuth: withAuth),
-      body: jsonEncode(body),
-    );
+    return client
+        .patch(
+          _uri(path),
+          headers: await _headers(withAuth: withAuth),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
   }
 
   static Future<http.Response> delete(String path, {bool withAuth = true}) async {
-    return http.delete(_uri(path), headers: await _headers(withAuth: withAuth));
+    return client
+        .delete(_uri(path), headers: await _headers(withAuth: withAuth))
+        .timeout(_timeout);
+  }
+
+  /// GET / — the backend's tiny public "hello" endpoint.
+  /// Called once when the app starts: the Render free tier sleeps when
+  /// idle, and this makes it start waking up while the driver is still on
+  /// the first screen. True when the server answered.
+  static Future<bool> ping() async {
+    try {
+      final response = await client.get(_uri('/')).timeout(_timeout);
+      return response.statusCode < 500;
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Pulls a readable message out of a NestJS-style error response,

@@ -77,8 +77,9 @@ class _SignInScreenState extends State<SignInScreen> {
     if (passwordController.text.isEmpty) {
       setState(() => passwordError = 'Password is required');
       isValid = false;
-    } else if (passwordController.text.length < 6) {
-      setState(() => passwordError = 'Password must be at least 6 characters');
+    } else if (passwordController.text.length < 8) {
+      // same rule as the backend (LoginDto: MinLength 8)
+      setState(() => passwordError = 'Password must be at least 8 characters');
       isValid = false;
     }
 

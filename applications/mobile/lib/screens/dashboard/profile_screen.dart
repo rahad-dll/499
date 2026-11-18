@@ -11,7 +11,8 @@ import '../auth/sign_in_screen.dart';
 import 'active_devices_screen.dart';
 import 'bookings_screen.dart';
 import 'change_password_screen.dart';
-import 'dashboard_screen.dart';
+import 'edit_profile_screen.dart';
+import 'payment_history_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -26,16 +27,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // GET /bookings?limit=1 → total (one small request instead of every page)
+  late Future<int> _bookingCount;
+
   @override
   void initState() {
     super.initState();
+    _bookingCount = _loadBookingCount();
     _loadProfile();
+  }
+
+  Future<int> _loadBookingCount() async {
+    try {
+      return await BookingService().getBookingCount();
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> _openEditProfile() async {
+    final data = _profileData;
+    if (data == null) return;
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => EditProfileScreen(profile: data)),
+    );
+    if (saved == true && mounted) _loadProfile();
   }
 
   Future<void> _loadProfile() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _bookingCount = _loadBookingCount();
     });
 
     try {
@@ -49,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
           _isLoading = false;
         });
       }
@@ -160,14 +184,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = _profileData;
     if (user == null) return const SizedBox.shrink();
 
-    final email = user['email'] ?? 'No email';
-    final fullName = user['full_name'] ?? email.split('@').first;
-    final phone = user['phone'] ?? 'Not provided';
-    final role = user['role'] ?? 'driver';
-    final avatarUrl = user['avatar_url'];
-    final profile = user['profile'] as Map<String, dynamic>? ?? {};
-    final drivingLicenceNo = profile['driving_licence_no'];
-    final licenceType = profile['licence_type'];
+    final String email = user['email']?.toString() ?? 'No email';
+    final String rawName = user['full_name']?.toString().trim() ?? '';
+    final String fullName = rawName.isNotEmpty ? rawName : email.split('@').first;
+    final String phone = user['phone']?.toString() ?? 'Not provided';
+    final String role = user['role']?.toString() ?? 'driver';
+    final String? avatarUrl = user['avatar_url']?.toString();
+    final Map<String, dynamic> profile = user['profile'] is Map
+        ? Map<String, dynamic>.from(user['profile'] as Map)
+        : <String, dynamic>{};
+    final String? drivingLicenceNo = profile['driving_licence_no']?.toString();
+    final String? licenceTypeRaw = profile['licence_type']?.toString();
+    final String? licenceType = licenceTypeRaw == null
+        ? null
+        : (licenceTypeRaw == 'non_professional' ? 'Non-professional' : 'Professional');
+    final String? dateOfBirth = profile['date_of_birth']?.toString();
+    final List<String> vehicleClasses = profile['vehicle_classes'] is List
+        ? (profile['vehicle_classes'] as List).map((e) => e.toString()).toList()
+        : <String>[];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -274,10 +308,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FutureBuilder(
-                  future: BookingService().getBookings(),
+                child: FutureBuilder<int>(
+                  future: _bookingCount,
                   builder: (context, snap) {
-                    final count = snap.data?.length ?? 0;
+                    final count = snap.data ?? 0;
                     return _buildStatCard(
                       isDark: isDark,
                       icon: Icons.book_online,
@@ -371,7 +405,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
 
           // Driver Details Section (if driver)
-          if (role == 'driver' && (drivingLicenceNo != null || licenceType != null))
+          if (role == 'driver' &&
+              (drivingLicenceNo != null ||
+                  licenceType != null ||
+                  dateOfBirth != null ||
+                  vehicleClasses.isNotEmpty))
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -423,6 +461,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       label: 'Licence Type',
                       value: licenceType,
                       icon: Icons.category_outlined,
+                    ),
+                  if (dateOfBirth != null)
+                    _buildInfoTile(
+                      isDark: isDark,
+                      label: 'Date of Birth',
+                      value: dateOfBirth,
+                      icon: Icons.cake_outlined,
+                    ),
+                  if (vehicleClasses.isNotEmpty)
+                    _buildInfoTile(
+                      isDark: isDark,
+                      label: 'Vehicle Classes',
+                      value: vehicleClasses.join(', '),
+                      icon: Icons.directions_car_outlined,
                     ),
                 ],
               ),
@@ -477,11 +529,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isDark: isDark,
             icon: Icons.edit_outlined,
             title: 'Edit Profile',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit Profile - Coming Soon!')),
-              );
-            },
+            onTap: _openEditProfile,
           ),
           _buildMenuItem(
             isDark: isDark,
@@ -528,11 +576,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           _buildMenuItem(
             isDark: isDark,
-            icon: Icons.payment_outlined,
-            title: 'Payment Methods',
+            icon: Icons.receipt_long_rounded,
+            title: 'Payment History',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Payment Methods - Coming Soon!')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()),
               );
             },
           ),

@@ -5,7 +5,7 @@ import '../../models/parking_model.dart';
 import 'dashboard_colors.dart';
 
 /// Booking শেষ হলে "Booking Confirmed!" dialog দেখায়।
-/// "View Bookings" চাপলে dialog বন্ধ হয়ে [onViewBookings] চলে।
+/// "View & Pay" চাপলে dialog বন্ধ হয়ে [onViewBookings] চলে (নতুন booking-এর details খোলে)।
 Future<void> showBookingConfirmationDialog(
   BuildContext context, {
   required ParkingModel parking,
@@ -106,7 +106,7 @@ class _BookingConfirmationDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('View Bookings'),
+                    child: const Text('View & Pay'),
                   ),
                 ),
                 const SizedBox(width: 12),

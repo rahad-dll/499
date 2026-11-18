@@ -26,34 +26,142 @@ class _BookingsScreenState extends State<BookingsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
 
+  // GET /bookings?status=... filter (null = all)
+  _BookingFilter _filter = _BookingFilter.all;
+
+  // GET /bookings?from&to — start-date range (null = any date)
+  DateTimeRange? _range;
+
+  // Paging: the list is loaded one page at a time (GET /bookings?page&limit)
+  // and the next page only when the driver scrolls to the end. Loading the
+  // whole history on every open gets slower with every booking made.
+  static const int _pageSize = 20;
+  int _page = 1;
+  bool _hasMore = false;
+  bool _loadingMore = false;
+  bool _loadMoreFailed = false;
+  int _loadSeq = 0; // drops answers of an older filter / refresh
+
   @override
   void initState() {
     super.initState();
     _loadBookings();
   }
 
+  /// One page of the current filter + date range.
+  Future<BookingPage> _fetchPage(int page) {
+    final range = _range;
+    return _service.getBookingsPage(
+      statuses: _filter.statuses,
+      // from = first day 00:00 (inclusive), to = day after the last day
+      from: range == null
+          ? null
+          : DateTime(range.start.year, range.start.month, range.start.day),
+      to: range == null
+          ? null
+          : DateTime(range.end.year, range.end.month, range.end.day)
+              .add(const Duration(days: 1)),
+      page: page,
+      limit: _pageSize,
+    );
+  }
+
+  /// Loads the first page (also used by refresh and filter changes).
   Future<void> _loadBookings() async {
+    final seq = ++_loadSeq;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
     try {
-      final bookings = await _service.getBookings();
-      if (!mounted) return;
-      
-      final filteredBookings = _deletedService.filterBookings(bookings);
-      
+      final result = await _fetchPage(1);
+      if (!mounted || seq != _loadSeq) return;
+
       setState(() {
-        _bookings = filteredBookings;
+        _bookings = _deletedService.filterBookings(result.items);
+        _page = 1;
+        _hasMore = result.hasMore;
+        _loadingMore = false;
+        _loadMoreFailed = false;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || seq != _loadSeq) return;
       setState(() {
-        _errorMessage = 'Failed to load bookings: $e';
+        _errorMessage =
+            'Failed to load bookings: ${e.toString().replaceFirst('Exception: ', '')}';
         _isLoading = false;
       });
     }
+  }
+
+  /// Loads the next page and appends it.
+  Future<void> _loadMore() async {
+    if (_loadingMore || !_hasMore || _isLoading) return;
+    final seq = _loadSeq;
+    _loadingMore = true;
+    if (_loadMoreFailed) setState(() => _loadMoreFailed = false);
+    try {
+      final result = await _fetchPage(_page + 1);
+      if (!mounted || seq != _loadSeq) return;
+
+      // a booking made / removed meanwhile shifts the pages by one row,
+      // so skip rows that are already in the list
+      final known = _bookings.map((b) => b.id).toSet();
+      final fresh = _deletedService
+          .filterBookings(result.items)
+          .where((b) => !known.contains(b.id))
+          .toList();
+
+      setState(() {
+        _bookings = [..._bookings, ...fresh];
+        _page = result.page;
+        _hasMore = result.hasMore && result.items.isNotEmpty;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted || seq != _loadSeq) return;
+      setState(() {
+        _loadingMore = false;
+        _loadMoreFailed = true;
+      });
+    }
+  }
+
+  /// Last row of the list while more pages exist: loads the next page as
+  /// soon as it scrolls into view, or offers a retry after a failure.
+  Widget _buildLoadMore(bool isDark) {
+    if (_loadMoreFailed) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Center(
+          child: TextButton.icon(
+            onPressed: _loadMore,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Could not load more — tap to retry'),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF18D6C0),
+            ),
+          ),
+        ),
+      );
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _loadMore();
+    });
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF18D6C0)),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _openDetails(BookingModel booking) async {
@@ -106,10 +214,18 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (confirm != true) return;
 
     try {
-      await _service.updateStatus(booking.id, BookingStatus.cancelled);
-      showAppToast(context, 'Booking cancelled successfully', color: Color(0xFF22C55E));
+      final updated = await _service.cancelBooking(booking.id);
+      if (!mounted) return;
+      showAppToast(
+        context,
+        updated.isRefunded
+            ? 'Booking cancelled — payment refunded'
+            : 'Booking cancelled successfully',
+        color: const Color(0xFF22C55E),
+      );
       _loadBookings();
     } catch (e) {
+      if (!mounted) return;
       showAppToast(context, e.toString().replaceFirst('Exception: ', ''), color: Colors.red);
     }
   }
@@ -145,6 +261,15 @@ class _BookingsScreenState extends State<BookingsScreen> {
     );
     
     if (confirm == true) {
+      if (!booking.canDelete) {
+        if (!mounted) return false;
+        showAppToast(
+          context,
+          'Cancel the booking first; only past or cancelled bookings can be removed',
+          color: Colors.orange,
+        );
+        return false;
+      }
       try {
         // Server only allows removing cancelled / finished bookings.
         await _service.deleteBooking(booking.id);
@@ -183,6 +308,16 @@ class _BookingsScreenState extends State<BookingsScreen> {
         centerTitle: false,
         actions: [
           IconButton(
+            onPressed: _isLoading ? null : _pickRange,
+            icon: Icon(
+              _range == null ? Icons.date_range_rounded : Icons.event_note_rounded,
+              color: _range == null
+                  ? (isDark ? Colors.white : Colors.black87)
+                  : const Color(0xFF18D6C0),
+            ),
+            tooltip: 'Filter by date',
+          ),
+          IconButton(
             onPressed: _loadBookings,
             icon: Icon(
               Icons.refresh_rounded,
@@ -192,7 +327,108 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
         ],
       ),
-      body: _isLoading
+      body: Column(
+        children: [
+          _buildFilterBar(isDark),
+          Expanded(child: _buildBody(isDark)),
+        ],
+      ),
+      bottomNavigationBar: const AppBottomNav(
+        currentIndex: 1,
+      ),
+    );
+  }
+
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2),
+      // bookings can be made up to 30 days ahead
+      lastDate: now.add(const Duration(days: 60)),
+      initialDateRange: _range,
+      helpText: 'Bookings starting between',
+      saveText: 'Apply',
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _range = picked);
+    _loadBookings();
+  }
+
+  void _clearRange() {
+    if (_range == null || _isLoading) return;
+    setState(() => _range = null);
+    _loadBookings();
+  }
+
+  String _rangeText(DateTimeRange r) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    String d(DateTime x) => '${x.day} ${months[x.month - 1]}';
+    final sameDay = r.start.year == r.end.year &&
+        r.start.month == r.end.month &&
+        r.start.day == r.end.day;
+    return sameDay ? d(r.start) : '${d(r.start)} – ${d(r.end)}';
+  }
+
+  Widget _buildFilterBar(bool isDark) {
+    final range = _range;
+    final extra = range == null ? 0 : 1;
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+        itemCount: _BookingFilter.values.length + extra,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          if (range != null && index == 0) {
+            return InputChip(
+              avatar: const Icon(Icons.event_rounded, size: 16, color: Colors.white),
+              label: Text(_rangeText(range)),
+              labelStyle: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+              backgroundColor: const Color(0xFF0AA6C4),
+              deleteIconColor: Colors.white,
+              side: BorderSide.none,
+              onPressed: _pickRange,
+              onDeleted: _clearRange,
+            );
+          }
+          final i = index - extra;
+          final f = _BookingFilter.values[i];
+          final selected = f == _filter;
+          return ChoiceChip(
+            label: Text(f.label),
+            selected: selected,
+            showCheckmark: false,
+            selectedColor: const Color(0xFF18D6C0),
+            backgroundColor: isDark ? const Color(0xFF1A2740) : Colors.white,
+            labelStyle: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected
+                  ? Colors.white
+                  : (isDark ? Colors.grey[300] : Colors.grey[700]),
+            ),
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xFF18D6C0)
+                  : (isDark ? const Color(0xFF2A3B57) : const Color(0xFFE2E8F0)),
+            ),
+            onSelected: (_) {
+              if (selected || _isLoading) return;
+              setState(() => _filter = f);
+              _loadBookings();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBody(bool isDark) {
+    return _isLoading
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -218,8 +454,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                       onRefresh: _loadBookings,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
-                        itemCount: _bookings.length,
+                        itemCount: _bookings.length + (_hasMore ? 1 : 0),
                         itemBuilder: (context, index) {
+                          if (index >= _bookings.length) {
+                            return _buildLoadMore(isDark);
+                          }
                           final booking = _bookings[index];
                           return Dismissible(
                             key: ValueKey(booking.id),
@@ -253,11 +492,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                           );
                         },
                       ),
-                    ),
-      bottomNavigationBar: const AppBottomNav(
-        currentIndex: 1,
-      ),
-    );
+                    );
   }
 
   Widget _buildErrorState(bool isDark) {
@@ -328,7 +563,9 @@ class _BookingsScreenState extends State<BookingsScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'No bookings yet',
+            (_range != null || _filter != _BookingFilter.all)
+                ? 'No bookings match this filter'
+                : 'No bookings yet',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -396,11 +633,20 @@ class _BookingsScreenState extends State<BookingsScreen> {
         statusText = 'Cancelled';
         statusIcon = Icons.cancel;
         break;
+      case BookingStatus.noShow:
+        statusColor = const Color(0xFF64748B);
+        statusText = 'No-show';
+        statusIcon = Icons.event_busy_rounded;
+        break;
+    }
+    if (booking.isParkedNow) {
+      statusColor = const Color(0xFF2563EB);
+      statusText = 'Parked';
+      statusIcon = Icons.local_parking_rounded;
     }
 
-    final canCancel = booking.status == BookingStatus.confirmed ||
-        booking.status == BookingStatus.pending;
-    final isCancelled = booking.status == BookingStatus.cancelled;
+    final canCancel = booking.canCancel;
+    final canDelete = booking.canDelete;
 
     return InkWell(
       onTap: () => _openDetails(booking),
@@ -506,8 +752,11 @@ class _BookingsScreenState extends State<BookingsScreen> {
                 const SizedBox(width: 6),
                 _buildInfoChip(
                   isDark: isDark,
-                  icon: Icons.attach_money_rounded,
-                  label: formatTaka(booking.totalPrice),
+                  // a tick instead of the money icon once it is paid
+                  icon: booking.isPaid
+                      ? Icons.verified_rounded
+                      : Icons.attach_money_rounded,
+                  label: formatTaka(booking.payableAmount),
                 ),
               ],
             ),
@@ -551,7 +800,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
                     ),
                   ),
                 ],
-                if (isCancelled) ...[
+                if (canDelete && !canCancel) ...[
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
@@ -600,6 +849,8 @@ class _BookingsScreenState extends State<BookingsScreen> {
           const SizedBox(width: 4),
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -609,5 +860,40 @@ class _BookingsScreenState extends State<BookingsScreen> {
         ],
       ),
     );
+  }
+}
+
+/// Status filters of GET /bookings.
+enum _BookingFilter { all, upcoming, completed, cancelled, noShow }
+
+extension on _BookingFilter {
+  String get label {
+    switch (this) {
+      case _BookingFilter.all:
+        return 'All';
+      case _BookingFilter.upcoming:
+        return 'Upcoming';
+      case _BookingFilter.completed:
+        return 'Completed';
+      case _BookingFilter.cancelled:
+        return 'Cancelled';
+      case _BookingFilter.noShow:
+        return 'No-show';
+    }
+  }
+
+  List<BookingStatus>? get statuses {
+    switch (this) {
+      case _BookingFilter.all:
+        return null;
+      case _BookingFilter.upcoming:
+        return const [BookingStatus.confirmed, BookingStatus.pending];
+      case _BookingFilter.completed:
+        return const [BookingStatus.completed];
+      case _BookingFilter.cancelled:
+        return const [BookingStatus.cancelled];
+      case _BookingFilter.noShow:
+        return const [BookingStatus.noShow];
+    }
   }
 }

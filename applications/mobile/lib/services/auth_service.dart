@@ -1,7 +1,13 @@
 // lib/services/auth_service.dart
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+import 'authed_http.dart';
+import 'deleted_bookings_service.dart';
+import 'map_prefs_service.dart';
+import 'recent_searches_service.dart';
+import 'session_expiry.dart';
 import 'session_service.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
@@ -98,13 +104,50 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/register', body);
-      print('REGISTER ${response.statusCode}: ${response.body}');
+      debugPrint('REGISTER -> ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final auth = AuthResponse.fromJson(json);
-        await SessionService.saveSession(auth.user, true);
-        await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
+        final decoded =
+            response.body.trim().isEmpty ? null : jsonDecode(response.body);
+        final json = decoded is Map<String, dynamic>
+            ? decoded
+            : <String, dynamic>{};
+
+        // The backend answers { message, user_id } (no tokens): the user
+        // signs in afterwards. Only keep a session if tokens did come back,
+        // otherwise an empty session would open the dashboard with no token.
+        final user = User(
+          id: (json['user_id'] ?? json['id'] ?? '').toString(),
+          email: email,
+          phone: phone,
+          role: role,
+          fullName: fullName,
+        );
+        final auth = AuthResponse(
+          accessToken: (json['access_token'] ?? json['accessToken'] ?? '')
+              .toString(),
+          refreshToken:
+              (json['refresh_token'] ?? json['refreshToken'])?.toString(),
+          user: user,
+        );
+        if (auth.accessToken.isNotEmpty) {
+          await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
+          await SessionService.saveSession(user, true);
+        }
+
+        // POST /auth/register stores only email, phone and password for a
+        // driver: the name, date of birth and licence number typed on the
+        // sign-up form are not saved by the server. Keep them on this phone
+        // and send them with PATCH /profiles/me at the first sign-in.
+        await _savePendingProfile(email, {
+          if (fullName != null && fullName.isNotEmpty) 'full_name': fullName,
+          if (role == 'driver' && dateOfBirth != null && dateOfBirth.isNotEmpty)
+            'date_of_birth': dateOfBirth,
+          if (role == 'driver' &&
+              drivingLicenceNo != null &&
+              drivingLicenceNo.isNotEmpty)
+            'driving_licence_no': drivingLicenceNo,
+        });
         return AuthResult.success(auth);
       }
       return AuthResult.failure(ApiService.extractErrorMessage(response));
@@ -134,14 +177,32 @@ class AuthService {
 
     try {
       final response = await ApiService.post('/auth/login', body);
-      print('LOGIN ${response.statusCode}: ${response.body}');
+      debugPrint('LOGIN -> ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final auth = AuthResponse.fromJson(json);
-        await SessionService.saveSession(auth.user, rememberMe);
-        await SessionService.saveTokens(auth.accessToken, auth.refreshToken);
-        return AuthResult.success(auth);
+        final tokens = AuthResponse.fromJson(json);
+        if (tokens.accessToken.isEmpty) {
+          return AuthResult.failure('Login failed: no access token received');
+        }
+        await SessionService.saveTokens(tokens.accessToken, tokens.refreshToken);
+        SessionExpiry.reset();
+
+        // details typed at sign-up that the server has not saved yet
+        await _applyPendingProfile(email);
+
+        // POST /auth/login only returns tokens -> load the real user from
+        // GET /profiles/me so the session has id / name / role.
+        final user = await _loadUser(email) ?? tokens.user;
+        final safeUser = user.email.isEmpty ? user.copyWith(email: email) : user;
+        await SessionService.saveSession(safeUser, rememberMe);
+        return AuthResult.success(
+          AuthResponse(
+            accessToken: tokens.accessToken,
+            refreshToken: tokens.refreshToken,
+            user: safeUser,
+          ),
+        );
       }
       return AuthResult.failure(ApiService.extractErrorMessage(response));
     } catch (e) {
@@ -149,19 +210,147 @@ class AuthService {
     }
   }
 
+  /// GET /profiles/me right after login. Null when it can't be loaded.
+  static Future<User?> _loadUser(String email) async {
+    try {
+      final response = await ApiService.get('/profiles/me');
+      if (response.statusCode != 200) return null;
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) return null;
+      final profile = data['profile'] is Map
+          ? Map<String, dynamic>.from(data['profile'] as Map)
+          : <String, dynamic>{};
+      return User(
+        id: data['id']?.toString() ?? '',
+        email: data['email']?.toString() ?? email,
+        phone: data['phone']?.toString(),
+        role: data['role']?.toString() ?? 'driver',
+        fullName: data['full_name']?.toString(),
+        drivingLicenceNo: profile['driving_licence_no']?.toString(),
+        licenceType: profile['licence_type']?.toString(),
+        dateOfBirth: profile['date_of_birth']?.toString(),
+        isLoggedIn: true,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---------------- SIGN-UP DETAILS (sent after the first login) ----------------
+
+  static const _keyPendingProfile = 'cp_pending_profile';
+
+  static Map<String, dynamic> _decodeMap(String? raw) {
+    if (raw == null || raw.isEmpty) return <String, dynamic>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+    return <String, dynamic>{};
+  }
+
+  static bool _isBlank(dynamic v) => v == null || v.toString().trim().isEmpty;
+
+  /// Remembers the profile fields of a fresh sign-up, keyed by email.
+  static Future<void> _savePendingProfile(
+    String email,
+    Map<String, dynamic> fields,
+  ) async {
+    if (fields.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = _decodeMap(prefs.getString(_keyPendingProfile));
+      all[email.trim().toLowerCase()] = fields;
+      await prefs.setString(_keyPendingProfile, jsonEncode(all));
+    } catch (_) {
+      // local helper only — sign-up itself already succeeded
+    }
+  }
+
+  /// Sends the remembered sign-up fields with PATCH /profiles/me, but only
+  /// the ones the server still has empty (never overwrites newer data).
+  /// Kept for the next login when the server can't be reached.
+  static Future<void> _applyPendingProfile(String email) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final all = _decodeMap(prefs.getString(_keyPendingProfile));
+      final key = email.trim().toLowerCase();
+      final raw = all[key];
+      if (raw is! Map || raw.isEmpty) return;
+      final pending = Map<String, dynamic>.from(raw);
+
+      final current = await ApiService.get('/profiles/me');
+      if (current.statusCode != 200) return;
+      final data = jsonDecode(current.body);
+      if (data is! Map) return;
+      final profile = data['profile'] is Map ? data['profile'] as Map : const {};
+
+      final body = <String, dynamic>{
+        if (pending['full_name'] != null && _isBlank(data['full_name']))
+          'full_name': pending['full_name'],
+        if (pending['date_of_birth'] != null &&
+            _isBlank(profile['date_of_birth']))
+          'date_of_birth': pending['date_of_birth'],
+        if (pending['driving_licence_no'] != null &&
+            _isBlank(profile['driving_licence_no']))
+          'driving_licence_no': pending['driving_licence_no'],
+      };
+
+      if (body.isNotEmpty) {
+        final response = await ApiService.patch('/profiles/me', body);
+        debugPrint('PATCH /profiles/me (sign-up details) -> ${response.statusCode}');
+        // server problem -> try again at the next login
+        if (response.statusCode >= 500) return;
+      }
+
+      all.remove(key);
+      if (all.isEmpty) {
+        await prefs.remove(_keyPendingProfile);
+      } else {
+        await prefs.setString(_keyPendingProfile, jsonEncode(all));
+      }
+    } catch (_) {
+      // network problem -> try again at the next login
+    }
+  }
+
   // ---------------- REFRESH ----------------
 
-  static Future<bool> refresh() async {
-    if (useLocalMock) return true;
+  // One refresh at a time: the backend rotates the refresh token, so two
+  // parallel refreshes (e.g. slot list + price quote both getting 401)
+  // would make the second one fail with an already-used token.
+  static Future<bool>? _refreshInFlight;
 
+  /// True when the last refresh was refused by the server (session revoked
+  /// or expired) — not just a network problem.
+  static bool lastRefreshRejected = false;
+
+  static Future<bool> refresh() {
+    if (useLocalMock) return Future.value(true);
+    final running = _refreshInFlight;
+    if (running != null) return running;
+    final future = _refreshOnce().whenComplete(() => _refreshInFlight = null);
+    _refreshInFlight = future;
+    return future;
+  }
+
+  static Future<bool> _refreshOnce() async {
+    lastRefreshRejected = false;
     final refreshToken = await SessionService.getRefreshToken();
-    if (refreshToken == null) return false;
+    if (refreshToken == null) {
+      lastRefreshRejected = true;
+      return false;
+    }
 
     try {
       final response = await ApiService.post(
         '/auth/refresh',
         {'refresh_token': refreshToken},
       );
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        lastRefreshRejected = true;
+        return false;
+      }
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final newAccess = json['accessToken'] ?? json['access_token'];
@@ -182,13 +371,24 @@ class AuthService {
 
   static Future<void> logout() async {
     if (!useLocalMock) {
+      // signing out on purpose: a 401 here must not be reported as an
+      // expired session (the caller opens the sign-in screen itself)
+      SessionExpiry.paused = true;
       try {
-        await ApiService.post('/auth/logout', {}, withAuth: true);
+        // AuthedHttp refreshes an expired access token once, so the server
+        // session is really revoked instead of failing with 401.
+        await AuthedHttp.post('/auth/logout');
       } catch (_) {
         // ignore network errors on logout — clear local session regardless
+      } finally {
+        SessionExpiry.paused = false;
       }
     }
     await SessionService.clearSession();
+    // the next account on this phone must not inherit this one's local data
+    DeletedBookingsService().clearAll();
+    await RecentSearchesService().clear();
+    await MapPrefsService().clearSaved();
   }
 
   // ---------------- PASSWORD (NEW 08 Nov) ----------------
@@ -316,7 +516,9 @@ class AuthService {
     try {
       final response = await ApiService.get('/auth/sessions');
       if (response.statusCode == 200) {
-        return jsonDecode(response.body) as List<dynamic>;
+        final data = jsonDecode(response.body);
+        if (data is List) return data;
+        if (data is Map && data['data'] is List) return data['data'] as List;
       }
     } catch (_) {}
     return null;

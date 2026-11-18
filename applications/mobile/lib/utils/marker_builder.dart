@@ -1,9 +1,11 @@
 // lib/utils/marker_builder.dart
 //
 // Custom-drawn parking pins: a white pill with a coloured "P" badge and the
-// number of free slots ("12", "Full", "Closed"). Drawn with dart:ui once per
-// (state, label, selected, pixel-ratio) and cached, so rebuilding the marker
-// set is instant after the first frame.
+// number of free slots plus the hourly price ("12 · ৳50", "Full", "Closed").
+// The best pick gets a gold badge and border, a saved lot a small red dot.
+// Drawn with dart:ui once per (state, label, selected, best, saved,
+// pixel-ratio) and cached, so rebuilding the marker set is instant after
+// the first frame.
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -22,16 +24,23 @@ class _PinFactory {
 
   static final Map<String, _Pin> _cache = {};
 
+  static const Color _gold = Color(0xFFF5B301);
+  static const Color _savedRed = Color(0xFFE11D48);
+
   static Future<_Pin> parking(
     ParkingModel p, {
     required bool selected,
     required double dpr,
+    bool best = false,
+    bool saved = false,
   }) async {
+    final rate = p.rate;
+    final price = (rate != null && rate > 0) ? ' · ৳${rate.round()}' : '';
     final String label;
     if (!p.isOpen) {
       label = 'Closed';
     } else if (p.availableSpots > 0) {
-      label = '${p.availableSpots}';
+      label = '${p.availableSpots}$price';
     } else {
       label = 'Full';
     }
@@ -42,11 +51,13 @@ class _PinFactory {
             : p.availableSpots > 0
                 ? 'limited'
                 : 'full';
-    final key = '$bucket|$label|$selected|$dpr';
+    final key = '$bucket|$label|$selected|$best|$saved|$dpr';
     final cached = _cache[key];
     if (cached != null) return cached;
+    // the label now carries a price, so keep the cache from growing forever
+    if (_cache.length > 400) _cache.clear();
 
-    final color = p.availabilityColor;
+    final color = best ? _gold : p.availabilityColor;
     final scale = selected ? 1.12 : 1.0;
 
     final tp = TextPainter(
@@ -118,7 +129,7 @@ class _PinFactory {
       body,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
+        ..strokeWidth = best ? 3 : 2
         ..color = color,
     );
 
@@ -133,6 +144,13 @@ class _PinFactory {
       canvas,
       Offset(shadow + pad + badge + gap, cy - tp.height / 2),
     );
+
+    // Saved lot: small red dot on the top-right corner of the pill.
+    if (saved) {
+      final dot = Offset(shadow + bodyW - 5, shadow + 4);
+      canvas.drawCircle(dot, 5.5, Paint()..color = Colors.white);
+      canvas.drawCircle(dot, 4, Paint()..color = _savedRed);
+    }
 
     final image = await recorder
         .endRecording()
@@ -159,6 +177,8 @@ Future<Set<Marker>> buildDashboardMarkers({
   required void Function(ParkingModel parking) onParkingTap,
   required double devicePixelRatio,
   String? selectedId,
+  String? bestId,
+  Set<String> savedIds = const <String>{},
   LatLng? searchedLocation,
   String? searchedLocationLabel,
 }) async {
@@ -181,6 +201,8 @@ Future<Set<Marker>> buildDashboardMarkers({
       parking,
       selected: parking.id == selectedId,
       dpr: devicePixelRatio,
+      best: parking.id == bestId,
+      saved: savedIds.contains(parking.id),
     );
     markers.add(
       Marker(

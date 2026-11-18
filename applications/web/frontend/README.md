@@ -108,7 +108,7 @@ frontend/
 |   `-- ui/                     # shadcn/ui components and shared UI primitives
 |-- context/AuthContext.tsx     # Client authentication state
 |-- lib/
-|   |-- api/                    # API client and transport errors
+|   |-- api/                    # API client (timeout/retry pipeline) and shared query cache
 |   |-- auth/                   # Auth contracts, JWT sessions, and HTTP repository
 |   |-- bookings/               # Bookings API repository, types, and hook
 |   |-- insights/               # Pure metrics: occupancy, stress, alerts, revenue
@@ -127,9 +127,24 @@ The active authentication repository communicates with the NestJS API. Registrat
 - normal sessions use `sessionStorage`;
 - sessions created with **Remember me** use `localStorage`;
 - access tokens are refreshed when they are within 30 seconds of expiring;
+- only one refresh runs at a time, across tabs too (the API rotates refresh tokens, so a second parallel refresh would sign the user out);
 - logout calls the API and always clears the local session.
 
 Authenticated requests to `/spaces` include the access token as a Bearer token. The owner portal loads registered parking lots from this endpoint and uses it to create new lots.
+
+Set `NEXT_PUBLIC_AUTH_BACKEND=local` to sign up and sign in with a browser-only store instead (for UI demos while the API is asleep; portal data still comes from the API). The `dev-local-auth` entry in `.claude/launch.json` starts the dev server that way on port 3007.
+
+## Data Loading
+
+API data goes through a shared cache in `lib/api/query-store.ts`, used from components with `useQuery` (`lib/api/use-query.ts`):
+
+- pages that need the same data share one copy and one request, and moving between portal pages reuses data younger than 60 s;
+- live occupancy is polled every 30 s only while a page shows it, pauses in hidden tabs, and backs off after failures;
+- Dhaka scan points that return no lots are re-checked every 5 minutes instead of on every poll;
+- repository writes (create, update, delete, photos) mark the cached lots stale, so pages reload them;
+- the cache is cleared on sign-in and sign-out.
+
+`apiRequest` (`lib/api/client.ts`) times reads out after 60 s and retries them twice (after 1 s and 3 s) on network errors and 502/503/504, which covers a sleeping Render instance waking up. Writes are never retried.
 
 ## Available Scripts
 
@@ -158,7 +173,7 @@ npm run build
 | AI occupancy check | `POST /spaces/:id/infer` |
 | Revenue | `GET /bookings`, `PATCH /bookings/:id/cancel` |
 | Profiles and devices | `GET/PATCH /profiles/me`, `GET /auth/sessions`, `DELETE /auth/sessions/:id` |
-| Command center, zones, analytics, enforcement | Public `GET /spaces/nearby` (polled every 30 s across Dhaka) |
+| Command center, zones, analytics, enforcement | Public `GET /spaces/nearby` (polled every 30 s across Dhaka; empty areas every 5 min) |
 
 The API has no alerts, enforcement, or analytics endpoints, so `lib/insights/metrics.ts` derives them from live slot data. Unbooked occupancy (an occupied slot with no booking) is shown as an enforcement incident.
 

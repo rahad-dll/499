@@ -11,17 +11,20 @@ import { cn } from "@/lib/utils";
 export interface PasswordRule {
   id: string;
   label: string;
+  /** chip text for the compact checklist */
+  short: string;
   test: (value: string) => boolean;
 }
 
 export const PASSWORD_RULES: PasswordRule[] = [
-  { id: "length", label: "8+ characters", test: (v) => v.length >= 8 },
-  { id: "upper", label: "One uppercase (A-Z)", test: (v) => /[A-Z]/.test(v) },
-  { id: "lower", label: "One lowercase (a-z)", test: (v) => /[a-z]/.test(v) },
-  { id: "number", label: "One number (0-9)", test: (v) => /[0-9]/.test(v) },
+  { id: "length", label: "8+ characters", short: "8+ chars", test: (v) => v.length >= 8 },
+  { id: "upper", label: "One uppercase (A-Z)", short: "A–Z", test: (v) => /[A-Z]/.test(v) },
+  { id: "lower", label: "One lowercase (a-z)", short: "a–z", test: (v) => /[a-z]/.test(v) },
+  { id: "number", label: "One number (0-9)", short: "0–9", test: (v) => /[0-9]/.test(v) },
   {
     id: "symbol",
     label: "One symbol (!@#$%)",
+    short: "Symbol",
     test: (v) => /[!@#$%^&*(),.?":{}|<>_\-+=/[\]\\';`~]/.test(v),
   },
 ];
@@ -51,6 +54,9 @@ type Props = Omit<ComponentProps<typeof Input>, "type"> & {
   value: string;
   labelEnd?: ReactNode;
   showChecklistWhenEmpty?: boolean;
+  /** Shorter input and an always-visible one-row checklist, so the form
+   *  never grows while the password is typed. */
+  compact?: boolean;
 };
 
 export function PasswordChecklistField({
@@ -58,6 +64,7 @@ export function PasswordChecklistField({
   value,
   labelEnd,
   showChecklistWhenEmpty = false,
+  compact = false,
   id,
   className,
   ...props
@@ -69,8 +76,8 @@ export function PasswordChecklistField({
   const showMeta = showChecklistWhenEmpty || value.length > 0;
 
   return (
-    <div className="mt-3 sm:mt-5">
-      <div className="mb-1.5 flex items-center justify-between sm:mb-2">
+    <div className={compact ? "mt-2.5 short:mt-1.5 sm:mt-3" : "mt-3 sm:mt-5"}>
+      <div className={cn("flex items-center justify-between", compact ? "mb-1" : "mb-1.5 sm:mb-2")}>
         <Label htmlFor={inputId}>{label}</Label>
         {labelEnd && <span className="text-sm">{labelEnd}</span>}
       </div>
@@ -81,7 +88,8 @@ export function PasswordChecklistField({
           id={inputId}
           type={visible ? "text" : "password"}
           value={value}
-          className={cn("h-12 pl-11 pr-11 sm:h-[50px]", className)}
+          aria-describedby={compact ? `${inputId}-rules` : undefined}
+          className={cn(compact ? "h-11 pl-11 pr-11 short:h-10" : "h-12 pl-11 pr-11 sm:h-[50px]", className)}
           {...props}
         />
         <button
@@ -95,7 +103,39 @@ export function PasswordChecklistField({
         </button>
       </div>
 
-      {showMeta && (
+      {compact ? (
+        <div id={`${inputId}-rules`}>
+          <div className="mt-2 grid grid-cols-5 gap-1">
+            {PASSWORD_RULES.map((_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "h-1 rounded-full transition-colors duration-300",
+                  i < score ? SEG_COLOR[level] : "bg-muted",
+                )}
+              />
+            ))}
+          </div>
+          <ul aria-label="Password requirements" className="mt-1.5 flex flex-wrap gap-1">
+            {PASSWORD_RULES.map((rule) => {
+              const met = rule.test(value);
+              return (
+                <li
+                  key={rule.id}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold transition-colors duration-300",
+                    met ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {met ? <Check className="size-3" strokeWidth={3} /> : <X className="size-3" strokeWidth={3} />}
+                  {rule.short}
+                  <span className="sr-only">{met ? "(met)" : "(not met)"}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : showMeta && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}

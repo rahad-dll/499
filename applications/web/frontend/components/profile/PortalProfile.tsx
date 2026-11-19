@@ -19,9 +19,11 @@ import { TextField } from "@/components/form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { isValidBangladeshPhone, normalizeBangladeshPhone } from "@/lib/auth/phone";
 import { fetchQuery } from "@/lib/api/query-store";
+import { formatDateTime } from "@/lib/format/datetime";
 import { SESSIONS_KEY, describeDevice, sessionsRepository, type DeviceSession } from "@/lib/auth/sessions";
 import { PROFILE_KEY, ProfileError, profileRepository } from "@/lib/profiles/repository";
 import type { MyProfile, UpdateMyProfileInput } from "@/lib/profiles/types";
@@ -29,8 +31,8 @@ import type { MyProfile, UpdateMyProfileInput } from "@/lib/profiles/types";
 type ProfileRole = "owner" | "authority";
 
 const ROLE_LABEL: Record<ProfileRole, string> = {
-  owner: "Parking Owner",
-  authority: "Traffic Authority",
+  owner: "Parking owner",
+  authority: "Traffic authority",
 };
 
 function initials(name: string): string {
@@ -41,10 +43,6 @@ function initials(name: string): string {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-}
-
-function formatDate(iso: string | null | undefined): string {
-  return iso ? new Date(iso).toLocaleString() : "—";
 }
 
 interface FormState {
@@ -201,7 +199,7 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
           </div>
           <Button variant="outline" onClick={onLogout} className="border-destructive/40 text-destructive hover:bg-destructive/10">
             <LogOut className="size-4" />
-            Log out
+            Sign out
           </Button>
         </div>
       </div>
@@ -214,9 +212,20 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_340px]">
         {/* edit form */}
-        <SectionCard title="Profile Details" sub="Update the information shown across CityPulse.">
+        <SectionCard title="Profile details" sub="Update the information shown across CityPulse.">
           {!form ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">{loadError ? "Profile unavailable." : "Loading profile…"}</div>
+            loadError ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">Profile unavailable.</div>
+            ) : (
+              <LoadingRegion label="Loading profile…" className="grid gap-x-5 gap-y-5 pt-2 sm:grid-cols-2">
+                {Array.from({ length: 4 }, (_, i) => (
+                  <div key={i}>
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="mt-2 h-12 w-full rounded-lg" />
+                  </div>
+                ))}
+              </LoadingRegion>
+            )
           ) : (
             <form onSubmit={onSave}>
               {notice && (
@@ -225,24 +234,24 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
                 </Alert>
               )}
               <div className="grid gap-x-5 sm:grid-cols-2">
-                <TextField label="Full Name" name="full_name" icon={UserRound} value={form.full_name} onChange={(e) => setField("full_name", e.target.value)} required />
-                <TextField label="Mobile Number" name="phone" type="tel" icon={Phone} placeholder="01712345678" value={form.phone} onChange={(e) => setField("phone", e.target.value)} required />
+                <TextField label="Full name" name="full_name" icon={UserRound} value={form.full_name} onChange={(e) => setField("full_name", e.target.value)} required />
+                <TextField label="Mobile number" name="phone" type="tel" icon={Phone} placeholder="01712345678" value={form.phone} onChange={(e) => setField("phone", e.target.value)} required />
                 {role === "owner" ? (
                   <>
-                    <TextField label="Business Name" name="business_name" icon={Building2} placeholder="Gulshan Parking Ltd." value={form.business_name} onChange={(e) => setField("business_name", e.target.value)} />
-                    <TextField label="Business Address" name="address" icon={MapPin} placeholder="House 12, Road 5, Gulshan" value={form.address} onChange={(e) => setField("address", e.target.value)} />
+                    <TextField label="Business name" name="business_name" icon={Building2} placeholder="Gulshan Parking Ltd." value={form.business_name} onChange={(e) => setField("business_name", e.target.value)} />
+                    <TextField label="Business address" name="address" icon={MapPin} placeholder="House 12, Road 5, Gulshan" value={form.address} onChange={(e) => setField("address", e.target.value)} />
                   </>
                 ) : (
                   <>
                     <TextField label="Organization" name="organization" icon={Briefcase} placeholder="Dhaka Metropolitan Police" value={form.organization} onChange={(e) => setField("organization", e.target.value)} />
-                    <TextField label="Badge Number" name="badge_number" icon={IdCard} placeholder="DMP-001" value={form.badge_number} onChange={(e) => setField("badge_number", e.target.value)} />
+                    <TextField label="Badge number" name="badge_number" icon={IdCard} placeholder="DMP-001" value={form.badge_number} onChange={(e) => setField("badge_number", e.target.value)} />
                   </>
                 )}
               </div>
               <div className="mt-6 flex justify-end">
                 <Button type="submit" variant="brand" disabled={saving}>
                   <Save className="size-4" />
-                  {saving ? "Saving…" : "Save Changes"}
+                  {saving ? "Saving…" : "Save changes"}
                 </Button>
               </div>
             </form>
@@ -256,10 +265,10 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
               {[
                 ["Email", profile?.user.email ?? "—"],
                 ["Area", profile?.user.area?.name ?? roleProfile?.area?.name ?? "Not set"],
-                ["Member since", formatDate(profile?.user.created_at)],
-                ["Last login", formatDate(profile?.user.last_login_at)],
+                ["Member since", formatDateTime(profile?.user.created_at)],
+                ["Last sign-in", formatDateTime(profile?.user.last_login_at)],
                 ...(roleProfile?.type === "owner" && roleProfile.verified_at
-                  ? [["Verified on", formatDate(roleProfile.verified_at)]]
+                  ? [["Verified on", formatDateTime(roleProfile.verified_at)]]
                   : []),
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-3">
@@ -271,10 +280,16 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
           </SectionCard>
 
           {/* signed-in devices */}
-          <SectionCard title="Signed-in Devices" sub="Sign out sessions you don’t recognise.">
+          <SectionCard title="Signed-in devices" sub="Sign out sessions you don’t recognise.">
             {sessionsError && <p className="mb-3 text-sm text-destructive">{sessionsError}</p>}
             {!sessions ? (
-              <p className="text-sm text-muted-foreground">{sessionsError ? "" : "Loading…"}</p>
+              sessionsError ? null : (
+                <LoadingRegion label="Loading devices…" className="flex flex-col gap-3">
+                  {Array.from({ length: 2 }, (_, i) => (
+                    <Skeleton key={i} className="h-[54px] w-full rounded-xl" />
+                  ))}
+                </LoadingRegion>
+              )
             ) : sessions.length === 0 ? (
               <p className="text-sm text-muted-foreground">No active sessions.</p>
             ) : (
@@ -285,7 +300,7 @@ export function PortalProfile({ role }: { role: ProfileRole }) {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{describeDevice(session.device_name)}</span>
                       <span className="block truncate text-xs text-muted-foreground">
-                        {session.ip_address ?? "Unknown IP"} · {formatDate(session.created_at)}
+                        {session.ip_address ?? "Unknown IP"} · {formatDateTime(session.created_at)}
                       </span>
                     </span>
                     <button

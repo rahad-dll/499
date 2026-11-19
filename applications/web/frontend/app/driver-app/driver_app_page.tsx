@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  ArrowUpRight,
+  AlertTriangle,
   CheckCircle2,
   Download,
   LockKeyhole,
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
 import { roleDestination } from "@/lib/auth/destination";
+import { formatBytes } from "@/lib/media/photos";
 
 export type DriverAppSource = "login" | "signup" | "session";
 
@@ -39,7 +40,7 @@ const HANDOFF_COPY: Record<
     eyebrow: "Account created successfully",
     title: "Your driver account is ready.",
     description:
-      "CityPulse driver tools are designed for mobile use. Keep this account, then use the administrator-provided app link when it is published.",
+      "CityPulse driver tools are designed for mobile use. Download the Android app below and sign in with this account.",
   },
   login: {
     eyebrow: "Welcome back",
@@ -57,10 +58,14 @@ const HANDOFF_COPY: Record<
 
 export default function DriverAppPage({
   source,
-  driverAppUrl,
+  apkSize,
+  downloadFailed,
 }: {
   source: DriverAppSource;
-  driverAppUrl: string | null;
+  /** bytes of the latest APK, when GitHub could be asked */
+  apkSize: number | null;
+  /** the last download attempt couldn't reach GitHub */
+  downloadFailed: boolean;
 }) {
   const router = useRouter();
   const { user, loading, logout } = useAuth();
@@ -124,11 +129,11 @@ export default function DriverAppPage({
               size="sm"
               onClick={onLogout}
               disabled={loggingOut}
-              aria-label="Log out of CityPulse"
+              aria-label="Sign out of CityPulse"
             >
               <LogOut className="size-4" />
               <span className="hidden sm:inline">
-                {loggingOut ? "Logging out…" : "Log out"}
+                {loggingOut ? "Signing out…" : "Sign out"}
               </span>
             </Button>
           </div>
@@ -170,42 +175,37 @@ export default function DriverAppPage({
                     Official CityPulse Driver app
                   </p>
                   <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    {driverAppUrl
-                      ? "Use the administrator-provided download destination."
-                      : "The official download destination has not been published yet."}
+                    Latest Android build (APK){apkSize ? ` · ${formatBytes(apkSize)}` : ""}. If your phone
+                    asks, allow your browser to install apps.
                   </p>
                 </div>
               </div>
 
-              {driverAppUrl ? (
-                <Button
-                  asChild
-                  variant="brand"
-                  size="lg"
-                  className="w-full sm:w-auto"
-                >
-                  <a
-                    href={driverAppUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Download mobile app
-                    <ArrowUpRight className="size-[18px]" />
-                  </a>
-                </Button>
-              ) : (
-                <Button
-                  type="button"
-                  variant="brand"
-                  size="lg"
-                  className="w-full sm:w-auto"
-                  disabled
-                >
-                  Download link coming soon
+              {/* /download/apk redirects to the newest APK on GitHub, which the
+                  browser downloads straight away; the visitor stays here. */}
+              <Button
+                asChild
+                variant="brand"
+                size="lg"
+                className="w-full sm:w-auto"
+              >
+                <a href="/download/apk">
+                  Download APK
                   <Download className="size-[18px]" />
-                </Button>
-              )}
+                </a>
+              </Button>
             </div>
+
+            {downloadFailed && (
+              <Alert variant="destructive" className="mt-5">
+                <AlertTriangle />
+                <AlertTitle>The download couldn&apos;t start</AlertTitle>
+                <AlertDescription className="leading-5">
+                  The app is stored on GitHub, which didn&apos;t respond just now. Please try
+                  Download APK again in a few minutes.
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Alert className="mt-5 bg-card/80">
               <ShieldCheck />
@@ -272,7 +272,7 @@ export default function DriverAppPage({
           </Card>
 
           <p className="px-2 text-center text-xs leading-5 text-muted-foreground">
-            Need to use a different account? Log out, then sign in with the
+            Need to use a different account? Sign out, then sign in with the
             correct CityPulse credentials.
           </p>
         </div>

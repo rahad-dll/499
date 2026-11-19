@@ -1,11 +1,11 @@
 import { CookieAuthRepository } from "./cookie-repository";
-import { HttpAuthRepository } from "./http-repository";
+import { NextAuthRepository } from "./nextauth-repository";
 import type { AuthRepository } from "./types";
 
 /**
  * Factory: builds the auth backend named by `NEXT_PUBLIC_AUTH_BACKEND`.
  *
- * - `api` (default): the live NestJS API with JWT sessions.
+ * - `api` (default): NextAuth sessions backed by the live NestJS API.
  * - `local`: the browser-only prototype store. Sign-up and sign-in work with
  *   no server (useful for UI demos while the API is asleep), but portal data
  *   still comes from the API and needs the real backend.
@@ -13,7 +13,7 @@ import type { AuthRepository } from "./types";
 export function createAuthRepository(
   backend = process.env.NEXT_PUBLIC_AUTH_BACKEND,
 ): AuthRepository {
-  return backend === "local" ? new CookieAuthRepository() : new HttpAuthRepository();
+  return backend === "local" ? new CookieAuthRepository() : new NextAuthRepository();
 }
 
 /**

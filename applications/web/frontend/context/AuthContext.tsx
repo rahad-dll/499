@@ -14,19 +14,21 @@ import { authRepository } from "@/lib/auth/repository";
 import { PROFILE_KEY, profileRepository } from "@/lib/profiles/repository";
 import type {
   LoginInput,
+  ResetPasswordInput,
   SignupInput,
   User,
 } from "@/lib/auth/types";
 
+
 interface AuthContextValue {
   user: User | null;
-  /** true until the initial session read from the cookie completes */
+  /** true until the initial session read completes */
   loading: boolean;
   signup: (input: SignupInput) => Promise<User>;
   login: (input: LoginInput) => Promise<User>;
   logout: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ token: string | null }>;
-  resetPassword: (token: string, password: string) => Promise<void>;
+  resetPassword: (input: ResetPasswordInput) => Promise<void>;
   /** re-read the session from storage */
   refresh: () => Promise<void>;
 }
@@ -92,11 +94,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await authRepository.logout();
-    } catch {
-      // Local session removal is authoritative even if the API is unavailable.
-    }
+    // Wait for the session cookie to go before the UI reacts: a portal shell
+    // sends a signed-out user to /login, and proxy.ts would send a browser
+    // that still has the cookie straight back. The repository does not wait
+    // for the API, so a slow or asleep API never blocks sign-out.
+    await authRepository.logout().catch(() => {
+      // the UI signs out even if the request failed
+    });
     clearQueries();
     setUser(null);
   }, []);
@@ -107,8 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const resetPassword = useCallback(
-    async (token: string, password: string) => {
-      await authRepository.resetPassword(token, password);
+    async (input: ResetPasswordInput) => {
+      await authRepository.resetPassword(input);
       clearQueries();
       setUser(null);
     },

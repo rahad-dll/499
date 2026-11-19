@@ -8,33 +8,50 @@ export type BookingStatus =
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 export type PaymentMethod = "bkash" | "nagad" | "card" | "cash";
 
+/** The payment row, embedded by GET /bookings/:id and PATCH /bookings/:id/cancel only. */
 export interface BookingPayment {
   status: PaymentStatus;
   method?: PaymentMethod;
-  amount_unit: number;
+  trx_id?: string | null;
   paid_at?: string | null;
+  refund_amount_unit?: number | null;
 }
 
-/** A booking as returned by GET /bookings. Relations are optional because
- *  the API may or may not embed them. */
+/**
+ * A booking as GET /bookings, GET /bookings/:id and PATCH /bookings/:id/cancel
+ * return it (`formatBooking` on the API). Amounts ending in `_unit` are paisa
+ * (100 = ৳1); `total_price` and `price_per_hour` are BDT.
+ */
 export interface Booking {
   id: string;
-  driver_id: string;
-  slot_id: string;
   space_id: string;
+  space_name: string;
+  space_address?: string;
+  slot_id: string;
+  slot_label: string;
   status: BookingStatus;
   scheduled_at: string;
   hold_expires_at?: string | null;
+  duration_hours?: number | null;
+  base_amount_unit?: number | null;
+  discount_unit?: number | null;
+  amount_unit?: number | null;
+  price_per_hour?: number;
+  total_price?: number;
+  cancellation_reason?: string | null;
+  vehicle_plate?: string | null;
+  payment_status?: PaymentStatus | null;
+  payment?: BookingPayment | null;
   arrived_at?: string | null;
   departed_at?: string | null;
-  /** Amount in paisa (100 = ৳1). */
-  amount_unit?: number | null;
-  /** Some API builds report the booked length directly. */
-  duration_hours?: number | null;
-  vehicle_plate?: string | null;
-  cancellation_reason?: string | null;
+  extended_to?: string | null;
   created_at?: string;
-  payment?: BookingPayment | null;
-  space?: { id: string; name: string } | null;
-  slot?: { id?: string; slot_label?: string } | null;
+}
+
+/** One page of GET /bookings: `{ data, page, limit, total }`. */
+export interface BookingPage {
+  data: Booking[];
+  page: number;
+  limit: number;
+  total: number;
 }

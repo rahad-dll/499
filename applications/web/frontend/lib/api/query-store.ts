@@ -41,7 +41,8 @@ interface Entry {
   /** epoch ms the last load finished, successful or not */
   attemptedAt: number;
   failures: number;
-  poll?: { everyMs: number; timer?: ReturnType<typeof setTimeout> };
+  /** `dueAt`: epoch ms the next poll is scheduled for */
+  poll?: { everyMs: number; timer?: ReturnType<typeof setTimeout>; dueAt?: number };
 }
 
 export const EMPTY_SNAPSHOT: QuerySnapshot<never> = Object.freeze({
@@ -92,6 +93,16 @@ function watchVisibility(): void {
     // catch up on anything that went stale while the tab was hidden
     entries.forEach((entry, key) => schedulePoll(key, entry));
   });
+  window.addEventListener("online", reloadOnScreen);
+}
+
+/** Back online: reload what is on screen now instead of waiting out the backoff. */
+function reloadOnScreen(): void {
+  entries.forEach((entry, key) => {
+    if (!entry.listeners.size || !entry.fetcher || entry.inflight) return;
+    entry.failures = 0;
+    void loadQuery(key, entry.fetcher);
+  });
 }
 
 function schedulePoll(key: string, entry: Entry): void {
@@ -100,6 +111,7 @@ function schedulePoll(key: string, entry: Entry): void {
   clearTimeout(poll.timer);
   const backoff = Math.min(poll.everyMs * 2 ** entry.failures, Math.max(poll.everyMs, MAX_BACKOFF_MS));
   const due = entry.attemptedAt + backoff - Date.now();
+  poll.dueAt = Date.now() + Math.max(0, due);
   poll.timer = setTimeout(() => {
     // hidden tabs skip their turn; the visibility listener resumes them
     if (isHidden() || !entry.fetcher) return;
@@ -130,13 +142,19 @@ async function run(key: string, entry: Entry, fetcher: () => Promise<unknown>): 
   }
   entry.inflight = undefined;
   entry.attemptedAt = Date.now();
-  publish(entry, next);
+  // schedule first, so observers re-rendering on publish see the new `nextPollAt`
   schedulePoll(key, entry);
+  publish(entry, next);
   if (changedMeanwhile && entry.listeners.size) void loadQuery(key, fetcher);
 }
 
 export function readQuery<T>(key: string): QuerySnapshot<T> {
   return (entries.get(key)?.snapshot ?? EMPTY_SNAPSHOT) as QuerySnapshot<T>;
+}
+
+/** Epoch ms of the key's next scheduled poll, or null when it isn't polled. */
+export function nextPollAt(key: string): number | null {
+  return entries.get(key)?.poll?.dueAt ?? null;
 }
 
 /** True when the key has no data, was invalidated, or its data is older than `staleMs`. */

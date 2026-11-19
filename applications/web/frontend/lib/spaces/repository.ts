@@ -1,26 +1,44 @@
-import { ApiError, apiRequest } from "@/lib/api/client";
+import { API_URL, ApiError, apiRequest } from "@/lib/api/client";
 import { asList, authedRequest } from "@/lib/api/authed";
 import { invalidateQuery } from "@/lib/api/query-store";
 import { toParkingSpace, type ApiParkingSpace } from "./adapters";
 import type {
+  ApiVehicleType,
+  CameraDetail,
+  CreateCameraInput,
   CreateParkingSpaceInput,
   InferenceResult,
   NearbySpace,
   ParkingSpace,
+  SpaceCameras,
+  UpdateCameraInput,
   UpdateParkingSpaceInput,
+  VehicleRate,
 } from "./types";
 
 /** Query-store keys for the owner's lots. */
 export const spaceKeys = {
   mine: "spaces:mine",
   one: (id: string) => `space:${id}`,
+  cameras: (id: string) => `space:${id}:cameras`,
 };
 
 /** After a change, cached copies of the lot (and the list) reload. */
 function changed(id?: string): void {
   invalidateQuery(spaceKeys.mine);
-  if (id) invalidateQuery(spaceKeys.one(id));
+  if (id) {
+    invalidateQuery(spaceKeys.one(id));
+    invalidateQuery(spaceKeys.cameras(id));
+  }
 }
+
+const lotPath = (id: string) => `/spaces/${encodeURIComponent(id)}`;
+
+/**
+ * Photos uploaded through POST /spaces/:id/photos are kept on the API server's
+ * disk (bucket "local"), which presign refuses; the API serves them statically.
+ */
+const localPhotoUrl = (s3Key: string) => `${API_URL}/uploads/spaces/${encodeURIComponent(s3Key)}`;
 
 export class ParkingSpaceError extends Error {
   constructor(message: string, public readonly status = 0) {
@@ -124,7 +142,11 @@ export const parkingSpacesRepository = {
     }, "Could not delete parking lot");
   },
 
-  /** GET /spaces/nearby: public, live AI occupancy for active lots within ~5 km. */
+  /**
+   * GET /spaces/nearby: public, live AI occupancy for lots within ~5 km.
+   * The API does not filter by status, so pending and suspended lots are included
+   * (each item carries its `status`).
+   */
   nearby(lat: number, lng: number, signal?: AbortSignal): Promise<NearbySpace[]> {
     const query = new URLSearchParams({ lat: String(lat), lng: String(lng) });
     return call(
@@ -145,6 +167,54 @@ export const parkingSpacesRepository = {
         }),
       "AI check failed",
     );
+  },
+
+  /** PUT /spaces/:id/rates/:vehicleType: the lot's hourly price for one vehicle type. */
+  setVehicleRate(id: string, vehicleType: ApiVehicleType, hourlyRateUnit: number): Promise<VehicleRate> {
+    return call(async () => {
+      const saved = await authedRequest<VehicleRate>(
+        `${lotPath(id)}/rates/${encodeURIComponent(vehicleType)}`,
+        { method: "PUT", body: JSON.stringify({ hourly_rate_unit: hourlyRateUnit }) },
+      );
+      changed(id);
+      return saved;
+    }, "Could not save hourly rates");
+  },
+
+  /** GET /spaces/:id/cameras: every camera with its slots, plus the lot's vehicle rates. */
+  cameras(id: string): Promise<SpaceCameras> {
+    return call(
+      () => authedRequest<SpaceCameras>(`${lotPath(id)}/cameras`),
+      "Could not load cameras",
+    );
+  },
+
+  /**
+   * POST /spaces/:id/cameras: one camera with its slots, saved together or not
+   * at all. Slot labels must be unused in the lot, and every vehicle type
+   * needs a lot rate (or each slot its own `hourly_rate_unit`).
+   */
+  createCamera(id: string, input: CreateCameraInput): Promise<CameraDetail> {
+    return call(async () => {
+      const created = await authedRequest<CameraDetail>(`${lotPath(id)}/cameras`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      changed(id);
+      return created;
+    }, "Could not save the camera and its slots");
+  },
+
+  /** PATCH /spaces/:id/cameras/:cameraId: slots are matched by label; others are left alone. */
+  updateCamera(id: string, cameraId: string, input: UpdateCameraInput): Promise<CameraDetail> {
+    return call(async () => {
+      const updated = await authedRequest<CameraDetail>(
+        `${lotPath(id)}/cameras/${encodeURIComponent(cameraId)}`,
+        { method: "PATCH", body: JSON.stringify(input) },
+      );
+      changed(id);
+      return updated;
+    }, "Could not save the camera");
   },
 
   /** POST /spaces/:id/photos */
@@ -177,20 +247,26 @@ export const parkingSpacesRepository = {
    * Proxy: a URL is reused until shortly before it expires, and thumbnails that
    * ask at the same time share one request.
    */
-  photoUrl(id: string, photoId: string): Promise<string | null> {
+  photoUrl(id: string, photo: { id: string; s3_key: string; s3_bucket?: string }): Promise<string | null> {
+    const photoId = photo.id;
+    if (photo.s3_bucket === "local") return Promise.resolve(localPhotoUrl(photo.s3_key));
     const cached = photoUrls.get(photoId);
     if (cached && cached.reuseUntil > Date.now()) return cached.url;
 
     const entry = { reuseUntil: Infinity, url: Promise.resolve<string | null>(null) };
-    entry.url = call(
-      async () =>
-        presignedUrl(
+    entry.url = call(async () => {
+      try {
+        return presignedUrl(
           await authedRequest<unknown>(
             `/spaces/${encodeURIComponent(id)}/photos/${encodeURIComponent(photoId)}/presign`,
           ),
-        ),
-      "Could not load photo",
-    ).then(
+        );
+      } catch (error) {
+        // GET /spaces leaves out s3_bucket; presign answers 400 for a photo on the server's disk
+        if (error instanceof ApiError && error.status === 400) return localPhotoUrl(photo.s3_key);
+        throw error;
+      }
+    }, "Could not load photo").then(
       (url) => {
         entry.reuseUntil = reuseUntil(url);
         return url;

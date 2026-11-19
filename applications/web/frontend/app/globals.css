@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
-/* Light is the default theme. Dark mode applies only when the user explicitly
-   chooses it via ThemeToggle ([data-theme="dark"], restored by the pre-paint
-   script) — the OS color-scheme preference is intentionally ignored. */
+/* Light is the default theme. Dark mode applies when the user chooses Dark in
+   ThemeToggle, or System while the OS is in dark mode ([data-theme="dark"],
+   restored by the pre-paint script; see lib/theme.ts). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Short phone screens (e.g. 375×667): forms tighten so they fit without scrolling. */
+@custom-variant short (@media (max-height: 740px) and (max-width: 639px));
 
 /* ---------------- CityPulse brand tokens ---------------- */
 :root {
@@ -35,15 +38,18 @@
   --brand: #00c9b1;
   --brand-2: #26b7e8;
   --brand-purple: #8b6cff;
+  /* "Pulse" in the CityPulse wordmark */
+  --logo-pulse: #00d3ea;
 
-  /* Brand panel — always dark, independent of theme */
-  --panel-bg: radial-gradient(120% 90% at 75% 30%, rgba(24, 214, 192, 0.1) 0%, transparent 55%),
-    radial-gradient(100% 80% at 30% 90%, rgba(124, 92, 255, 0.12) 0%, transparent 60%),
-    linear-gradient(160deg, #0b1322 0%, #0f1b31 55%, #131f3a 100%);
-  --panel-card: rgba(255, 255, 255, 0.04);
-  --panel-border: rgba(255, 255, 255, 0.09);
-  --panel-fg: #f1f5fb;
-  --panel-muted: #8fa0ba;
+  /* Auth brand panel (left side of login / password pages) */
+  --panel-bg: radial-gradient(120% 90% at 75% 30%, rgba(0, 211, 234, 0.14) 0%, transparent 55%),
+    radial-gradient(100% 80% at 30% 90%, rgba(124, 92, 255, 0.1) 0%, transparent 60%),
+    linear-gradient(160deg, #eef5fb 0%, #e7f1f9 55%, #eceffc 100%);
+  --panel-card: rgba(255, 255, 255, 0.72);
+  --panel-border: rgba(23, 32, 51, 0.08);
+  --panel-shadow: 0 10px 30px -20px rgba(23, 32, 51, 0.35);
+  --panel-fg: #172033;
+  --panel-muted: #5b6b82;
 }
 
 [data-theme="dark"] {
@@ -69,6 +75,16 @@
   --input: #2a3a54;
   --ring: #18d6c0;
   --brand: #18d6c0;
+  --logo-pulse: #00c9b1;
+
+  --panel-bg: radial-gradient(120% 90% at 75% 30%, rgba(24, 214, 192, 0.1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 30% 90%, rgba(124, 92, 255, 0.12) 0%, transparent 60%),
+    linear-gradient(160deg, #0b1322 0%, #0f1b31 55%, #131f3a 100%);
+  --panel-card: rgba(255, 255, 255, 0.04);
+  --panel-border: rgba(255, 255, 255, 0.09);
+  --panel-shadow: none;
+  --panel-fg: #f1f5fb;
+  --panel-muted: #8fa0ba;
 }
 
 /* ---------------- Tailwind theme mapping ---------------- */
@@ -97,6 +113,7 @@
   --color-brand: var(--brand);
   --color-brand-2: var(--brand-2);
   --color-brand-purple: var(--brand-purple);
+  --color-logo-pulse: var(--logo-pulse);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -107,6 +124,13 @@
 
   --animate-float: cp-float 6s ease-in-out infinite;
   --animate-pulse-dot: cp-pulse-dot 2s ease-in-out infinite;
+  --animate-marquee: cp-marquee 50s linear infinite;
+}
+
+/* The track holds two identical copies, so -50% lands exactly on the start. */
+@keyframes cp-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 @keyframes cp-float {

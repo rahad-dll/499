@@ -12,6 +12,7 @@ export function roleDestination(
   role: Role,
   source?: DriverHandoffSource,
 ): string {
+  if (role === "admin") return "/admin";
   if (role === "owner") return "/owner";
   if (role === "authority") return "/command-center";
   return source ? `/driver-app?source=${source}` : "/driver-app";

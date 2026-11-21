@@ -7,24 +7,30 @@ import {
   CircleDollarSign,
   Clock,
   Download,
+  FilterX,
+  Info,
   Receipt,
-  XCircle,
   type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { OwnerShell } from "@/components/portal/OwnerShell";
+import { RowsSkeleton } from "@/components/portal/PageSkeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookingError, bookingsRepository } from "@/lib/bookings/repository";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import type { Booking, BookingStatus } from "@/lib/bookings/types";
 import { useBookings } from "@/lib/bookings/use-bookings";
 import {
   bookingDurationMs,
+  bookingPaymentStatus,
   bookingRevenue,
   bookingsToCsv,
   formatDuration,
   formatTaka,
 } from "@/lib/insights/metrics";
+import { formatDate, formatDateTime } from "@/lib/format/datetime";
 import { useOwnerSpaces } from "@/lib/spaces/use-owner-spaces";
 import { cn } from "@/lib/utils";
 
@@ -46,7 +52,7 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   no_show: "No-show",
 };
 
-const COLUMNS = ["Date / Time", "Driver ID", "Parking Lot", "Duration", "Amount", "Status", "Actions"];
+const COLUMNS = ["Date and time", "Booking", "Parking lot", "Duration", "Amount", "Status"];
 
 type RangeKey = "all" | "7d" | "30d" | "month";
 
@@ -64,16 +70,12 @@ function rangeStart(key: RangeKey, now: Date): number | null {
   return now.getTime() - days * 86_400_000;
 }
 
-const cancellable = (b: Booking) => b.status === "pending" || b.status === "confirmed";
-
 export default function RevenueHistoryPage() {
-  const { bookings, loading, error, replace } = useBookings();
+  const { bookings, loading, error } = useBookings();
   const { spaces } = useOwnerSpaces();
   const [range, setRange] = useState<{ key: RangeKey; from: number | null }>({ key: "all", from: null });
   const [lotId, setLotId] = useState("all");
   const [page, setPage] = useState(1);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState<string | null>(null);
 
   const spaceNames = useMemo(
     () => Object.fromEntries(spaces.map((s) => [s.id, s.name])) as Record<string, string>,
@@ -100,8 +102,18 @@ export default function RevenueHistoryPage() {
   const current = Math.min(page, pages);
   const rows = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const lotName = (b: Booking) => b.space?.name ?? spaceNames[b.space_id] ?? `Lot ${b.space_id.slice(0, 6)}`;
-  const amount = (b: Booking) => formatTaka(b.payment?.amount_unit ?? b.amount_unit ?? 0);
+  const lotName = (b: Booking) => b.space_name || spaceNames[b.space_id] || `Lot ${b.space_id.slice(0, 6)}`;
+  const amount = (b: Booking) => formatTaka(b.amount_unit ?? 0);
+  /** Short booking reference shown in place of the driver, whom the API does not identify. */
+  const reference = (b: Booking) => b.id.slice(0, 8).toUpperCase();
+
+  const filtersActive = range.key !== "all" || lotId !== "all";
+
+  function clearFilters() {
+    setRange({ key: "all", from: null });
+    setLotId("all");
+    setPage(1);
+  }
 
   function chooseRange(key: RangeKey) {
     setRange({ key, from: rangeStart(key, new Date()) });
@@ -118,24 +130,10 @@ export default function RevenueHistoryPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function cancel(booking: Booking) {
-    if (!window.confirm(`Cancel this booking at ${lotName(booking)}?`)) return;
-    setActionError(null);
-    setCancelling(booking.id);
-    try {
-      const updated = await bookingsRepository.cancel(booking.id);
-      replace({ ...booking, ...updated, status: updated?.status ?? "cancelled" });
-    } catch (caught) {
-      setActionError(caught instanceof BookingError ? caught.message : "Could not cancel booking");
-    } finally {
-      setCancelling(null);
-    }
-  }
-
   const cards: { icon: LucideIcon; iconClass: string; label: string; value: string; caption: string }[] = [
-    { icon: Receipt, iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400", label: "Total Bookings", value: filtered.length.toLocaleString(), caption: `${summary.paid} earned revenue` },
-    { icon: CircleDollarSign, iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", label: "Revenue Earned", value: formatTaka(summary.revenue), caption: "Paid or completed bookings" },
-    { icon: Clock, iconClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400", label: "Avg Parking Duration", value: formatDuration(summary.avg), caption: "Arrival to departure" },
+    { icon: Receipt, iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400", label: "Total bookings", value: filtered.length.toLocaleString(), caption: `${summary.paid} earned revenue` },
+    { icon: CircleDollarSign, iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", label: "Revenue earned", value: formatTaka(summary.revenue), caption: "Paid or completed bookings" },
+    { icon: Clock, iconClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400", label: "Average parking time", value: formatDuration(summary.avg), caption: "Arrival to departure" },
   ];
 
   return (
@@ -143,7 +141,7 @@ export default function RevenueHistoryPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-            Revenue History
+            Revenue history
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Bookings and earnings from the CityPulse API.
@@ -188,11 +186,20 @@ export default function RevenueHistoryPage() {
         </select>
       </div>
 
-      {(error || actionError) && (
+      {error && (
         <Alert variant="destructive" className="mt-5">
-          <AlertDescription>{error ?? actionError}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+
+      {/* GET /bookings only returns the caller's own bookings as a driver */}
+      <Alert className="mt-5">
+        <Info className="size-4" />
+        <AlertDescription>
+          The CityPulse API doesn’t list bookings made at an owner’s lots yet: GET /bookings only returns a
+          driver’s own bookings. Revenue will appear here once the backend adds an owner bookings endpoint.
+        </AlertDescription>
+      </Alert>
 
       {/* summary cards */}
       <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -203,7 +210,11 @@ export default function RevenueHistoryPage() {
             </span>
             <div>
               <div className="text-[13px] text-muted-foreground">{s.label}</div>
-              <div className="text-2xl font-extrabold tracking-tight">{loading ? "…" : s.value}</div>
+              {loading ? (
+                <Skeleton className="my-1 h-6 w-24" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{s.value}</div>
+              )}
               <div className="text-xs text-muted-foreground">{s.caption}</div>
             </div>
           </div>
@@ -212,10 +223,36 @@ export default function RevenueHistoryPage() {
 
       {/* transactions: table on ≥md, cards on mobile */}
       <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card">
-        {rows.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground">
-            {loading ? "Loading bookings…" : "No bookings for this period yet."}
-          </div>
+        {loading ? (
+          <LoadingRegion label="Loading bookings…">
+            <RowsSkeleton rows={6} />
+          </LoadingRegion>
+        ) : rows.length === 0 ? (
+          filtersActive ? (
+            <EmptyState
+              className="m-4 border-0"
+              icon={FilterX}
+              title="No bookings match these filters"
+              description="Try a longer date range or another parking lot."
+              action={
+                <Button variant="outline" onClick={clearFilters}>
+                  Show all bookings
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              className="m-4 border-0"
+              icon={Receipt}
+              title="No bookings yet"
+              description="Nothing to show until the API can list bookings at your lots. Meanwhile, check that each lot is approved: drivers can book a lot only after a CityPulse admin approves it."
+              action={
+                <Button asChild variant="outline">
+                  <Link href="/owner">Check your parking lots</Link>
+                </Button>
+              }
+            />
+          )
         ) : (
           <>
             <div className="hidden md:block">
@@ -223,7 +260,7 @@ export default function RevenueHistoryPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/60 text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                     {COLUMNS.map((c) => (
-                      <th key={c} className={cn("px-5 py-3.5 font-bold", c === "Actions" && "text-right")}>
+                      <th key={c} className={"px-5 py-3.5 font-bold"}>
                         {c}
                       </th>
                     ))}
@@ -232,15 +269,15 @@ export default function RevenueHistoryPage() {
                 <tbody>
                   {rows.map((b) => (
                     <tr key={b.id} className="border-b border-border last:border-0 hover:bg-muted/40">
-                      <td className="px-5 py-4 text-muted-foreground">{new Date(b.scheduled_at).toLocaleString()}</td>
-                      <td className="px-5 py-4 font-mono text-xs font-bold text-teal-600 dark:text-brand" title={b.driver_id}>
-                        {b.driver_id.slice(0, 8).toUpperCase()}
+                      <td className="px-5 py-4 text-muted-foreground">{formatDateTime(b.scheduled_at)}</td>
+                      <td className="px-5 py-4 font-mono text-xs font-bold text-teal-600 dark:text-brand" title={b.id}>
+                        {reference(b)}
                       </td>
                       <td className="px-5 py-4">
                         <div className="font-semibold">{lotName(b)}</div>
-                        {(b.slot?.slot_label || b.vehicle_plate) && (
+                        {(b.slot_label || b.vehicle_plate) && (
                           <div className="text-xs text-muted-foreground">
-                            {[b.slot?.slot_label && `Slot ${b.slot.slot_label}`, b.vehicle_plate].filter(Boolean).join(" · ")}
+                            {[b.slot_label && `Slot ${b.slot_label}`, b.vehicle_plate].filter(Boolean).join(" · ")}
                           </div>
                         )}
                       </td>
@@ -251,26 +288,10 @@ export default function RevenueHistoryPage() {
                           <span className="size-1.5 rounded-full bg-current" />
                           {STATUS_LABEL[b.status] ?? b.status}
                         </Badge>
-                        {b.payment && (
+                        {bookingPaymentStatus(b) && (
                           <div className="mt-1 text-xs capitalize text-muted-foreground">
-                            {b.payment.status}{b.payment.method ? ` · ${b.payment.method}` : ""}
+                            {bookingPaymentStatus(b)}{b.payment?.method ? ` · ${b.payment.method}` : ""}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-5 py-4 text-right">
-                        {cancellable(b) ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={cancelling === b.id}
-                            onClick={() => cancel(b)}
-                            className="border-destructive/40 text-destructive hover:bg-destructive/10"
-                          >
-                            <XCircle className="size-3.5" />
-                            {cancelling === b.id ? "Cancelling…" : "Cancel"}
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
                     </tr>
@@ -284,7 +305,7 @@ export default function RevenueHistoryPage() {
               {rows.map((b) => (
                 <div key={b.id} className="flex flex-col gap-2 px-4 py-3.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-teal-600 dark:text-brand">{b.driver_id.slice(0, 8).toUpperCase()}</span>
+                    <span className="font-mono text-xs font-bold text-teal-600 dark:text-brand">{reference(b)}</span>
                     <Badge variant={STATUS_VARIANT[b.status] ?? "secondary"}>
                       <span className="size-1.5 rounded-full bg-current" />
                       {STATUS_LABEL[b.status] ?? b.status}
@@ -292,15 +313,10 @@ export default function RevenueHistoryPage() {
                   </div>
                   <div className="text-sm font-semibold">{lotName(b)}</div>
                   <div className="flex items-center justify-between text-[13px] text-muted-foreground">
-                    <span>{new Date(b.scheduled_at).toLocaleDateString()}</span>
+                    <span>{formatDate(b.scheduled_at)}</span>
                     <span>{formatDuration(bookingDurationMs(b))}</span>
                     <span className="font-extrabold text-foreground">{amount(b)}</span>
                   </div>
-                  {cancellable(b) && (
-                    <Button variant="outline" size="sm" disabled={cancelling === b.id} onClick={() => cancel(b)} className="self-end border-destructive/40 text-destructive">
-                      Cancel booking
-                    </Button>
-                  )}
                 </div>
               ))}
             </div>

@@ -5,12 +5,21 @@ import {
   Activity,
   Car,
   Gauge,
+  MapPinOff,
   RadioTower,
+  RefreshCcw,
   Ticket,
   type LucideIcon,
 } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
 import { AuthorityShell } from "@/components/portal/AuthorityShell";
+import { LiveStatus } from "@/components/portal/LiveStatus";
+import { RowsSkeleton } from "@/components/portal/PageSkeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
+import type { GlossaryTerm } from "@/lib/insights/glossary";
 import {
   cityOccupancy,
   deriveIncidents,
@@ -34,7 +43,7 @@ const STRESS_BADGE: Record<Stress, "destructive" | "warning" | "success"> = {
 };
 
 export default function AnalyticsPage() {
-  const { spaces, loading, error, updatedAt } = useLiveSpaces();
+  const { spaces, loading, error, updatedAt, nextRefreshAt, refresh } = useLiveSpaces();
 
   const data = useMemo(() => {
     const lots = spaces
@@ -58,11 +67,11 @@ export default function AnalyticsPage() {
     };
   }, [spaces]);
 
-  const stats: { icon: LucideIcon; iconClass: string; value: string; label: string }[] = [
-    { icon: Car, iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400", value: data.occupied.toLocaleString(), label: "Vehicles Parked Now" },
-    { icon: Ticket, iconClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400", value: data.incidents.toLocaleString(), label: "Unbooked Occupancy" },
-    { icon: Gauge, iconClass: "bg-red-500/15 text-red-600 dark:text-red-400", value: `${data.cityPct}%`, label: "City Occupancy" },
-    { icon: RadioTower, iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", value: `${data.coverage}%`, label: "Lots With Fresh AI Data" },
+  const stats: { icon: LucideIcon; iconClass: string; value: string; label: string; term?: GlossaryTerm }[] = [
+    { icon: Car, iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400", value: data.occupied.toLocaleString(), label: "Vehicles parked now" },
+    { icon: Ticket, iconClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400", value: data.incidents.toLocaleString(), label: "Unbooked occupancy", term: "unbooked" },
+    { icon: Gauge, iconClass: "bg-red-500/15 text-red-600 dark:text-red-400", value: `${data.cityPct}%`, label: "City occupancy", term: "occupancy" },
+    { icon: RadioTower, iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400", value: `${data.coverage}%`, label: "Lots with fresh AI data", term: "freshData" },
   ];
 
   const mix = [
@@ -75,12 +84,19 @@ export default function AnalyticsPage() {
     <AuthorityShell active="analytics">
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-          City Analytics
+          City analytics
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Live parking occupancy across Dhaka from CityPulse AI cameras
-          {updatedAt && <> · updated {new Date(updatedAt).toLocaleTimeString()}</>}.
+          Live parking occupancy across Dhaka from CityPulse AI cameras.
         </p>
+        <LiveStatus
+          className="mt-1.5"
+          updatedAt={updatedAt}
+          nextRefreshAt={nextRefreshAt}
+          loading={loading}
+          error={error}
+          onRefresh={() => void refresh()}
+        />
 
         {error && (
           <div className="mt-4 rounded-xl border border-destructive/35 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -95,10 +111,15 @@ export default function AnalyticsPage() {
               <span className={cn("flex size-10 items-center justify-center rounded-xl", s.iconClass)}>
                 <s.icon className="size-5" />
               </span>
-              <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[26px]">
-                {loading && spaces.length === 0 ? "…" : s.value}
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="mt-3 h-8 w-16" />
+              ) : (
+                <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[26px]">{s.value}</div>
+              )}
+              <div className="mt-0.5 flex items-center gap-0.5 text-[13px] text-muted-foreground">
+                {s.label}
+                {s.term && <InfoTip term={s.term} className="-my-1" />}
               </div>
-              <div className="mt-0.5 text-[13px] text-muted-foreground">{s.label}</div>
             </div>
           ))}
         </div>
@@ -107,7 +128,7 @@ export default function AnalyticsPage() {
         <div className="mt-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-extrabold tracking-tight">Live Occupancy by Lot</h2>
+              <h2 className="text-lg font-extrabold tracking-tight">Live occupancy by lot</h2>
               <p className="text-[13px] text-muted-foreground">Share of AI-classified slots that are occupied</p>
             </div>
             <Badge variant="purple">
@@ -116,9 +137,27 @@ export default function AnalyticsPage() {
             </Badge>
           </div>
           {data.lots.length === 0 ? (
-            <div className="mt-5 rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              {loading ? "Loading live data…" : "No active lots found."}
-            </div>
+            loading ? (
+              <LoadingRegion label="Loading live data…">
+                <RowsSkeleton rows={4} className="mt-3 -mx-5" />
+              </LoadingRegion>
+            ) : (
+              <EmptyState
+                className="mt-5"
+                icon={error ? RefreshCcw : MapPinOff}
+                title={error ? "Live data unavailable" : "No active parking lots yet"}
+                description={
+                  error
+                    ? "CityPulse couldn't load the latest camera readings. Try again in a moment."
+                    : "Lots appear here once an owner's lot is active and its camera reports AI-monitored slots."
+                }
+                action={
+                  <Button variant="outline" onClick={() => void refresh()}>
+                    <RefreshCcw className="size-4" /> Check again now
+                  </Button>
+                }
+              />
+            )
           ) : (
             <div className="mt-5 flex flex-col gap-3.5">
               {data.lots.map(({ space, pct }) => (
@@ -139,10 +178,10 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
           {/* slot status mix */}
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <h2 className="text-lg font-extrabold tracking-tight">Slot Status Breakdown</h2>
+            <h2 className="text-lg font-extrabold tracking-tight">Slot status breakdown</h2>
             <p className="text-[13px] text-muted-foreground">
               {data.totalSlots} AI-monitored slots · {data.booked} currently booked
             </p>
@@ -156,7 +195,10 @@ export default function AnalyticsPage() {
               {mix.map((m) => (
                 <div key={m.label} className="flex items-center gap-3 text-sm">
                   <span className={cn("size-2.5 rounded-full", m.cls)} />
-                  <span className="flex-1 font-semibold">{m.label}</span>
+                  <span className="flex flex-1 items-center gap-0.5 font-semibold">
+                    {m.label}
+                    {m.label === "Unknown" && <InfoTip term="unknown" className="-my-1" />}
+                  </span>
                   <span className="font-extrabold">{m.count}</span>
                   <span className="w-12 text-right text-muted-foreground">
                     {data.totalSlots ? Math.round((m.count / data.totalSlots) * 100) : 0}%
@@ -168,7 +210,10 @@ export default function AnalyticsPage() {
 
           {/* top stressed lots */}
           <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <h2 className="text-lg font-extrabold tracking-tight">Top Stressed Lots</h2>
+            <h2 className="flex items-center gap-0.5 text-lg font-extrabold tracking-tight">
+              Most stressed lots
+              <InfoTip term="stress" className="-my-1" />
+            </h2>
             <p className="text-[13px] text-muted-foreground">Ranked by live occupancy</p>
             <div className="mt-4 flex flex-col divide-y divide-border">
               {data.lots.slice(0, 5).map(({ space, pct }, i) => {

@@ -1,0 +1,30 @@
+{
+ "PH": 80,
+ "PW": 160,
+ "GLYPH": 48,
+ "PAD": 0.08,
+ "STEPS": 40,
+ "REG": 0.5,
+ "FEAT_LAYER": 4,
+ "top_k": 5,
+ "layout_lambda": 1.5,
+ "layout_caps": {
+  "digit": 8,
+  "district": 1,
+  "letter": 2,
+  "word": 2
+ },
+ "guess_conf": 0.05,
+ "best_w": {
+  "pixel": 0,
+  "edge": 0,
+  "feature": 20,
+  "learned": 0
+ },
+ "best_score": "pixel",
+ "subset_limits": {
+  "dark": 0.33241999745368955,
+  "tilted": 9.95426056883492,
+  "small": 416.0
+ }
+}

@@ -170,7 +170,9 @@ def load_plate_models():
     global _plate_models
 
     if _plate_models is None:
-        from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
+        # imported here so occupancy-only setups do not need them
+        import plate_layers  # noqa: F401  the reader weights need these classes
+        from ultralytics import YOLO
 
         classes = json.loads((Path(MODEL_DIR) / PLATE_READER_CLASSES).read_text(encoding="utf-8"))
         _plate_models = {

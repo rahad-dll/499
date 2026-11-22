@@ -46,10 +46,12 @@ DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "occupancy")
 
 # Licence plate models, relative to MODEL_DIR: detector finds plates, reader finds characters.
 PLATE_DETECTOR_MODEL = os.getenv("MODEL_PATH_PLATE_DETECTOR", "").strip() or "plate-detector-yolo26n/best.pt"
-PLATE_READER_MODEL   = os.getenv("MODEL_PATH_PLATE_READER", "").strip() or "plate-reader-yolo26s/best.pt"
-PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "plate-reader-yolo26s/classes.json"
+PLATE_READER_MODEL   = os.getenv("MODEL_PATH_PLATE_READER", "").strip() or "plate-reader-layout/best.pt"
+PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "plate-reader-layout/classes.json"
 # boxes below this confidence are dropped (removes weak whole-image boxes on close-ups)
 PLATE_MIN_CONFIDENCE = float(os.getenv("PLATE_MIN_CONFIDENCE", 0.4))
+# load the plate models when the service starts instead of on the first plate request
+PLATE_PRELOAD = os.getenv("PLATE_PRELOAD", "false").strip().lower() == "true"
 
 # Server bind settings — 0.0.0.0 makes it reachable inside Docker
 HOST = os.getenv("HOST", "0.0.0.0")

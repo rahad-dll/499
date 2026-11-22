@@ -35,6 +35,7 @@ api-services/
 ├── main.py              # app bootstrap, lifespan, health route
 ├── config.py            # all env vars in one place
 ├── predictor.py         # model loading and inference engine
+├── plate_layers.py      # custom layers of the plate reader
 ├── auth/
 │   └── dependencies.py  # bearer token guard
 ├── db/
@@ -50,7 +51,7 @@ api-services/
     │   └── phase2_weights.pth   (active)
     ├── plate-detector-yolo26n/
     │   └── best.pt
-    └── plate-reader-yolo26s/
+    └── plate-reader-layout/
         ├── best.pt
         └── classes.json
 ```
@@ -86,9 +87,10 @@ Swagger UI → `http://localhost:8001/docs`
 | `MODEL_PATH_OCCUPANCY` | `mobilenetv2/phase2_weights.pth`              | occupancy model path relative to `MODEL_DIR`                  |
 | `MODEL_PATH_VPS_NET`   | `vps-net/Customized.pth`                      | alternate model path relative to `MODEL_DIR`                  |
 | `MODEL_PATH_PLATE_DETECTOR` | `plate-detector-yolo26n/best.pt`         | plate detector path relative to `MODEL_DIR`                   |
-| `MODEL_PATH_PLATE_READER`   | `plate-reader-yolo26s/best.pt`           | plate character reader path relative to `MODEL_DIR`           |
-| `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-yolo26s/classes.json`      | reader classes with English and Bangla text                   |
+| `MODEL_PATH_PLATE_READER`   | `plate-reader-layout/best.pt`            | plate character reader path relative to `MODEL_DIR`           |
+| `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-layout/classes.json`       | reader classes with English and Bangla text                   |
 | `PLATE_MIN_CONFIDENCE`      | `0.4`                                    | plates detected below this confidence are dropped             |
+| `PLATE_PRELOAD`             | `false`                                  | `true` loads the plate models at startup                      |
 | `HOST`                 | `0.0.0.0`                                     |                                                               |
 | `PORT`                 | `8001`                                        |                                                               |
 | `CORS_ORIGINS`         | `http://localhost:3000,http://localhost:5173` | comma-separated allowed origins                               |

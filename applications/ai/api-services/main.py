@@ -1,18 +1,29 @@
+import logging
 import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from config import PLATE_PRELOAD
 from db.mongodb import connect_db, close_db
+from predictor import load_plate_models
 from routes.inference import router as inference_router
 from routes.plates import router as plates_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # connect on startup, disconnect on shutdown
     await connect_db()
+    if PLATE_PRELOAD:
+        try:
+            load_plate_models()
+        except Exception as exc:
+            # occupancy must keep working even if the plate models are missing
+            logger.warning("Plate models not loaded: %s", exc)
     yield
     await close_db()
 

@@ -12,6 +12,9 @@ if ENV_PATH.exists():
 else:
     load_dotenv()
 
+# Stop ultralytics from pip-installing missing packages at runtime.
+os.environ.setdefault("YOLO_AUTOINSTALL", "false")
+
 # MongoDB connection — override via env in production
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB  = os.getenv("MONGO_DB", "citypulse_ai")

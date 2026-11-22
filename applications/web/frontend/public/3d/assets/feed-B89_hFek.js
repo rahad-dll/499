@@ -1,0 +1,1 @@
+var e=[`car`,`sport`,`bus`,`cng`,`bike`],t=[`copter`,`watch`,`tow`,`drone`];function n(e){return{listener:new Float32Array(9),vehicles:new Float32Array(e*6),vehicleCount:0,aircraft:new Float32Array(t.length*4),jam:0,jamZone:new Float32Array(3),progress:0,beat:0}}export{e as n,n as r,t};

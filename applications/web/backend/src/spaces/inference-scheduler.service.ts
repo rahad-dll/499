@@ -18,6 +18,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { basename, parse } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import type { plate_check } from '../generated/prisma/enums.js';
+import { comparePlates } from './plate-match';
 
 const SLOT_IMAGE_BUCKET = 'fixed-slot-image';
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -212,8 +213,8 @@ export class InferenceSchedulerService implements OnModuleInit {
   }
 
   /**
-   * Compares the plate read with the current booking's vehicle plate, ignoring case,
-   * spaces and dashes. A failed read ({}) leaves the last check untouched.
+   * Compares the plate read with the current booking's vehicle plate, in English or Bangla.
+   * A failed read ({}) leaves the last check untouched.
    */
   private withPlateCheck(
     plate: { plate_text?: string | null; plate_confidence?: number | null; plate_read_at?: Date | null },
@@ -221,15 +222,10 @@ export class InferenceSchedulerService implements OnModuleInit {
   ) {
     if (!('plate_text' in plate)) return plate;
 
-    const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const read = plate.plate_text ? normalise(plate.plate_text) : '';
-    const booked = booking?.vehicle_plate ? normalise(booking.vehicle_plate) : '';
-
     let plate_check: plate_check;
-    if (!read) plate_check = 'unknown';
+    if (!plate.plate_text?.trim()) plate_check = 'unknown';
     else if (!booking) plate_check = 'no_booking';
-    else if (!booked) plate_check = 'unknown';
-    else plate_check = read === booked ? 'match' : 'mismatch';
+    else plate_check = comparePlates(plate.plate_text, booking.vehicle_plate);
 
     return { ...plate, plate_check };
   }

@@ -12,7 +12,7 @@ if ENV_PATH.exists():
 else:
     load_dotenv()
 
-# Stop ultralytics from pip-installing missing packages at runtime.
+# No package installs at runtime.
 os.environ.setdefault("YOLO_AUTOINSTALL", "false")
 
 # MongoDB connection — override via env in production
@@ -50,7 +50,7 @@ PLATE_READER_MODEL   = os.getenv("MODEL_PATH_PLATE_READER", "").strip() or "plat
 PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "plate-reader-layout/classes.json"
 # boxes below this confidence are dropped (removes weak whole-image boxes on close-ups)
 PLATE_MIN_CONFIDENCE = float(os.getenv("PLATE_MIN_CONFIDENCE", 0.4))
-# load the plate models when the service starts instead of on the first plate request
+# load plate models at startup
 PLATE_PRELOAD = os.getenv("PLATE_PRELOAD", "false").strip().lower() == "true"
 
 # Server bind settings — 0.0.0.0 makes it reachable inside Docker

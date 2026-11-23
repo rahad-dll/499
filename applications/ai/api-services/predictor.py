@@ -170,9 +170,8 @@ def load_plate_models():
     global _plate_models
 
     if _plate_models is None:
-        # imported here so occupancy-only setups do not need them
-        import plate_layers  # noqa: F401  the reader weights need these classes
-        from ultralytics import YOLO
+        import plate_layers  # noqa: F401
+        from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
 
         classes = json.loads((Path(MODEL_DIR) / PLATE_READER_CLASSES).read_text(encoding="utf-8"))
         _plate_models = {
@@ -187,7 +186,7 @@ def load_plate_models():
 
 
 def plate_text(boxes: list[tuple[int, float]], labels: list[str], kind: list[str]) -> str:
-    """Turn (class_id, x1) character boxes into plate text.
+    """Turn (class_id, x) characters into plate text.
 
     District, word and letter come first, then the digits, each left to right;
     six digits are written as 12-3456.
@@ -200,6 +199,20 @@ def plate_text(boxes: list[tuple[int, float]], labels: list[str], kind: list[str
     return " ".join(part for part in (head, digits) if part)
 
 
+def read_characters(plate_models: dict, crop: Image.Image) -> list[tuple[int, float]]:
+    """Read the characters of one plate crop."""
+    import plate_decoding
+
+    reader = plate_models["reader"]
+    guesses = plate_decoding.reader_guesses(reader, crop)
+    if hasattr(reader.model, "layout_head"):
+        probs = plate_decoding.layout_probabilities(reader.model, crop)
+        guesses = plate_decoding.decode(guesses, plate_models["kind"], reader.model.layout_caps, probs)
+    else:
+        guesses = [g for g in guesses if g["conf"] >= plate_decoding.READ_CONFIDENCE]
+    return [(g["cls"], g["x"]) for g in guesses]
+
+
 def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
     """Find every licence plate in an image and read it. Most confident plate first."""
     plate_models = load_plate_models()
@@ -210,8 +223,7 @@ def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE
     plates = []
     for box in sorted(detection.boxes, key=lambda b: -float(b.conf)):
         x1, y1, x2, y2 = (round(v) for v in box.xyxy[0].tolist())
-        reading = plate_models["reader"].predict(img.crop((x1, y1, x2, y2)), conf=0.25, verbose=False)[0]
-        chars = [(int(c), float(b[0])) for c, b in zip(reading.boxes.cls, reading.boxes.xyxy)]
+        chars = read_characters(plate_models, img.crop((x1, y1, x2, y2)))
 
         plates.append({
             "box":        {"x1": x1, "y1": y1, "x2": x2, "y2": y2},

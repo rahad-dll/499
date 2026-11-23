@@ -1,8 +1,4 @@
-"""Custom layers of the plate reader (YOLO26s with a layout head).
-
-The trained weights refer to these classes by this module name, so the file must stay
-importable as `plate_layers`. Training-only code is in notebook 13_reader_layout.
-"""
+"""Custom layers of the plate reader. The weights need this module name."""
 
 import torch
 import torch.nn as nn
@@ -11,7 +7,7 @@ from ultralytics.nn.tasks import DetectionModel
 
 
 class Tap(nn.Module):
-    """Wraps one backbone layer and keeps its last output, so the layout head can read it."""
+    """Keeps the output of one layer."""
 
     def __init__(self, m):
         super().__init__()
@@ -30,7 +26,7 @@ class Tap(nn.Module):
 
 
 class LayoutHead(nn.Module):
-    """Predicts how many digits, districts, letters and words the plate has."""
+    """Predicts the character counts of a plate."""
 
     def __init__(self, c, caps, hidden=256):
         super().__init__()
@@ -44,7 +40,9 @@ class LayoutHead(nn.Module):
 
 
 class LayoutModel(DetectionModel):
-    """YOLO detector with an extra head that predicts the plate layout."""
+    """Plate reader with a layout head."""
 
-    def layout_logits(self):
-        return self.layout_head(self.model[self.layout_layer].out)
+    def layout_logits(self, x):
+        for layer in self.model[: self.layout_layer + 1]:
+            x = layer(x)
+        return self.layout_head(x)

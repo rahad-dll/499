@@ -35,7 +35,8 @@ api-services/
 ├── main.py              # app bootstrap, lifespan, health route
 ├── config.py            # all env vars in one place
 ├── predictor.py         # model loading and inference engine
-├── plate_layers.py      # custom layers of the plate reader
+├── plate_layers.py      # plate reader layers
+├── plate_decoding.py    # plate text decoding
 ├── auth/
 │   └── dependencies.py  # bearer token guard
 ├── db/

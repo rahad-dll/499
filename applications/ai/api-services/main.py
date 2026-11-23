@@ -22,7 +22,6 @@ async def lifespan(app: FastAPI):
         try:
             load_plate_models()
         except Exception as exc:
-            # occupancy must keep working even if the plate models are missing
             logger.warning("Plate models not loaded: %s", exc)
     yield
     await close_db()

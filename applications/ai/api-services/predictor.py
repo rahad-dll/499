@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import torch
-from PIL import Image
+from PIL import Image, ImageOps
 from torchvision import models, transforms
 
 from config import (
@@ -140,9 +140,12 @@ def load_model(model_name: str | None = None):
 
 def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
     """Classify a single slot image. Returns label and confidence."""
-    model = load_model(model_name)
+    return classify(Image.open(io.BytesIO(image_bytes)).convert("RGB"), model_name)
 
-    img    = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+def classify(img: Image.Image, model_name: str | None = None) -> dict:
+    """Classify a slot image that is already open."""
+    model = load_model(model_name)
     tensor = _transform(img).unsqueeze(0)
 
     with torch.no_grad():
@@ -215,9 +218,12 @@ def read_characters(plate_models: dict, crop: Image.Image) -> list[tuple[int, fl
 
 def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
     """Find every licence plate in an image and read it. Most confident plate first."""
-    plate_models = load_plate_models()
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    return find_plates(Image.open(io.BytesIO(image_bytes)).convert("RGB"), min_confidence)
 
+
+def find_plates(img: Image.Image, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
+    """Find and read the plates in an image that is already open."""
+    plate_models = load_plate_models()
     detection = plate_models["detector"].predict(img, conf=min_confidence, verbose=False)[0]
 
     plates = []
@@ -233,3 +239,28 @@ def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE
         })
 
     return plates
+
+
+def analyse_frame(image_bytes: bytes, slots: list[dict], model_name: str | None = None) -> list[dict]:
+    """Occupancy of each slot in a camera frame, and the plate of each occupied slot.
+
+    Slot boxes are fractions (0-1) of the frame. Plate boxes are returned in frame pixels.
+    """
+    frame = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
+    width, height = frame.size
+
+    results = []
+    for slot in slots:
+        x1, y1 = round(slot["x1"] * width), round(slot["y1"] * height)
+        x2, y2 = round(slot["x2"] * width), round(slot["y2"] * height)
+        crop = frame.crop((x1, y1, max(x2, x1 + 1), max(y2, y1 + 1)))
+
+        prediction = classify(crop, model_name)
+        plates = find_plates(crop) if prediction["label"] == "occupied" else []
+        for plate in plates:
+            box = plate["box"]
+            plate["box"] = {"x1": box["x1"] + x1, "y1": box["y1"] + y1, "x2": box["x2"] + x1, "y2": box["y2"] + y1}
+
+        results.append({"slot_id": slot["slot_id"], "prediction": prediction, "plates": plates})
+
+    return results

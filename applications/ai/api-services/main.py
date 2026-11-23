@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import PLATE_PRELOAD
 from db.mongodb import connect_db, close_db
 from predictor import load_plate_models
+from routes.frames import router as frames_router
 from routes.inference import router as inference_router
 from routes.plates import router as plates_router
 
@@ -50,6 +51,7 @@ app.add_middleware(
 
 app.include_router(inference_router)
 app.include_router(plates_router)
+app.include_router(frames_router)
 
 
 @app.get("/health")

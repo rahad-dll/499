@@ -56,6 +56,28 @@ class PlateResponse(BaseModel):
     created_at:   datetime
 
 
+class FrameSlot(BaseModel):
+    slot_id: str
+    x1: float = Field(..., ge=0, le=1, description="left edge, fraction of the frame width")
+    y1: float = Field(..., ge=0, le=1, description="top edge, fraction of the frame height")
+    x2: float = Field(..., ge=0, le=1, description="right edge, fraction of the frame width")
+    y2: float = Field(..., ge=0, le=1, description="bottom edge, fraction of the frame height")
+
+
+class FrameSlotResult(BaseModel):
+    slot_id:    str
+    prediction: PredictionResult
+    plates:     list[PlateRead]     # read only for occupied slots
+
+
+class FrameResponse(BaseModel):
+    space_id:     Optional[str] = None
+    camera_id:    Optional[str] = None
+    slots:        list[FrameSlotResult]
+    inference_id: str               # MongoDB ObjectId as string
+    created_at:   datetime
+
+
 class StandardResponse(BaseModel):
     success: bool = True
     data:    Optional[dict | list | None] = None

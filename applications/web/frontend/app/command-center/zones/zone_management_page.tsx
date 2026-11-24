@@ -7,11 +7,19 @@ import {
   Cctv,
   Layers,
   Map,
+  MapPinOff,
   RefreshCcw,
   Search,
+  SearchX,
 } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
 import { AuthorityShell } from "@/components/portal/AuthorityShell";
+import { LiveStatus } from "@/components/portal/LiveStatus";
+import { RowsSkeleton } from "@/components/portal/PageSkeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import {
   STRESS_RANK,
@@ -30,12 +38,12 @@ const STRESS_META: Record<Stress, { badge: "destructive" | "warning" | "success"
   Optimal: { badge: "success", bar: "bg-emerald-500" },
 };
 
-const COLUMNS = ["Lot ID", "Parking Lot", "Location", "Capacity", "Occupancy", "Stress Level", "AI Data"];
+const COLUMNS = ["Lot ID", "Parking lot", "Location", "Capacity", "Occupancy", "Stress level", "AI data"];
 
 type StressFilter = "All" | Stress;
 
 export default function ZoneManagementPage() {
-  const { spaces, loading, error, updatedAt, refresh } = useLiveSpaces();
+  const { spaces, loading, error, updatedAt, nextRefreshAt, refresh } = useLiveSpaces();
   const [query, setQuery] = useState("");
   const [stressFilter, setStressFilter] = useState<StressFilter>("All");
   const now = updatedAt ?? 0;
@@ -68,11 +76,18 @@ export default function ZoneManagementPage() {
     <AuthorityShell active="zones">
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-          City Parking Zones
+          City parking zones
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Every active parking lot in Dhaka with live AI occupancy.
         </p>
+        <LiveStatus
+          className="mt-1.5"
+          updatedAt={updatedAt}
+          nextRefreshAt={nextRefreshAt}
+          loading={loading}
+          error={error}
+        />
 
         {/* toolbar */}
         <div className="mt-5 flex flex-wrap items-center gap-3">
@@ -95,7 +110,7 @@ export default function ZoneManagementPage() {
             >
               {(["All", "Critical", "Moderate", "Optimal"] as const).map((option) => (
                 <option key={option} value={option}>
-                  Stress Level: {option}
+                  Stress level: {option}
                 </option>
               ))}
             </select>
@@ -106,7 +121,7 @@ export default function ZoneManagementPage() {
             onClick={refresh}
             className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-semibold hover:bg-muted"
           >
-            <RefreshCcw className={cn("size-4", loading && "animate-spin")} />
+            <RefreshCcw className={cn("size-4", loading && "animate-spin motion-reduce:animate-none")} />
             Refresh
           </button>
           <Badge variant="info" className="ml-auto hidden px-3.5 py-2 text-[13px] sm:inline-flex">
@@ -120,11 +135,46 @@ export default function ZoneManagementPage() {
           </div>
         )}
 
-        {visible.length === 0 && (
-          <div className="mt-5 rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-            {loading ? "Loading live parking lots…" : "No parking lots match your filters."}
-          </div>
-        )}
+        {visible.length === 0 &&
+          (loading ? (
+            <LoadingRegion label="Loading live parking lots…" className="mt-5 overflow-hidden rounded-2xl border border-border bg-card">
+              <RowsSkeleton rows={6} />
+            </LoadingRegion>
+          ) : rows.length > 0 ? (
+            <EmptyState
+              className="mt-5"
+              icon={SearchX}
+              title="No parking lots match your filters"
+              description="Try another name or address, or show every stress level."
+              action={
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setQuery("");
+                    setStressFilter("All");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              className="mt-5"
+              icon={error ? RefreshCcw : MapPinOff}
+              title={error ? "Live data unavailable" : "No active parking lots yet"}
+              description={
+                error
+                  ? "CityPulse couldn't load the latest camera readings. Try again in a moment."
+                  : "Lots appear here once an owner's lot is active and its camera reports AI-monitored slots."
+              }
+              action={
+                <Button variant="outline" onClick={() => void refresh()}>
+                  <RefreshCcw className="size-4" /> Check again now
+                </Button>
+              }
+            />
+          ))}
 
         {/* table on ≥lg */}
         {visible.length > 0 && (
@@ -134,7 +184,11 @@ export default function ZoneManagementPage() {
                 <tr className="border-b border-border bg-muted/60 text-[11.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                   {COLUMNS.map((c) => (
                     <th key={c} className="px-5 py-3.5 font-bold">
-                      {c}
+                      <span className="inline-flex items-center gap-0.5">
+                        {c}
+                        {c === "Stress level" && <InfoTip term="stress" className="-my-1" />}
+                        {c === "AI data" && <InfoTip term="stale" className="-my-1" />}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -221,8 +275,12 @@ export default function ZoneManagementPage() {
               <Map className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{spaces.length}</div>
-              <div className="text-[13px] text-muted-foreground">Active Parking Lots</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{spaces.length}</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">Active parking lots</div>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
@@ -230,8 +288,12 @@ export default function ZoneManagementPage() {
               <Layers className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{capacity.toLocaleString()}</div>
-              <div className="text-[13px] text-muted-foreground">City-wide Capacity</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{capacity.toLocaleString()}</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">City-wide capacity</div>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
@@ -239,8 +301,12 @@ export default function ZoneManagementPage() {
               <AlertTriangle className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{critical}</div>
-              <div className="text-[13px] text-muted-foreground">Critical Lots (≥85% full)</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{critical}</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">Critical lots (≥85% full)</div>
             </div>
           </div>
         </div>

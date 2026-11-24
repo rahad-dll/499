@@ -5,8 +5,10 @@
  * implementation calls the deployed NestJS API and persists its JWT session.
  */
 
-export type Role = "driver" | "owner" | "authority";
+/** `admin` accounts are created by the CityPulse team; nobody can sign up as one. */
+export type Role = "driver" | "owner" | "authority" | "admin";
 
+/** The roles a visitor can choose on the signup page. */
 export const ROLES: Role[] = ["driver", "owner", "authority"];
 
 export interface User {
@@ -24,6 +26,8 @@ export interface AuthSession {
   token: string;
   /** epoch ms */
   expiresAt: number;
+  /** true when the user ticked "Remember me" (the session outlives the browser) */
+  remember?: boolean;
 }
 
 export interface SignupInput {
@@ -32,6 +36,16 @@ export interface SignupInput {
   phone: string;
   password: string;
   role: Role;
+}
+
+/** sessionStorage key that hands the email from /forgot-password to /reset-password (kept out of the URL). */
+export const RESET_EMAIL_KEY = "cp:reset-email";
+
+export interface ResetPasswordInput {
+  email: string;
+  /** the 6-digit code from the reset email */
+  token: string;
+  password: string;
 }
 
 export interface LoginInput {
@@ -58,6 +72,7 @@ export class AuthError extends Error {
 export interface AuthRepository {
   signup(input: SignupInput): Promise<AuthSession>;
   login(input: LoginInput): Promise<AuthSession>;
+  /** resolves once this browser is signed out; revoking on the API is not waited for */
   logout(): Promise<void>;
   /** current session from storage, or null */
   getSession(): Promise<AuthSession | null>;
@@ -65,7 +80,11 @@ export interface AuthRepository {
   getAccessToken(): Promise<string | null>;
   /** replace the public user snapshot stored with the active session */
   updateCachedUser(user: User): void;
-  /** returns a reset token (in a real backend this is emailed, not returned) */
+  /**
+   * Asks for a password reset. The API emails a 6-digit code and returns no
+   * token; the browser-only prototype returns its token so the demo can go on.
+   */
   requestPasswordReset(email: string): Promise<{ token: string | null }>;
-  resetPassword(token: string, password: string): Promise<void>;
+  /** Sets a new password with the emailed code (`token`). */
+  resetPassword(input: ResetPasswordInput): Promise<void>;
 }

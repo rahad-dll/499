@@ -6,7 +6,7 @@ Live Link : https://499-ab-frontend.vercel.app/
 
 ## Features
 
-- Public CityPulse landing page with light and dark themes
+- Public CityPulse landing page with light and dark themes; every figure on it comes from the project repository (see `components/landing/data.ts`)
 - Registration and sign-in for drivers, parking owners, and traffic authorities
 - JWT-backed sessions with automatic access-token refresh
 - Role-aware dashboard routing
@@ -50,6 +50,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Sign-in uses NextAuth, which needs a secret to encrypt its session cookie. Add one to `.env.local` (and to the hosting environment, e.g. Vercel):
+
+```dotenv
+NEXTAUTH_SECRET=<output of: openssl rand -base64 32>
+NEXTAUTH_URL=http://localhost:3000
+```
+
 The application uses the deployed CityPulse API by default. To use a local backend, create or update `.env.local`:
 
 ```dotenv
@@ -82,6 +89,7 @@ Restart the frontend development server after changing environment variables.
 | `/owner/cameras` | Owner camera-management view |
 | `/owner/revenue` | Owner revenue-history view |
 | `/owner/settings` | Owner facility configuration |
+| `/admin` | Admin overview: parking-lot approvals and user roles |
 | `/command-center` | Traffic-authority operations dashboard |
 | `/command-center/zones` | Zone management |
 | `/command-center/enforcement` | Enforcement logs |
@@ -109,7 +117,8 @@ frontend/
 |-- context/AuthContext.tsx     # Client authentication state
 |-- lib/
 |   |-- api/                    # API client (timeout/retry pipeline) and shared query cache
-|   |-- auth/                   # Auth contracts, JWT sessions, and HTTP repository
+|   |-- admin/                  # Admin API repository and types
+|   |-- auth/                   # Auth contracts, NextAuth options and repository, route access rules
 |   |-- bookings/               # Bookings API repository, types, and hook
 |   |-- insights/               # Pure metrics: occupancy, stress, alerts, revenue
 |   `-- spaces/                 # Parking-space API repository, types, and live-data hooks
@@ -122,17 +131,19 @@ frontend/
 
 ## Authentication and API Flow
 
-The active authentication repository communicates with the NestJS API. Registration calls `/auth/register`, and sign-in calls `/auth/login`. Access and refresh tokens are stored under `cp:api-session`:
+Sessions are managed by NextAuth (`lib/auth/nextauth-options.ts`, served at `/api/auth/*`). Registration calls the NestJS API's `/auth/register` from the browser. Sign-in goes through NextAuth's Credentials provider, which forwards the email and password to the API's `/auth/login` and keeps the returned tokens in an encrypted, httpOnly session cookie:
 
-- normal sessions use `sessionStorage`;
-- sessions created with **Remember me** use `localStorage`;
-- access tokens are refreshed when they are within 30 seconds of expiring;
+- the browser receives only the short-lived access token (from `/api/auth/session`, held in memory); the refresh token never leaves the server;
+- sessions created with **Remember me** last 30 days, other sessions end 24 hours after sign-in;
+- the server refreshes the access token when it is within 30 seconds of expiring;
 - only one refresh runs at a time, across tabs too (the API rotates refresh tokens, so a second parallel refresh would sign the user out);
-- logout calls the API and always clears the local session.
+- logout clears the session cookie first and then tells the API, without waiting for it.
+
+`proxy.ts` (Next.js 16's name for Middleware) reads the role from the session cookie before a page renders: `/admin`, `/owner` and `/command-center` open only for their own role, signed-out visitors are sent to `/login` and returned afterwards, and signed-in users skip `/login` and `/signup`. The rules are in `lib/auth/access.ts`. Admin accounts cannot be created from the signup page.
 
 Authenticated requests to `/spaces` include the access token as a Bearer token. The owner portal loads registered parking lots from this endpoint and uses it to create new lots.
 
-Set `NEXT_PUBLIC_AUTH_BACKEND=local` to sign up and sign in with a browser-only store instead (for UI demos while the API is asleep; portal data still comes from the API). The `dev-local-auth` entry in `.claude/launch.json` starts the dev server that way on port 3007.
+Set `NEXT_PUBLIC_AUTH_BACKEND=local` to sign up and sign in with a browser-only store instead (for UI demos while the API is asleep; portal data still comes from the API, and `proxy.ts` steps aside so the pages guard themselves). The `dev-local-auth` entry in `.claude/launch.json` starts the dev server that way on port 3007.
 
 ## Data Loading
 
@@ -183,7 +194,7 @@ The API has no alerts, enforcement, or analytics endpoints, so `lib/insights/met
 - The driver-specific dashboard is not implemented yet.
 - Warden dispatch, tickets, evidence images, occupancy history charts, surge pricing, payouts, and notifications need backend endpoints that do not exist yet.
 - The API stores one camera per parking lot (`rtsp_url` on `PATCH /spaces/:id`).
-- Social sign-in, notifications, search, and some landing-page links are UI placeholders.
+- Social sign-in, notifications, and search are UI placeholders.
 
 ## Part of CityPulse
 

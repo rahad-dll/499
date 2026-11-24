@@ -34,7 +34,7 @@ function space(overrides: Partial<NearbySpace> = {}): NearbySpace {
 
 function booking(overrides: Partial<Booking> = {}): Booking {
   return {
-    id: "b1", driver_id: "d1", slot_id: "sl1", space_id: "s1", status: "completed",
+    id: "b1", slot_id: "sl1", slot_label: "A01", space_id: "s1", space_name: "", status: "completed",
     scheduled_at: "2026-10-03T10:00:00Z", amount_unit: 12000, ...overrides,
   };
 }
@@ -97,8 +97,9 @@ describe("bookings", () => {
   it("counts paid payments, completed bookings, and nothing else as revenue", () => {
     assert.equal(bookingRevenue(booking()), 12000);
     assert.equal(bookingRevenue(booking({ status: "confirmed" })), 0);
-    assert.equal(bookingRevenue(booking({ payment: { status: "paid", amount_unit: 9000 } })), 9000);
-    assert.equal(bookingRevenue(booking({ payment: { status: "refunded", amount_unit: 9000 } })), 0);
+    assert.equal(bookingRevenue(booking({ status: "confirmed", payment_status: "paid" })), 12000);
+    assert.equal(bookingRevenue(booking({ payment_status: "refunded" })), 0);
+    assert.equal(bookingRevenue(booking({ payment_status: "pending", payment: { status: "paid" } })), 12000);
   });
 
   it("measures duration from arrival and departure, else booked hours", () => {

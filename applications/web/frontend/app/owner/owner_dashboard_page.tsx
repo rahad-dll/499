@@ -10,12 +10,16 @@ import {
   Gauge,
   Layers,
   MapPin,
+  ParkingCircle,
   Plus,
   Settings,
   Video,
   type LucideIcon,
 } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
+import { LiveStatus } from "@/components/portal/LiveStatus";
 import { OwnerShell } from "@/components/portal/OwnerShell";
+import { CardGridSkeleton } from "@/components/portal/PageSkeleton";
 import {
   CameraStatusBadge,
   LotStatusBadge,
@@ -23,6 +27,9 @@ import {
   SlotLegend,
 } from "@/components/portal/owner-widgets";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
+import type { GlossaryTerm } from "@/lib/insights/glossary";
 import { useBookings } from "@/lib/bookings/use-bookings";
 import {
   bookingRevenue,
@@ -42,6 +49,7 @@ interface Metric {
   value: string;
   label: string;
   caption: string;
+  term?: GlossaryTerm;
 }
 
 function RegisteredNotice() {
@@ -50,7 +58,7 @@ function RegisteredNotice() {
   return (
     <div className="mt-5 flex items-center gap-2.5 rounded-xl border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
       <CheckCircle2 className="size-4" />
-      Parking lot registered. New lots appear on the live map once they are active and have AI-monitored slots.
+      Parking lot registered. It stays “Pending approval” until a CityPulse admin approves it; drivers can book it only after that.
     </div>
   );
 }
@@ -77,28 +85,35 @@ export default function OwnerDashboardPage() {
         icon: Layers,
         iconClass: "bg-teal-500/15 text-teal-600 dark:text-teal-400",
         value: totalCapacity.toLocaleString(),
-        label: "Total Capacity",
+        label: "Total capacity",
         caption: `${spaces.length} parking lot${spaces.length === 1 ? "" : "s"}`,
       },
       {
         icon: Gauge,
         iconClass: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
         value: live.length ? `${cityOccupancy(live)}%` : "—",
-        label: "Live Occupancy",
+        label: "Live occupancy",
+        term: "occupancy",
         caption: `${live.length} of ${spaces.length} lots reporting AI data`,
       },
       {
         icon: CircleDollarSign,
         iconClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-        value: bookingsError ? "—" : formatTaka(revenue),
-        label: "Today's Revenue",
-        caption: bookingsError ? "Bookings unavailable" : `${todays.length} booking${todays.length === 1 ? "" : "s"} today`,
+        // GET /bookings only lists the caller's own driver bookings, so an owner's
+        // lots show none until the API adds an owner bookings endpoint
+        value: bookingsError || todays.length === 0 ? "—" : formatTaka(revenue),
+        label: "Today's revenue",
+        caption: bookingsError
+          ? "Bookings unavailable"
+          : todays.length
+            ? `${todays.length} booking${todays.length === 1 ? "" : "s"} today`
+            : "Owner bookings aren't in the API yet",
       },
       {
         icon: Cctv,
         iconClass: "bg-sky-500/15 text-sky-600 dark:text-sky-400",
         value: `${activeCameras}/${cameras.length}`,
-        label: "Active AI Cameras",
+        label: "Active AI cameras",
         caption: cameras.length ? `${cameras.length - activeCameras} offline or in setup` : "No cameras connected",
       },
     ];
@@ -112,7 +127,7 @@ export default function OwnerDashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-            Dashboard Overview
+            Dashboard overview
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Manage your registered parking facilities and operations.
@@ -120,7 +135,7 @@ export default function OwnerDashboardPage() {
         </div>
         <Button asChild variant="brand" className="h-11 rounded-xl">
           <Link href="/owner/spaces/new">
-            <Plus className="size-4" /> Register Parking Lot
+            <Plus className="size-4" /> Register parking lot
           </Link>
         </Button>
       </div>
@@ -136,10 +151,15 @@ export default function OwnerDashboardPage() {
             <span className={cn("flex size-10 items-center justify-center rounded-xl", m.iconClass)}>
               <m.icon className="size-5" />
             </span>
-            <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[28px]">
-              {spacesLoading ? "…" : m.value}
+            {spacesLoading ? (
+              <Skeleton className="mt-3 h-8 w-20" />
+            ) : (
+              <div className="mt-3 text-2xl font-extrabold tracking-tight sm:text-[28px]">{m.value}</div>
+            )}
+            <div className="mt-0.5 flex items-center gap-0.5 text-[13px] font-semibold">
+              {m.label}
+              {m.term && <InfoTip term={m.term} className="-my-1" />}
             </div>
-            <div className="mt-0.5 text-[13px] font-semibold">{m.label}</div>
             <div className="mt-1 text-xs text-muted-foreground">{m.caption}</div>
           </div>
         ))}
@@ -149,11 +169,18 @@ export default function OwnerDashboardPage() {
       <section className="mt-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-extrabold tracking-tight">Your Parking Lots</h2>
-            <p className="text-[13px] text-muted-foreground">
-              Live slot status from CityPulse AI cameras
-              {occupancy.updatedAt && <> · updated {new Date(occupancy.updatedAt).toLocaleTimeString()}</>}
-            </p>
+            <h2 className="text-lg font-extrabold tracking-tight">Your parking lots</h2>
+            <p className="text-[13px] text-muted-foreground">Live slot status from CityPulse AI cameras</p>
+            {spaces.length > 0 && (
+              <LiveStatus
+                className="mt-1"
+                updatedAt={occupancy.updatedAt}
+                nextRefreshAt={occupancy.nextRefreshAt}
+                loading={occupancy.loading}
+                error={occupancy.error}
+                onRefresh={() => void occupancy.refresh()}
+              />
+            )}
           </div>
           <SlotLegend />
         </div>
@@ -163,16 +190,23 @@ export default function OwnerDashboardPage() {
             {spacesError}
           </div>
         ) : spacesLoading ? (
-          <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
-            Loading parking lots…
-          </div>
+          <LoadingRegion label="Loading parking lots…">
+            <CardGridSkeleton className="mt-4 md:grid-cols-2" />
+          </LoadingRegion>
         ) : spaces.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-8 text-center">
-            <p className="text-sm text-muted-foreground">No parking lots registered yet.</p>
-            <Button asChild variant="outline" className="mt-4">
-              <Link href="/owner/spaces/new">Register your first parking lot</Link>
-            </Button>
-          </div>
+          <EmptyState
+            className="mt-4"
+            icon={ParkingCircle}
+            title="No parking lots yet"
+            description="Register your first lot: add its address, connect its camera and mark the slots. Drivers can find it once it is active."
+            action={
+              <Button asChild variant="brand">
+                <Link href="/owner/spaces/new">
+                  <Plus className="size-4" /> Register your first parking lot
+                </Link>
+              </Button>
+            }
+          />
         ) : (
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {spaces.map((space) => {
@@ -209,13 +243,20 @@ export default function OwnerDashboardPage() {
                     {live ? (
                       <>
                         <SlotGrid slots={live.slot_statuses} />
-                        <p className={cn("mt-2 text-xs", live.is_stale ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+                        <p className={cn("mt-2 flex items-center gap-0.5 text-xs", live.is_stale ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
                           {live.is_stale ? "Camera data is stale" : "AI data live"} · {timeAgo(lastUpdated(live), now)}
+                          {live.is_stale && <InfoTip term="stale" className="-my-1" />}
                         </p>
                       </>
+                    ) : occupancy.loading ? (
+                      <LoadingRegion label="Loading live AI data…" className="flex flex-wrap gap-1.5">
+                        {Array.from({ length: Math.min(space.total_capacity, 8) || 4 }, (_, i) => (
+                          <Skeleton key={i} className="h-8 w-10" />
+                        ))}
+                      </LoadingRegion>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        {occupancy.loading ? "Loading live AI data…" : "No live AI data yet (lot must be active with monitored slots)."}
+                        No live AI data yet — the lot must be active and have AI-monitored slots.
                       </p>
                     )}
                   </div>
@@ -243,15 +284,39 @@ export default function OwnerDashboardPage() {
       {/* cameras */}
       <div className="mt-7">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-extrabold tracking-tight">AI Cameras</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">AI cameras</h2>
           <Link href="/owner/cameras" className="text-sm font-semibold text-brand hover:underline">
             View all
           </Link>
         </div>
-        {cameras.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            {spacesLoading ? "Loading cameras…" : "No cameras connected. Add an RTSP stream from the Cameras page."}
-          </div>
+        {spacesLoading ? (
+          <LoadingRegion label="Loading cameras…" className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <Skeleton key={i} className="h-[68px] rounded-2xl" />
+            ))}
+          </LoadingRegion>
+        ) : spacesError ? (
+          <p className="mt-4 rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+            Cameras appear here once your parking lots load.
+          </p>
+        ) : cameras.length === 0 ? (
+          <EmptyState
+            className="mt-4"
+            icon={Cctv}
+            title="No cameras connected"
+            description={
+              spaces.length === 0
+                ? "Register a parking lot first, then connect its CCTV camera so the AI can watch the slots."
+                : "Connect a lot's CCTV camera so the AI can tell drivers which slots are free."
+            }
+            action={
+              <Button asChild variant="outline">
+                <Link href={spaces.length === 0 ? "/owner/spaces/new" : "/owner/cameras"}>
+                  {spaces.length === 0 ? "Register a parking lot" : "Connect a camera"}
+                </Link>
+              </Button>
+            }
+          />
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {cameras.slice(0, 6).map(({ camera, space }) => (

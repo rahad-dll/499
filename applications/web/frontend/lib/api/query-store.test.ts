@@ -6,6 +6,7 @@ import {
   invalidateQuery,
   isStale,
   loadQuery,
+  nextPollAt,
   primeQuery,
   readQuery,
   setQueryData,
@@ -93,6 +94,22 @@ describe("query store", () => {
     await sleep(100);
     assert.ok(afterLast > whileObserved, "the remaining observer keeps polling");
     assert.equal(load.calls, afterLast, "no polls after the last observer left");
+  });
+
+  it("reports when the next poll is due, and nothing for keys that aren't polled", async () => {
+    const load = counter();
+    await loadQuery("not-polled", load);
+    assert.equal(nextPollAt("not-polled"), null);
+
+    const notified: (number | null)[] = [];
+    const stop = subscribeQuery("timed", () => notified.push(nextPollAt("timed")), { everyMs: 40, fetcher: load });
+    await sleep(70);
+    stop();
+    // observers notified after a load already see the following poll's time
+    assert.ok(notified.length >= 1, "notified at least once");
+    const seen = notified[0];
+    assert.ok(seen !== null && seen > Date.now() - 70 && seen <= Date.now() + 40, `unexpected due time ${seen}`);
+    assert.equal(nextPollAt("timed"), null, "no due time once polling stops");
   });
 
   it("seeds a key only when nothing newer happened to it", async () => {

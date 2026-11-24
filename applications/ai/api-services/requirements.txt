@@ -1,6 +1,6 @@
 torch
 torchvision
-ultralytics
+ultralytics==8.4.46
 pillow
 pandas
 scikit-learn

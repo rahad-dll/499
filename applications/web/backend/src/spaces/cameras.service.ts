@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { SpacesService } from './spaces.service';
+import { InferenceSchedulerService } from './inference-scheduler.service';
 import { CameraSlotDto, CameraSource, CreateCameraDto, PixelBoxDto, UpdateCameraDto } from './dto/camera.dto';
 import { VehicleKind } from './dto/slot.dto';
 
@@ -32,7 +33,40 @@ export class CamerasService {
   constructor(
     private prisma: PrismaService,
     private spaces: SpacesService,
+    private inference: InferenceSchedulerService,
   ) { }
+
+  // ── PUT /spaces/:spaceId/cameras/:cameraId/frame
+  // Saves the camera's latest picture and reads its slots right away; the scheduler reads it again later.
+
+  async uploadFrame(spaceId: string, cameraId: string, file: Express.Multer.File, user: JwtPayload) {
+    await this.getManagedSpace(spaceId, user);
+    const camera = await this.prisma.cameras.findFirst({
+      where: { id: cameraId, space_id: spaceId, deleted_at: null },
+      select: { id: true },
+    });
+    if (!camera) throw new NotFoundException('Camera not found');
+    if (!['image/jpeg', 'image/png'].includes(file.mimetype)) {
+      throw new BadRequestException('Upload a JPEG or PNG picture');
+    }
+
+    const key = await this.inference.storeCameraFrame(cameraId, file.buffer, file.mimetype);
+    await this.prisma.cameras.update({
+      where: { id: cameraId },
+      data: { frame_key: key, frame_uploaded_at: new Date() },
+    });
+
+    // the picture is saved even if reading it fails
+    let slots_updated = 0;
+    let read_error: string | null = null;
+    try {
+      slots_updated = await this.inference.analyseCamera(cameraId, file.buffer);
+    } catch (e) {
+      read_error = e instanceof Error ? e.message : String(e);
+    }
+
+    return { slots_updated, read_error, camera: await this.findOne(spaceId, cameraId) };
+  }
 
   // ── POST /spaces/:spaceId/cameras
   // Adds one camera with its slots. Other cameras and slots are not touched;
@@ -325,6 +359,7 @@ export class CamerasService {
       media_key: camera.media_key,
       media_type: camera.media_type,
       media_size: camera.media_size,
+      frame_uploaded_at: camera.frame_uploaded_at,
       last_heartbeat: camera.last_heartbeat,
       created_at: camera.created_at,
       updated_at: camera.updated_at,

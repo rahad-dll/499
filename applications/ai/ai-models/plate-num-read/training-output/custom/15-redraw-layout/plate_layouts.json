@@ -1,0 +1,177 @@
+[
+ {
+  "digits": 6,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 3779
+ },
+ {
+  "digits": 6,
+  "districts": 1,
+  "letters": 0,
+  "words": 1,
+  "plates": 192
+ },
+ {
+  "digits": 5,
+  "districts": 1,
+  "letters": 0,
+  "words": 1,
+  "plates": 8
+ },
+ {
+  "digits": 6,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 1902
+ },
+ {
+  "digits": 6,
+  "districts": 0,
+  "letters": 1,
+  "words": 0,
+  "plates": 119
+ },
+ {
+  "digits": 4,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 9
+ },
+ {
+  "digits": 4,
+  "districts": 0,
+  "letters": 1,
+  "words": 0,
+  "plates": 12
+ },
+ {
+  "digits": 4,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 4
+ },
+ {
+  "digits": 5,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 4
+ },
+ {
+  "digits": 3,
+  "districts": 1,
+  "letters": 0,
+  "words": 1,
+  "plates": 12
+ },
+ {
+  "digits": 6,
+  "districts": 1,
+  "letters": 0,
+  "words": 0,
+  "plates": 4
+ },
+ {
+  "digits": 6,
+  "districts": 0,
+  "letters": 0,
+  "words": 1,
+  "plates": 4
+ },
+ {
+  "digits": 3,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 3
+ },
+ {
+  "digits": 2,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 19
+ },
+ {
+  "digits": 1,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 5
+ },
+ {
+  "digits": 0,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 9
+ },
+ {
+  "digits": 6,
+  "districts": 0,
+  "letters": 1,
+  "words": 2,
+  "plates": 188
+ },
+ {
+  "digits": 4,
+  "districts": 0,
+  "letters": 1,
+  "words": 2,
+  "plates": 2
+ },
+ {
+  "digits": 7,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 1
+ },
+ {
+  "digits": 5,
+  "districts": 1,
+  "letters": 1,
+  "words": 0,
+  "plates": 4
+ },
+ {
+  "digits": 6,
+  "districts": 0,
+  "letters": 2,
+  "words": 2,
+  "plates": 1
+ },
+ {
+  "digits": 7,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 4
+ },
+ {
+  "digits": 8,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 3
+ },
+ {
+  "digits": 2,
+  "districts": 0,
+  "letters": 1,
+  "words": 2,
+  "plates": 3
+ },
+ {
+  "digits": 0,
+  "districts": 1,
+  "letters": 1,
+  "words": 1,
+  "plates": 3
+ }
+]

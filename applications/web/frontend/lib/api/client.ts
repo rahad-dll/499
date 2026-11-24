@@ -155,6 +155,43 @@ export function withRetry(
 
 const transport = withRetry(withTimeout(fetchTransport, timeoutFor));
 
+/* ---------- slow requests ----------
+ * How many requests have waited longer than SLOW_AFTER_MS, so the UI can say
+ * the server is waking up instead of looking frozen (<ConnectionStatus>). */
+
+export const SLOW_AFTER_MS = 6_000;
+
+let slowRequests = 0;
+const slowListeners = new Set<() => void>();
+const notifySlow = () => slowListeners.forEach((notify) => notify());
+
+/** Counts `request` as slow while it is still running after `slowAfterMs`. */
+export function trackSlow<T>(request: Promise<T>, slowAfterMs = SLOW_AFTER_MS): Promise<T> {
+  let counted = false;
+  const timer = setTimeout(() => {
+    counted = true;
+    slowRequests += 1;
+    notifySlow();
+  }, slowAfterMs);
+  const settle = () => {
+    clearTimeout(timer);
+    if (!counted) return;
+    slowRequests -= 1;
+    notifySlow();
+  };
+  request.then(settle, settle);
+  return request;
+}
+
+export const slowRequestCount = () => slowRequests;
+
+export function subscribeSlowRequests(listener: () => void): () => void {
+  slowListeners.add(listener);
+  return () => {
+    slowListeners.delete(listener);
+  };
+}
+
 /** Fetch JSON from the CityPulse API and normalize transport/API errors. */
 export async function apiRequest<T>(
   path: string,
@@ -165,7 +202,7 @@ export async function apiRequest<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const { ok, status, payload } = await transport(`${API_URL}${path}`, { ...init, headers });
+  const { ok, status, payload } = await trackSlow(transport(`${API_URL}${path}`, { ...init, headers }));
   if (!ok) throw new ApiError(errorMessage(payload, status), status, payload);
   return payload as T;
 }

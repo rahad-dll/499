@@ -35,6 +35,8 @@ api-services/
 ├── main.py              # app bootstrap, lifespan, health route
 ├── config.py            # all env vars in one place
 ├── predictor.py         # model loading and inference engine
+├── plate_layers.py      # plate reader layers
+├── plate_decoding.py    # plate text decoding
 ├── auth/
 │   └── dependencies.py  # bearer token guard
 ├── db/
@@ -43,14 +45,15 @@ api-services/
 │   └── schemas.py       # Pydantic contracts
 ├── routes/
 │   ├── inference.py     # occupancy endpoints
-│   └── plates.py        # licence plate endpoint
+│   ├── plates.py        # licence plate endpoint
+│   └── frames.py        # camera frame endpoint
 └── weights/
     ├── mobilenetv2/
     │   ├── phase1_weights.pth   (archived)
     │   └── phase2_weights.pth   (active)
     ├── plate-detector-yolo26n/
     │   └── best.pt
-    └── plate-reader-yolo26s/
+    └── plate-reader-layout/
         ├── best.pt
         └── classes.json
 ```
@@ -86,9 +89,10 @@ Swagger UI → `http://localhost:8001/docs`
 | `MODEL_PATH_OCCUPANCY` | `mobilenetv2/phase2_weights.pth`              | occupancy model path relative to `MODEL_DIR`                  |
 | `MODEL_PATH_VPS_NET`   | `vps-net/Customized.pth`                      | alternate model path relative to `MODEL_DIR`                  |
 | `MODEL_PATH_PLATE_DETECTOR` | `plate-detector-yolo26n/best.pt`         | plate detector path relative to `MODEL_DIR`                   |
-| `MODEL_PATH_PLATE_READER`   | `plate-reader-yolo26s/best.pt`           | plate character reader path relative to `MODEL_DIR`           |
-| `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-yolo26s/classes.json`      | reader classes with English and Bangla text                   |
+| `MODEL_PATH_PLATE_READER`   | `plate-reader-layout/best.pt`            | plate character reader path relative to `MODEL_DIR`           |
+| `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-layout/classes.json`       | reader classes with English and Bangla text                   |
 | `PLATE_MIN_CONFIDENCE`      | `0.4`                                    | plates detected below this confidence are dropped             |
+| `PLATE_PRELOAD`             | `false`                                  | `true` loads the plate models at startup                      |
 | `HOST`                 | `0.0.0.0`                                     |                                                               |
 | `PORT`                 | `8001`                                        |                                                               |
 | `CORS_ORIGINS`         | `http://localhost:3000,http://localhost:5173` | comma-separated allowed origins                               |
@@ -118,6 +122,7 @@ This API is not intended for direct public access. Deploy it on an internal netw
 | POST   | `/api/v1/inference/predict-batch` | ✓    | batch slot classification  |
 | GET    | `/api/v1/inference/history`       | ✓    | paginated inference log    |
 | POST   | `/api/v1/inference/plate`         | ✓    | find and read licence plates |
+| POST   | `/api/v1/inference/frame`         | ✓    | slot occupancy and plates in a camera frame |
 
 ---
 
@@ -206,6 +211,43 @@ Find every licence plate in an image (slot image or full camera frame) and read 
 
 ---
 
+### POST `/api/v1/inference/frame`
+
+One camera frame and its slot boxes. Each slot is cropped and classified; plates are read only in occupied slots. Plate boxes are in frame pixels.
+
+**Form fields:**
+
+- `file` — JPEG or PNG of the full frame
+- `slots` — JSON list, boxes as fractions (0-1) of the frame: `[{"slot_id": "A1", "x1": 0.10, "y1": 0.52, "x2": 0.19, "y2": 0.66}]` (1 to 200 slots)
+
+**Query params:**
+
+- `space_id` (optional)
+- `camera_id` (optional)
+- `model` (optional, use `occupancy` or `slot-occupancy`)
+
+```json
+{
+  "space_id": "space-abc",
+  "camera_id": "cam-1",
+  "slots": [
+    {
+      "slot_id": "A1",
+      "prediction": { "label": "occupied", "confidence": 0.9931 },
+      "plates": [
+        { "box": { "x1": 412, "y1": 1630, "x2": 640, "y2": 1764 }, "confidence": 0.9412,
+          "text_en": "Dhaka Metro Ga 24-2955", "text_bn": "ঢাকা মেট্রো গ ২৪-২৯৫৫" }
+      ]
+    },
+    { "slot_id": "A2", "prediction": { "label": "empty", "confidence": 0.9874 }, "plates": [] }
+  ],
+  "inference_id": "6a563b45a83b52e626761fdd",
+  "created_at": "2026-11-23T10:12:41.204Z"
+}
+```
+
+---
+
 ## Storage
 
 Records are stored in MongoDB and auto-deleted after 30 days by a TTL index.
@@ -220,6 +262,12 @@ slot_id, space_id, label, confidence, filename, created_at
 
 ```
 slot_id, space_id, plates[box, confidence, text_en, text_bn], filename, created_at
+```
+
+`frame_reads` (camera frames):
+
+```
+space_id, camera_id, slots[slot_id, prediction, plates], filename, created_at
 ```
 
 ---

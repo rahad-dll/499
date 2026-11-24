@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 import torch
-from PIL import Image
+from PIL import Image, ImageOps
 from torchvision import models, transforms
 
 from config import (
@@ -140,9 +140,12 @@ def load_model(model_name: str | None = None):
 
 def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
     """Classify a single slot image. Returns label and confidence."""
-    model = load_model(model_name)
+    return classify(Image.open(io.BytesIO(image_bytes)).convert("RGB"), model_name)
 
-    img    = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+def classify(img: Image.Image, model_name: str | None = None) -> dict:
+    """Classify a slot image that is already open."""
+    model = load_model(model_name)
     tensor = _transform(img).unsqueeze(0)
 
     with torch.no_grad():
@@ -170,6 +173,7 @@ def load_plate_models():
     global _plate_models
 
     if _plate_models is None:
+        import plate_layers  # noqa: F401
         from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
 
         classes = json.loads((Path(MODEL_DIR) / PLATE_READER_CLASSES).read_text(encoding="utf-8"))
@@ -185,7 +189,7 @@ def load_plate_models():
 
 
 def plate_text(boxes: list[tuple[int, float]], labels: list[str], kind: list[str]) -> str:
-    """Turn (class_id, x1) character boxes into plate text.
+    """Turn (class_id, x) characters into plate text.
 
     District, word and letter come first, then the digits, each left to right;
     six digits are written as 12-3456.
@@ -198,18 +202,34 @@ def plate_text(boxes: list[tuple[int, float]], labels: list[str], kind: list[str
     return " ".join(part for part in (head, digits) if part)
 
 
+def read_characters(plate_models: dict, crop: Image.Image) -> list[tuple[int, float]]:
+    """Read the characters of one plate crop."""
+    import plate_decoding
+
+    reader = plate_models["reader"]
+    guesses = plate_decoding.reader_guesses(reader, crop)
+    if hasattr(reader.model, "layout_head"):
+        probs = plate_decoding.layout_probabilities(reader.model, crop)
+        guesses = plate_decoding.decode(guesses, plate_models["kind"], reader.model.layout_caps, probs)
+    else:
+        guesses = [g for g in guesses if g["conf"] >= plate_decoding.READ_CONFIDENCE]
+    return [(g["cls"], g["x"]) for g in guesses]
+
+
 def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
     """Find every licence plate in an image and read it. Most confident plate first."""
-    plate_models = load_plate_models()
-    img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    return find_plates(Image.open(io.BytesIO(image_bytes)).convert("RGB"), min_confidence)
 
+
+def find_plates(img: Image.Image, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
+    """Find and read the plates in an image that is already open."""
+    plate_models = load_plate_models()
     detection = plate_models["detector"].predict(img, conf=min_confidence, verbose=False)[0]
 
     plates = []
     for box in sorted(detection.boxes, key=lambda b: -float(b.conf)):
         x1, y1, x2, y2 = (round(v) for v in box.xyxy[0].tolist())
-        reading = plate_models["reader"].predict(img.crop((x1, y1, x2, y2)), conf=0.25, verbose=False)[0]
-        chars = [(int(c), float(b[0])) for c, b in zip(reading.boxes.cls, reading.boxes.xyxy)]
+        chars = read_characters(plate_models, img.crop((x1, y1, x2, y2)))
 
         plates.append({
             "box":        {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
@@ -219,3 +239,28 @@ def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE
         })
 
     return plates
+
+
+def analyse_frame(image_bytes: bytes, slots: list[dict], model_name: str | None = None) -> list[dict]:
+    """Occupancy of each slot in a camera frame, and the plate of each occupied slot.
+
+    Slot boxes are fractions (0-1) of the frame. Plate boxes are returned in frame pixels.
+    """
+    frame = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
+    width, height = frame.size
+
+    results = []
+    for slot in slots:
+        x1, y1 = round(slot["x1"] * width), round(slot["y1"] * height)
+        x2, y2 = round(slot["x2"] * width), round(slot["y2"] * height)
+        crop = frame.crop((x1, y1, max(x2, x1 + 1), max(y2, y1 + 1)))
+
+        prediction = classify(crop, model_name)
+        plates = find_plates(crop) if prediction["label"] == "occupied" else []
+        for plate in plates:
+            box = plate["box"]
+            plate["box"] = {"x1": box["x1"] + x1, "y1": box["y1"] + y1, "x2": box["x2"] + x1, "y2": box["y2"] + y1}
+
+        results.append({"slot_id": slot["slot_id"], "prediction": prediction, "plates": plates})
+
+    return results

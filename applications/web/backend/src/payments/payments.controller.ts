@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -59,6 +60,7 @@ export class PaymentsController {
   })
   @ApiUnauthorizedResponse({ description: 'Not allowed' })
   @Public()
+  @SkipThrottle()
   @Post('webhook/:gateway')
   @HttpCode(200)
   webhook(@Param('gateway') gateway: string, @Body() body: GatewayWebhookDto, @Headers('x-signature') signature?: string) {

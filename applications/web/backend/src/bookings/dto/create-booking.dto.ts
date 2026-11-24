@@ -36,10 +36,10 @@ export class CreateBookingDto {
   @Type(() => Number)
   duration_hours: number;
 
-  @ApiPropertyOptional({ example: 'DHK-1234' })
+  @ApiPropertyOptional({ example: 'Dhaka Metro Ga 12-3456' })
   @IsOptional()
   @IsString()
-  @MaxLength(20)
+  @MaxLength(64)
   vehicle_plate?: string;
 }
 

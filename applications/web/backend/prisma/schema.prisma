@@ -391,6 +391,9 @@ model cameras {
   media_type        String?         @db.VarChar(100)
   media_size        Int?
   media_uploaded_at DateTime?       @db.Timestamptz(6)
+  // latest still picture from the camera, read for slot occupancy and plates
+  frame_key         String?         @db.VarChar(500)
+  frame_uploaded_at DateTime?       @db.Timestamptz(6)
   sort_order        Int             @default(0)
   status            camera_status   @default(setup)
   last_heartbeat    DateTime?       @db.Timestamptz(6)
@@ -431,7 +434,7 @@ model bookings {
   // check-in and check-out times
   arrived_at          DateTime?             @db.Timestamptz(6)
   departed_at         DateTime?             @db.Timestamptz(6)
-  vehicle_plate       String?               @db.VarChar(20)
+  vehicle_plate       String?               @db.VarChar(64)
   base_amount_unit    Int?
   discount_unit       Int?
   discount_id         String?               @db.Uuid

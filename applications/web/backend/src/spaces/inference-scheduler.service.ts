@@ -7,20 +7,29 @@
  *   2. Sends to the AI inference API
  *   3. For an occupied or booked slot, reads the licence plate
  *   4. Upserts the result
+ * It also reads the latest picture of each camera for the slots drawn on it.
  *
  * GET /spaces/nearby reads from parking_slots directly — instant response.
  */
 
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { basename, parse } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import type { plate_check } from '../generated/prisma/enums.js';
+import { comparePlates } from './plate-match';
 
 const SLOT_IMAGE_BUCKET = 'fixed-slot-image';
+const CAMERA_FRAME_FOLDER = 'camera-frames';
 const DEFAULT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+type FrameSlotResult = {
+  slot_id: string;
+  prediction?: { label?: string; confidence?: number };
+  plates?: { text_en?: string; confidence?: number }[];
+};
 
 @Injectable()
 export class InferenceSchedulerService implements OnModuleInit {
@@ -134,10 +143,98 @@ export class InferenceSchedulerService implements OnModuleInit {
           }
         }
       }
+
+      const cameras = await this.prisma.cameras.findMany({
+        where: { deleted_at: null, frame_key: { not: null }, space: { deleted_at: null, status: 'active' } },
+        select: { id: true },
+      });
+      for (const camera of cameras) {
+        try {
+          updated += await this.analyseCamera(camera.id);
+        } catch (e) {
+          this.logger.warn(`Failed camera ${camera.id}: ${e instanceof Error ? e.message : e}`);
+        }
+      }
       this.logger.log(`Inference cycle complete — ${updated} slots updated`);
     } finally {
       this.running = false;
     }
+  }
+
+  /** Saves a camera's latest picture and returns its storage key. */
+  async storeCameraFrame(cameraId: string, image: Buffer, type: string): Promise<string> {
+    const key = `${CAMERA_FRAME_FOLDER}/${cameraId}.${type === 'image/png' ? 'png' : 'jpg'}`;
+    await this.getS3Client().send(
+      new PutObjectCommand({ Bucket: SLOT_IMAGE_BUCKET, Key: key, Body: image, ContentType: type }),
+    );
+    return key;
+  }
+
+  /**
+   * Reads a camera's latest picture: occupancy of each slot drawn on it and the plate of each
+   * occupied slot. Returns the number of slots updated.
+   */
+  async analyseCamera(cameraId: string, image?: Buffer): Promise<number> {
+    const camera = await this.prisma.cameras.findFirst({
+      where: { id: cameraId, deleted_at: null },
+      include: { slots: { where: { deleted_at: null }, select: { id: true, bbox: true } } },
+    });
+    if (!camera?.frame_key) return 0;
+
+    const slots = camera.slots.flatMap((slot) => {
+      const b = slot.bbox as { x1?: number; y1?: number; x2?: number; y2?: number } | null;
+      const ok = b && [b.x1, b.y1, b.x2, b.y2].every((v) => typeof v === 'number') && b.x2! > b.x1! && b.y2! > b.y1!;
+      return ok ? [{ slot_id: slot.id, x1: b.x1!, y1: b.y1!, x2: b.x2!, y2: b.y2! }] : [];
+    });
+    if (!slots.length) return 0;
+
+    const frame = image ?? (await this.downloadPhoto(camera.frame_key));
+    const payload = (await this.postToAi(
+      '/api/v1/inference/frame',
+      { space_id: camera.space_id, camera_id: camera.id },
+      frame,
+      basename(camera.frame_key),
+      { slots: JSON.stringify(slots) },
+    )) as { slots?: FrameSlotResult[] };
+
+    const now = new Date();
+    let updated = 0;
+    for (const result of payload.slots ?? []) {
+      const booking = await this.prisma.bookings.findFirst({
+        where: {
+          slot_id: result.slot_id,
+          deleted_at: null,
+          status: { in: ['confirmed', 'pending'] },
+          scheduled_at: { lte: now },
+          hold_expires_at: { gte: now },
+        },
+        select: { id: true, vehicle_plate: true },
+      });
+
+      const label = (result.prediction?.label ?? 'unknown').toLowerCase();
+      const confidence = result.prediction?.confidence ?? 0;
+      // a booked slot counts as taken; otherwise only a confident AI read marks it occupied
+      const occupied = !!booking || (label === 'occupied' && confidence >= 0.9);
+      const best = result.plates?.find((p) => p.text_en);
+      const plate = occupied
+        ? this.withPlateCheck(
+          { plate_text: best?.text_en ?? null, plate_confidence: best?.confidence ?? null, plate_read_at: now },
+          booking,
+        )
+        : { plate_text: null, plate_confidence: null, plate_read_at: null, plate_check: null };
+
+      await this.prisma.parking_slots.update({
+        where: { id: result.slot_id },
+        data: {
+          occupied,
+          ...(booking ? {} : { confidence_score: confidence }),
+          last_updated: now,
+          ...plate,
+        },
+      });
+      updated++;
+    }
+    return updated;
   }
 
   private getS3Client(): S3Client {
@@ -166,7 +263,13 @@ export class InferenceSchedulerService implements OnModuleInit {
     return Buffer.from(await imgResponse.arrayBuffer());
   }
 
-  private async postToAi(path: string, params: Record<string, string>, image: Buffer, filename: string) {
+  private async postToAi(
+    path: string,
+    params: Record<string, string>,
+    image: Buffer,
+    filename: string,
+    fields: Record<string, string> = {},
+  ) {
     const aiBaseUrl = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001');
     const aiToken = this.config.get<string>('AI_API_TOKEN', '');
 
@@ -175,6 +278,7 @@ export class InferenceSchedulerService implements OnModuleInit {
 
     const formData = new FormData();
     formData.append('file', new Blob([new Uint8Array(image)], { type: 'image/jpeg' }), filename);
+    for (const [key, value] of Object.entries(fields)) formData.append(key, value);
 
     const aiResponse = await fetch(aiEndpoint.toString(), {
       method: 'POST',
@@ -212,8 +316,8 @@ export class InferenceSchedulerService implements OnModuleInit {
   }
 
   /**
-   * Compares the plate read with the current booking's vehicle plate, ignoring case,
-   * spaces and dashes. A failed read ({}) leaves the last check untouched.
+   * Compares the plate read with the current booking's vehicle plate, in English or Bangla.
+   * A failed read ({}) leaves the last check untouched.
    */
   private withPlateCheck(
     plate: { plate_text?: string | null; plate_confidence?: number | null; plate_read_at?: Date | null },
@@ -221,15 +325,10 @@ export class InferenceSchedulerService implements OnModuleInit {
   ) {
     if (!('plate_text' in plate)) return plate;
 
-    const normalise = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const read = plate.plate_text ? normalise(plate.plate_text) : '';
-    const booked = booking?.vehicle_plate ? normalise(booking.vehicle_plate) : '';
-
     let plate_check: plate_check;
-    if (!read) plate_check = 'unknown';
+    if (!plate.plate_text?.trim()) plate_check = 'unknown';
     else if (!booking) plate_check = 'no_booking';
-    else if (!booked) plate_check = 'unknown';
-    else plate_check = read === booked ? 'match' : 'mismatch';
+    else plate_check = comparePlates(plate.plate_text, booking.vehicle_plate);
 
     return { ...plate, plate_check };
   }

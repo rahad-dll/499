@@ -58,6 +58,23 @@ describe("normalizeProfile", () => {
     assert.deepEqual(result.profile, { type: "driver", area: null });
   });
 
+  it("reads the current API shape: account fields with role-only `profile` fields", () => {
+    const result = normalizeProfile({
+      id: "u1",
+      email: "owner@citypulse.test",
+      full_name: "Rahad Hossain",
+      phone: "01712345678",
+      avatar_url: null,
+      role: "owner",
+      profile: { business_name: "Gulshan Parking Ltd.", address: null },
+    });
+    assert.equal(result.user.id, "u1");
+    assert.equal(result.user.role, "owner");
+    assert.equal(result.user.phone, "01712345678");
+    assert.equal(result.profile.type, "owner");
+    assert.equal(result.profile.type === "owner" && result.profile.business_name, "Gulshan Parking Ltd.");
+  });
+
   it("rejects responses without any usable role", () => {
     assert.throws(() => normalizeProfile({ email: "x@y.z" }), ProfileShapeError);
     assert.throws(() => normalizeProfile(null), ProfileShapeError);

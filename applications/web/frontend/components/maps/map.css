@@ -152,3 +152,103 @@
   right: 8px;
   color: var(--muted-foreground);
 }
+
+/* ---------------- Google Maps (role maps) ---------------- */
+
+.cp-pin--muted { --pin: #94a3b8; }
+.cp-pin--pending { --pin: #8b6cff; }
+
+/* lot name under an owner's pin */
+.cp-pin__label {
+  position: absolute;
+  z-index: 3;
+  top: 48px;
+  left: 50%;
+  max-width: 140px;
+  overflow: hidden;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  color: var(--foreground);
+  font: 700 11px/1.4 var(--font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+
+/* red counter for unbooked (possibly unpaid) cars, authority map */
+.cp-pin__badge {
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  left: -8px;
+  display: flex;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 9999px;
+  background: #dc2626;
+  color: #fff;
+  font: 800 10px/1 var(--font-sans);
+}
+
+/* pulsing ring on lots that have a critical alert */
+.cp-pin--alert::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(239, 68, 68, 0.85);
+  border-radius: 9999px;
+  animation: cp-pin-pulse 1.4s ease-out infinite;
+  pointer-events: none;
+}
+
+/* competitor lot on the owner map: small price tag */
+.cp-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 4px;
+  border: 1.5px solid #fff;
+  border-radius: 9999px;
+  background: #475569;
+  color: #fff;
+  font: 700 11px/1 var(--font-sans);
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.cp-tag:hover { transform: scale(1.08); }
+.cp-tag__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--tag, #12c2a9);
+  border: 2px solid #fff;
+}
+.cp-tag--selected { background: #0f172a; outline: 2px solid #18d6c0; }
+
+/* "you are here" dot */
+.cp-me {
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 9999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.25), 0 4px 10px rgba(15, 23, 42, 0.35);
+}
+
+@keyframes cp-toast-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.cp-toast { animation: cp-toast-in 0.18s ease-out; }

@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Cctv,
   Link2,
   Loader2,
+  ParkingCircle,
   Pencil,
   Plus,
   ScanEye,
@@ -13,13 +15,17 @@ import {
   WifiOff,
   X,
 } from "lucide-react";
+import { InfoTip } from "@/components/InfoTip";
 import { OwnerShell } from "@/components/portal/OwnerShell";
+import { CardGridSkeleton } from "@/components/portal/PageSkeleton";
 import { CameraStatusBadge, SlotGrid, SlotLegend } from "@/components/portal/owner-widgets";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import { ParkingSpaceError, parkingSpacesRepository } from "@/lib/spaces/repository";
 import type { InferenceResult } from "@/lib/spaces/types";
 import { useLotOccupancy, useOwnerSpaces } from "@/lib/spaces/use-owner-spaces";
@@ -43,6 +49,14 @@ const RESULT_TEXT: Record<string, string> = {
   not_available: "Slot occupied",
   unknown: "Unclear",
 };
+
+function StatValue({ loading, value }: { loading: boolean; value: number }) {
+  return loading ? (
+    <Skeleton className="my-1 h-6 w-10" />
+  ) : (
+    <div className="text-2xl font-extrabold tracking-tight">{value}</div>
+  );
+}
 
 export default function CamerasPage() {
   const { spaces, loading, error, reload } = useOwnerSpaces();
@@ -113,7 +127,7 @@ export default function CamerasPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-            Camera Management
+            Camera management
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Connect RTSP cameras and test the AI occupancy model on a snapshot.
@@ -121,7 +135,7 @@ export default function CamerasPage() {
         </div>
         <Button variant="brand" className="h-11 rounded-xl" onClick={() => openForm()} disabled={spaces.length === 0}>
           <Plus className="size-4" />
-          Add Camera
+          Add camera
         </Button>
       </div>
 
@@ -135,7 +149,7 @@ export default function CamerasPage() {
       {formOpen && (
         <form onSubmit={onSave} className="mt-5 rounded-2xl border border-brand/35 bg-card p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-extrabold tracking-tight">Connect a Camera</h2>
+            <h2 className="text-lg font-extrabold tracking-tight">Connect a camera</h2>
             <button type="button" aria-label="Close" onClick={() => setFormOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:bg-muted">
               <X className="size-4" />
             </button>
@@ -150,7 +164,7 @@ export default function CamerasPage() {
           )}
           <div className="mt-4 grid gap-4 sm:grid-cols-[240px_1fr_auto] sm:items-end">
             <div>
-              <Label htmlFor="camera_lot" className="mb-2 block">Parking Lot</Label>
+              <Label htmlFor="camera_lot" className="mb-2 block">Parking lot</Label>
               <select
                 id="camera_lot"
                 value={formLot}
@@ -165,7 +179,10 @@ export default function CamerasPage() {
               </select>
             </div>
             <div>
-              <Label htmlFor="camera_url" className="mb-2 block">RTSP Stream URL</Label>
+              <div className="mb-2 flex items-center gap-0.5">
+                <Label htmlFor="camera_url">RTSP stream URL</Label>
+                <InfoTip term="rtsp" className="-my-1" />
+              </div>
               <div className="relative flex items-center">
                 <Link2 className="pointer-events-none absolute left-3.5 size-4 text-muted-foreground" />
                 <Input
@@ -178,7 +195,7 @@ export default function CamerasPage() {
               </div>
             </div>
             <Button type="submit" variant="brand" className="h-11" disabled={saving}>
-              {saving ? "Saving…" : "Save Camera"}
+              {saving ? "Saving…" : "Save camera"}
             </Button>
           </div>
         </form>
@@ -191,8 +208,8 @@ export default function CamerasPage() {
             <Cctv className="size-[22px]" />
           </span>
           <div>
-            <div className="text-2xl font-extrabold tracking-tight">{cameras.length}</div>
-            <div className="text-[13px] text-muted-foreground">Total Cameras</div>
+            <StatValue loading={loading} value={cameras.length} />
+            <div className="text-[13px] text-muted-foreground">Total cameras</div>
           </div>
         </div>
         <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
@@ -200,8 +217,8 @@ export default function CamerasPage() {
             <Wifi className="size-[22px]" />
           </span>
           <div>
-            <div className="text-2xl font-extrabold tracking-tight">{online}</div>
-            <div className="text-[13px] text-muted-foreground">Streams Online</div>
+            <StatValue loading={loading} value={online} />
+            <div className="text-[13px] text-muted-foreground">Streams online</div>
           </div>
         </div>
         <div className="col-span-2 flex items-center gap-4 rounded-2xl border border-border bg-card p-5 lg:col-span-1">
@@ -209,8 +226,8 @@ export default function CamerasPage() {
             <WifiOff className="size-[22px]" />
           </span>
           <div>
-            <div className="text-2xl font-extrabold tracking-tight">{cameras.length - online}</div>
-            <div className="text-[13px] text-muted-foreground">Offline / In Setup</div>
+            <StatValue loading={loading} value={cameras.length - online} />
+            <div className="text-[13px] text-muted-foreground">Offline or in setup</div>
           </div>
         </div>
       </div>
@@ -224,15 +241,35 @@ export default function CamerasPage() {
 
       {/* camera grid */}
       {loading ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-          Loading cameras…
-        </div>
+        <LoadingRegion label="Loading cameras…">
+          <CardGridSkeleton className="mt-4" />
+        </LoadingRegion>
       ) : cameras.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-          {spaces.length === 0
-            ? "Register a parking lot first, then connect its camera here."
-            : "No cameras connected yet — click “Add Camera” to connect an RTSP stream."}
-        </div>
+        spaces.length === 0 ? (
+          <EmptyState
+            className="mt-4"
+            icon={ParkingCircle}
+            title="Register a parking lot first"
+            description="Cameras belong to a parking lot. Register your lot, then connect its CCTV camera here."
+            action={
+              <Button asChild variant="brand">
+                <Link href="/owner/spaces/new">Register a parking lot</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            className="mt-4"
+            icon={Cctv}
+            title="No cameras connected yet"
+            description="Add your CCTV camera's RTSP stream so the AI can watch your slots and tell drivers which ones are free."
+            action={
+              <Button variant="brand" onClick={() => openForm()}>
+                <Plus className="size-4" /> Add camera
+              </Button>
+            }
+          />
+        )
       ) : (
         <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {cameras.map(({ camera, space }) => {
@@ -261,9 +298,9 @@ export default function CamerasPage() {
                     </>
                   ) : (
                     <div className="px-4 text-center">
-                      <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10.5px] font-bold tracking-wider text-white">
+                      <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wider text-white">
                         <span className={cn("size-1.5 rounded-full", live && !live.is_stale ? "bg-emerald-400 shadow-[0_0_6px_#34d399]" : "bg-amber-400")} />
-                        {live ? (live.is_stale ? "STALE AI DATA" : "LIVE AI") : "NO AI DATA"}
+                        {live ? (live.is_stale ? "Stale AI data" : "Live AI") : "No AI data"}
                       </span>
                       {live ? (
                         <SlotGrid slots={live.slot_statuses} className="justify-center [&>span]:bg-white/10 [&>span]:text-white" />
@@ -305,11 +342,11 @@ export default function CamerasPage() {
                       onClick={() => fileInputs.current[camera.id]?.click()}
                     >
                       <ScanEye className="size-4" />
-                      Run AI Check
+                      Run AI check
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => openForm(space.id, camera.rtsp_url)}>
                       <Pencil className="size-3.5" />
-                      Edit Stream
+                      Edit stream
                     </Button>
                   </div>
                 </div>

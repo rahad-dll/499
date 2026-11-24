@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050a14" />
+    <title>CityPulse — Intelligent Parking &amp; Traffic Control</title>
+    <meta
+      name="description"
+      content="CityPulse reads Dhaka's existing CCTV cameras to find free parking for drivers, earn income for lot owners, and keep lanes clear for traffic authorities."
+    />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <!-- start the 3D city downloads while the page itself is still loading (low priority: page first) -->
+    <link rel="preload" href="./models/sedan.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/sport.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/super.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/mpv.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/van.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/pickup.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/bus.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/cng.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/bike.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/heli.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./models/copter.glb" as="fetch" crossorigin fetchpriority="low" />
+    <link rel="preload" href="./brand/logo-512.webp" as="image" fetchpriority="low" />
+    <script type="module" crossorigin src="./assets/index-d4ofLdVg-fixmwbh7h5y.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DeBUajdR.css">
+    <style>
+      /* "Download the app": real APK link + size/date caption (see /download/apk/info) */
+      .apk-dl{display:inline-flex;flex-direction:column;align-items:flex-start;gap:7px}
+      .apk-dl__meta{font-size:12.5px;line-height:1.3;color:var(--ink,#e6edf7);opacity:.72;letter-spacing:.01em}
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <!-- Boot sequence: the CityPulse mark draws itself as the city loads -->
+    <div class="boot" id="boot">
+      <div class="boot__bg" aria-hidden="true"><i class="boot__grid"></i><i class="boot__scan"></i></div>
+      <div class="boot__hud" aria-hidden="true">
+        <span>City<b>Pulse</b> · Dhaka node</span>
+        <span>23.7925°N 90.4078°E</span>
+        <span>Boot <b id="boot-count">00 / 00</b></span>
+        <span id="boot-time">t+0.00s</span>
+      </div>
+      <div class="boot__center">
+        <svg class="boot__mark" id="boot-mark" viewBox="0 0 400 250" aria-hidden="true">
+          <defs>
+            <linearGradient id="bt-tower" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ffffff" />
+              <stop offset="0.55" stop-color="#9eeefc" />
+              <stop offset="1" stop-color="#18d6c0" stop-opacity="0.05" />
+            </linearGradient>
+            <linearGradient id="bt-road" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#e8eef7" stop-opacity="0.9" />
+              <stop offset="1" stop-color="#e8eef7" stop-opacity="0" />
+            </linearGradient>
+            <filter id="bt-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2.2" result="b" />
+              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <!-- road running to the horizon -->
+          <g class="boot__road">
+            <path class="draw" data-at="0" data-span="0.18" pathLength="1" d="M112 250 L194 176" stroke="url(#bt-road)" />
+            <path class="draw" data-at="0" data-span="0.18" pathLength="1" d="M288 250 L206 176" stroke="url(#bt-road)" />
+            <path class="boot__lane" d="M200 250 L200 178" />
+          </g>
+          <!-- skyline -->
+          <g class="boot__towers" stroke="url(#bt-tower)">
+            <path class="draw" data-at="0.06" data-span="0.2" pathLength="1" d="M58 168 V122 H84 V168" />
+            <path class="draw" data-at="0.12" data-span="0.2" pathLength="1" d="M92 168 V92 L106 84 H122 V168" />
+            <path class="draw" data-at="0.18" data-span="0.2" pathLength="1" d="M130 168 V66 H150 L158 74 V168" />
+            <path class="draw" data-at="0.24" data-span="0.22" pathLength="1" d="M172 168 V44 L200 18 L228 44 V168" />
+            <path class="draw" data-at="0.3" data-span="0.2" pathLength="1" d="M242 168 V70 L250 62 H270 V168" />
+            <path class="draw" data-at="0.36" data-span="0.2" pathLength="1" d="M278 168 V90 H294 L308 98 V168" />
+            <path class="draw" data-at="0.42" data-span="0.2" pathLength="1" d="M316 168 V120 H342 V168" />
+            <path class="draw thin" data-at="0.3" data-span="0.25" pathLength="1" d="M140 168 V80" />
+            <path class="draw thin" data-at="0.36" data-span="0.25" pathLength="1" d="M186 168 V58" />
+            <path class="draw thin" data-at="0.38" data-span="0.25" pathLength="1" d="M214 168 V58" />
+            <path class="draw thin" data-at="0.44" data-span="0.25" pathLength="1" d="M260 168 V76" />
+          </g>
+          <text class="boot__p" x="200" y="104" text-anchor="middle">P</text>
+          <!-- circuit traces out of the pulse -->
+          <g class="boot__traces">
+            <path class="draw" data-at="0.5" data-span="0.16" pathLength="1" d="M70 150 L56 136 H34" />
+            <path class="draw" data-at="0.56" data-span="0.16" pathLength="1" d="M98 150 L86 162 H48" />
+            <path class="draw" data-at="0.5" data-span="0.16" pathLength="1" d="M330 150 L344 136 H366" />
+            <path class="draw" data-at="0.56" data-span="0.16" pathLength="1" d="M302 150 L314 162 H352" />
+            <circle class="dot" data-at="0.66" cx="30" cy="136" r="3.4" />
+            <circle class="dot" data-at="0.72" cx="44" cy="162" r="3.4" />
+            <circle class="dot" data-at="0.66" cx="370" cy="136" r="3.4" />
+            <circle class="dot" data-at="0.72" cx="356" cy="162" r="3.4" />
+            <circle class="dot" data-at="0.6" cx="20" cy="150" r="3.4" />
+            <circle class="dot" data-at="0.86" cx="380" cy="150" r="3.4" />
+          </g>
+          <!-- the heartbeat: drawn by progress, then a bright head keeps running along it -->
+          <g class="boot__pulse" filter="url(#bt-glow)">
+            <path class="draw" data-at="0.58" data-span="0.3" pathLength="1" d="M24 150 H150 L160 142 L168 150 H180 L194 108 L206 186 L216 150 H232 L242 140 L252 150 H376" />
+            <path class="boot__head" pathLength="1000" d="M24 150 H150 L160 142 L168 150 H180 L194 108 L206 186 L216 150 H232 L242 140 L252 150 H376" />
+          </g>
+        </svg>
+
+        <p class="boot__word" aria-hidden="true">City<b>Pulse</b></p>
+        <p class="boot__tag" aria-hidden="true">Intelligent parking &amp; traffic control</p>
+
+        <div class="boot__meter">
+          <span class="boot__pct" aria-hidden="true"><span id="boot-pct">000</span><small>%</small></span>
+          <div class="boot__now" role="status" aria-live="polite">
+            <span id="boot-label">Waking the city</span>
+            <b id="boot-detail">dhaka node</b>
+          </div>
+        </div>
+        <div class="boot__segs" id="boot-segs" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- The city -->
+    <canvas class="stage" id="stage" aria-hidden="true"></canvas>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="city-loading" role="status" aria-live="polite"><i></i><span id="city-loading-text">Loading the 3D city</span></div>
+    <canvas class="overlay" id="overlay" aria-hidden="true"></canvas>
+    <div class="cctv" id="cctv" aria-hidden="true">
+      <div class="cctv__tl"><i class="rec"></i> REC <span id="cctv-clock">00:00:00</span></div>
+      <div class="cctv__tr">CAM-07 · GULSHAN-2 · LOT B</div>
+      <div class="cctv__bl">mobilenetv2 · per-space crop 224×224 · classes: empty / occupied</div>
+      <div class="cctv__br"><span id="cctv-empty">0</span> empty · <span id="cctv-occ">0</span> occupied</div>
+    </div>
+    <div class="plate" id="plate" aria-hidden="true">
+      <div class="plate__tag">Lane blocked · roadside parking</div>
+      <div class="plate__card">
+        <div class="plate__bn" lang="bn">ঢাকা মেট্রো-গ</div>
+        <div class="plate__num" lang="bn">১৫-৮২৪৭</div>
+      </div>
+      <div class="plate__en">DHAKA METRO-GA 15-8247 · read 0.97</div>
+    </div>
+    <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+    <!-- HUD -->
+    <header class="nav">
+      <a class="wordmark" href="#top" aria-label="CityPulse — back to top">City<span>Pulse</span></a>
+      <nav class="nav__links" aria-label="Sections">
+        <a href="#portals">Portals</a>
+        <a href="#why">Why it matters</a>
+        <a href="#stack">How it's built</a>
+        <a href="#team">Team</a>
+      </nav>
+      <div class="nav__cta">
+        <button class="sound" id="sound-toggle" type="button" data-mode="off" aria-label="City sound: off" title="City sound: off. Click for on (M)">
+          <span class="sound__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="sound__label" aria-hidden="true">
+            <span data-for="off">Sound off</span>
+            <span data-for="on">Sound on</span>
+            <span data-for="cues">Titles only</span>
+          </span>
+        </button>
+        <a class="link" data-app="/?view=classic" href="#">Classic site</a>
+        <a class="link" data-app="/login" href="#">Sign in</a>
+        <a class="btn btn--sm" data-app="/signup" href="#">Get started</a>
+      </div>
+    </header>
+
+    <nav class="rail" id="rail" aria-label="Story chapters"></nav>
+
+    <!-- bottom-right HUD: live counts, then where the cursor points and the time in Dhaka -->
+    <div class="readouts" aria-hidden="true">
+      <div class="readout">
+        <span><b id="ro-free">0</b> free</span>
+        <span><b id="ro-taken">0</b> taken</span>
+        <span class="readout__sim">simulated city</span>
+      </div>
+      <div class="readout">
+        <span id="ro-coord">23.7925°N 90.4078°E</span>
+        <span class="readout__sep"></span>
+        <span id="ro-clock">00:00:00</span>
+      </div>
+    </div>
+
+    <p class="hero-hint" id="hero-hint" aria-hidden="true"><i></i><span class="hero-hint__mouse">Move the mouse or press any key</span><span class="hero-hint__touch">Tap or scroll to begin</span></p>
+
+    <div class="cursor" id="cursor" aria-hidden="true"><i></i><span id="cursor-label"></span></div>
+
+    <main id="main">
+      <!-- Story: the camera flies through these chapters -->
+      <section class="hero chapter" id="top" data-chapter="pulse" data-label="Pulse">
+        <div class="hero__inner">
+          <p class="eyebrow">Intelligent parking &amp; traffic control</p>
+          <h1 class="display hero__title" id="hero-title">Dhaka has<br />a <span class="hero__pulse">pulse.</span></h1>
+          <svg class="ecg" viewBox="0 0 1000 90" preserveAspectRatio="none" aria-hidden="true">
+            <path class="ecg__base" d="M0 56 H400 L424 46 L442 56 L462 56 L482 6 L504 84 L524 56 L552 56 L574 40 L596 56 H1000" />
+            <path class="ecg__head" id="ecg-head" d="M0 56 H400 L424 46 L442 56 L462 56 L482 6 L504 84 L524 56 L552 56 L574 40 L596 56 H1000" />
+          </svg>
+          <p class="hero__lede">
+            CityPulse reads it from the cameras the city already has — free spaces for drivers,
+            steady income for lot owners, and clear lanes for traffic authorities.
+          </p>
+          <div class="hero__actions">
+            <a class="btn" data-app="/signup" href="#">Create an account <span aria-hidden="true">→</span></a>
+            <a class="btn btn--ghost" href="#ch-jam">See how it works <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-jam" data-chapter="jam" data-label="Jam">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>02</span> The problem</p>
+            <h2 class="display card__title">One car on the curb.<br />One lane gone.</h2>
+            <p>
+              When drivers can't find parking, they stop wherever they can. One car on the road
+              edge squeezes a lane, and the queue behind it can last for hours — while the lot
+              beside it still has free spaces nobody can see.
+            </p>
+            <ul class="chips"><li>Roadside parking</li><li>Lane blocked</li><li>Left-hand traffic</li></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-sense" data-chapter="sense" data-label="Sense">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>03</span> Sense</p>
+            <h2 class="display card__title">Use the cameras<br />already on the wall.</h2>
+            <p>
+              Parking owners register their lot and connect the CCTV they already run. No sensors
+              in the ground and no new hardware — CityPulse takes the camera's RTSP stream.
+            </p>
+            <ul class="chips"><li>Existing CCTV</li><li>RTSP stream</li><li>Owner portal</li></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter chapter--right" id="ch-detect" data-chapter="detect" data-label="Detect">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>04</span> Detect</p>
+            <h2 class="display card__title">Every space,<br />empty or occupied.</h2>
+            <p>
+              Each space is cut from the camera frame and read by a MobileNetV2 model trained on
+              808,991 parking-space images. On a car park it never saw in training, it is right
+              99.18% of the time.
+            </p>
+            <div class="live">
+              <div><b id="det-empty">0</b><span>empty</span></div>
+              <div><b id="det-occ">0</b><span>occupied</span></div>
+              <div><b>99.18%</b><span>on an unseen lot</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-guide" data-chapter="guide" data-label="Guide">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>05</span> Guide</p>
+            <h2 class="display card__title">Straight to<br />a free space.</h2>
+            <p>
+              Drivers open the app, see free spaces near them, book one, and drive to the
+              entrance. A booked space is never shown as free to anyone else.
+            </p>
+            <div class="phone" aria-label="Driver app preview">
+              <div class="phone__row"><span class="dot"></span> Gulshan-2 · Lot B</div>
+              <div class="phone__big"><b id="guide-dist">420</b> m<small id="guide-eta">· 1 min</small></div>
+              <div class="phone__row phone__row--muted"><span id="guide-free">12</span> spaces free · space <span id="guide-slot">C-5</span> held for you</div>
+              <div class="phone__bar"><i id="guide-bar"></i></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter chapter--right" id="ch-enforce" data-chapter="enforce" data-label="Enforce">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>06</span> Enforce <em class="card__tag">Next phase</em></p>
+            <h2 class="display card__title">See the jam.<br />Find its cause.</h2>
+            <p>
+              Next, the same cameras go to work on the road. At busy junctions they flag the
+              vehicle causing a jam and read its plate in Bangla and English, so traffic
+              authorities can act on a live congestion map instead of posting police at every corner.
+            </p>
+            <ul class="chips"><li>Congestion heat map</li><li>Bangla + English plates</li><li>Enforcement log</li></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ch-impact" data-chapter="impact" data-label="Impact">
+        <div class="chapter__pin">
+          <div class="card">
+            <p class="card__step"><span>07</span> Impact</p>
+            <h2 class="display card__title">Every free space.<br />The whole city.</h2>
+            <p>
+              Each lot that joins lights up on the same live map. Spare spaces that sat empty
+              beside blocked roads become places drivers can find, and income their owners can count.
+            </p>
+            <div class="live live--impact">
+              <div><b id="impact-free">0</b><span>free right now</span></div>
+              <div><b id="impact-lots">0</b><span>lots on the map</span></div>
+              <div><b>0</b><span>new sensors</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Regular content over the dimmed city -->
+      <!-- One ecosystem, three experiences: the text scrolls, the 3D device stage stays pinned -->
+      <section class="eco" id="portals">
+        <div class="block__head eco__head">
+          <p class="eyebrow">For every stakeholder</p>
+          <h2 class="display block__title">One ecosystem,<br />three experiences.</h2>
+          <p class="block__lede">
+            A mobile app for drivers and two web portals for owners and authorities — all running on the same live API.
+          </p>
+        </div>
+
+        <div class="eco__body">
+          <div class="eco__stage" aria-hidden="true">
+            <canvas class="eco__canvas"></canvas>
+            <p class="eco__label">Driver app · Flutter</p>
+          </div>
+
+          <div class="eco__flow">
+            <article class="eco__part" id="driver">
+              <div class="eco__intro" data-show="0:0">
+                <p class="eco__k">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2.5" /><path d="M10.5 18.5h3" /></svg>
+                  Driver app
+                </p>
+                <h3 class="display eco__title">Find. Book. Park.</h3>
+                <p class="eco__lede">
+                  Drivers search any place in Dhaka, see which lots have free slots right now and book before they
+                  arrive — no more circling the block.
+                </p>
+                <div class="eco__cta">
+                  <span class="apk-dl"><a class="btn btn--download" data-apk href="/download/apk">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4.5 20.5h15" /></svg>
+                    Download now
+                  </a><small class="apk-dl__meta" data-apk-meta>Android APK · latest build</small></span>
+                  <a class="btn btn--ghost" data-app="/signup?role=driver" href="#">Create a driver account</a>
+                </div>
+              </div>
+              <ol class="eco__steps">
+                <li><button type="button" data-show="0:0"><b>1</b><span><strong>Find lots near you</strong>Search any place — nearby lots appear on the map with their free slots.</span></button>
+                  <figure class="eco__shot"><img src="./showcase/driver-map.webp" width="717" height="1526" loading="lazy" decoding="async" alt="Driver app map of Banani showing nearby parking lots and how many slots are free" /></figure>
+                </li>
+                <li><button type="button" data-show="0:1"><b>2</b><span><strong>Check before you go</strong>Free slots, hourly rate, distance and amenities for every lot.</span></button>
+                  <figure class="eco__shot"><img src="./showcase/driver-space.webp" width="717" height="1526" loading="lazy" decoding="async" alt="Parking lot details with available slots, hourly rate, distance, amenities and a Book Now button" /></figure>
+                </li>
+                <li><button type="button" data-show="0:2"><b>3</b><span><strong>Book in seconds</strong>Pick 1 to 8 hours and a start time; the total is shown up front.</span></button>
+                  <figure class="eco__shot"><img src="./showcase/driver-book.webp" width="717" height="1526" loading="lazy" decoding="async" alt="Booking sheet with duration options, scheduled time, hourly rate and total" /></figure>
+                </li>
+                <li><button type="button" data-show="0:3"><b>4</b><span><strong>Park with confidence</strong>The booking lands in My Bookings, ready to view, navigate to or cancel.</span></button>
+                  <figure class="eco__shot"><img src="./showcase/driver-booked.webp" width="717" height="1526" loading="lazy" decoding="async" alt="Booking confirmed dialog showing hours booked and distance to the lot" /></figure>
+                </li>
+              </ol>
+              <p class="eco__src">Real screens from the CityPulse driver app (Flutter) on the live backend.</p>
+            </article>
+
+            <article class="eco__part" id="owner">
+              <div class="eco__intro" data-show="1:0">
+                <p class="eco__k">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V5l8-3 8 3v16" /><path d="M9 21v-5h6v5M8 8h2M14 8h2M8 12h2M14 12h2" /></svg>
+                  Parking-owner portal
+                </p>
+                <h3 class="display eco__title">Turn idle space into verified revenue.</h3>
+                <p class="eco__lede">
+                  Owners register lots, draw slots on their own camera view and let the AI keep availability honest —
+                  every booking and taka tracked in one place.
+                </p>
+              </div>
+              <div class="eco__screen" data-portal="owner" role="img" aria-label="Owner portal preview, following the steps below"></div>
+              <ol class="eco__steps">
+                <li><button type="button" data-show="1:0"><b>1</b><span><strong>Register a lot</strong>An OpenStreetMap location picker, photos, capacity and rates.</span></button></li>
+                <li><button type="button" data-show="1:1"><b>2</b><span><strong>Draw slots on the camera</strong>Car and bike slots right on the CCTV view, each with its own rate.</span></button></li>
+                <li><button type="button" data-show="1:2"><b>3</b><span><strong>Run an AI check</strong>MobileNetV2 reads every slot on any camera, on demand.</span></button></li>
+                <li><button type="button" data-show="1:3"><b>4</b><span><strong>Track every taka</strong>Revenue history with filters, cancellations and CSV export — bKash, Nagad, card or cash.</span></button></li>
+              </ol>
+              <a class="eco__link" data-app="/signup?role=owner" href="#">Register your parking lot <span aria-hidden="true">→</span></a>
+            </article>
+
+            <article class="eco__part" id="authority">
+              <div class="eco__intro" data-show="2:0">
+                <p class="eco__k">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5 12 4l9 5.5M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20.5h18" /></svg>
+                  Traffic-authority command center
+                </p>
+                <h3 class="display eco__title">See the whole city's parking at a glance.</h3>
+                <p class="eco__lede">
+                  Live occupancy from every connected lot becomes zones, alerts and an enforcement log — without
+                  installing new hardware on the street.
+                </p>
+              </div>
+              <div class="eco__screen" data-portal="authority" role="img" aria-label="Command center preview, following the steps below"></div>
+              <ol class="eco__steps">
+                <li><button type="button" data-show="2:0"><b>1</b><span><strong>Live map of Dhaka</strong>Uttara, Mirpur, Gulshan, Dhanmondi and Motijheel, refreshed every 30 seconds.</span></button></li>
+                <li><button type="button" data-show="2:1"><b>2</b><span><strong>Real-time AI alerts</strong>High occupancy, stale cameras and slots the AI couldn't classify yet.</span></button></li>
+                <li><button type="button" data-show="2:2"><b>3</b><span><strong>Zones ranked by stress</strong>Optimal under 60%, moderate to 84%, critical from 85%.</span></button></li>
+                <li><button type="button" data-show="2:3"><b>4</b><span><strong>Enforcement log</strong>Every occupied slot with no booking, logged automatically.</span></button></li>
+              </ol>
+              <a class="eco__link" data-app="/login" href="#">Sign in to the command center <span aria-hidden="true">→</span></a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="block" id="why">
+        <div class="block__head">
+          <p class="eyebrow">Why it matters</p>
+          <h2 class="display block__title">Sensed, not typed.</h2>
+          <p class="block__lede">
+            Traffic in Dhaka now averages about 7&nbsp;km/h, and roadside parking is one of the biggest
+            reasons. Every parking app in Bangladesh still waits for someone to type in a count.
+            CityPulse reads it from the camera instead.
+          </p>
+        </div>
+
+        <ol class="compare">
+          <li class="compare__key" aria-hidden="true"><span></span><span>Today</span><span>With CityPulse</span></li>
+          <li>
+            <h3>Finding a space</h3>
+            <p class="compare__was"><span>Today</span>Drivers circle the block, give up, and stop on the road — taking a lane with them.</p>
+            <p class="compare__now"><span>With CityPulse</span>Free spaces show on the map before you set out, and the app takes you to the entrance.</p>
+          </li>
+          <li>
+            <h3>Keeping the count right</h3>
+            <p class="compare__was"><span>Today</span>Someone updates the count by hand. It falls behind exactly when the lot is busiest.</p>
+            <p class="compare__now"><span>With CityPulse</span>The lot's own CCTV updates every space by itself. Nobody has to sit at a keyboard.</p>
+          </li>
+          <li>
+            <h3>Spare private spaces</h3>
+            <p class="compare__was"><span>Today</span>Garages and private lots sit half-empty beside jammed roads, because nobody can find them.</p>
+            <p class="compare__now"><span>With CityPulse</span>Owners list their spaces once. Drivers can find them, and every booking is income.</p>
+          </li>
+          <li>
+            <h3>Bookings</h3>
+            <p class="compare__was"><span>Today</span>A space that looks free may already be promised to someone else.</p>
+            <p class="compare__now"><span>With CityPulse</span>A booked space is never shown as free. The booking always wins over what the camera sees.</p>
+          </li>
+          <li>
+            <h3>Policing the road</h3>
+            <p class="compare__was"><span>Today</span>Officers stand at every busy junction through heat, monsoon rain and smoke.</p>
+            <p class="compare__now"><span>With CityPulse</span>Authorities watch parking across zones from one command centre, and act where it matters.</p>
+          </li>
+        </ol>
+
+        <dl class="proof">
+          <div><dt>Accuracy</dt><dd>99.18%</dd><p>on a car park the model never saw in training</p></div>
+          <div><dt>Training images</dt><dd>808,991</dd><p>parking spaces, from 12 camera angles</p></div>
+          <div><dt>New hardware</dt><dd>0</dd><p>sensors — it uses the CCTV a lot already runs</p></div>
+          <div><dt>Roles</dt><dd>3</dd><p>drivers, owners and authorities on one live map</p></div>
+        </dl>
+        <p class="proof__note">
+          Accuracy measured on PKLot's UFPR05 lot, held out from training. Measuring it on Dhaka CCTV footage is the next step.
+        </p>
+
+        <div class="next">
+          <p class="next__k">What's next</p>
+          <ul class="next__list">
+            <li><b>Pay with bKash or Nagad</b><span>Bookings settle in the app, and owners see revenue as it comes in.</span></li>
+            <li><b>Alerts when a space frees up</b><span>A notification instead of checking back.</span></li>
+            <li><b>Automatic slot mapping</b><span>VPS-Net (98.53%) finds the painted bays, so a new lot joins without hand-drawn outlines.</span></li>
+            <li><b>Plate reading + jam detection</b><span>Bangla and English plates, read by cameras at busy junctions.</span></li>
+            <li><b>Counting at the lot</b><span>The model runs on a Raspberry Pi on site, so counts refresh far faster than today's ten-minute cycle.</span></li>
+            <li><b>Tested on Dhaka's own lots</b><span>Local CCTV footage, collected and labelled to measure accuracy here.</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="block" id="stack">
+        <div class="block__head">
+          <p class="eyebrow">How it's built</p>
+          <h2 class="display block__title">From camera to phone.</h2>
+          <p class="block__lede">
+            Apps only ever talk to the backend. The backend sends each camera image to the AI service,
+            checks the answer against live bookings, and saves the result — so every screen shows the same number.
+          </p>
+        </div>
+
+        <ol class="flow" aria-label="How a parking space gets counted">
+          <li><b>CCTV image</b><span>from the lot's own camera</span></li>
+          <li><b>AI service</b><span>empty or occupied, with a confidence</span></li>
+          <li><b>Backend</b><span>checks bookings, saves the answer</span></li>
+          <li><b>Driver's map</b><span>free spaces near you</span></li>
+        </ol>
+
+        <div class="layers">
+          <article class="layer">
+            <p class="layer__k">Driver app</p>
+            <h3>Find, book and get directions to a space.</h3>
+            <ul class="tools"><li>Flutter</li><li>Dart</li><li>Material 3</li><li>Provider</li><li>Google Maps</li><li>Geolocator</li></ul>
+          </article>
+          <article class="layer">
+            <p class="layer__k">Web portal</p>
+            <h3>Owner dashboard and authority command centre in one role-aware app.</h3>
+            <ul class="tools"><li>Next.js 16</li><li>React 19</li><li>TypeScript</li><li>JWT sessions</li></ul>
+          </article>
+          <article class="layer">
+            <p class="layer__k">Backend API</p>
+            <h3>Accounts, lots, bookings, and the scheduler that refreshes every space.</h3>
+            <ul class="tools"><li>NestJS 11</li><li>Prisma</li><li>REST + OpenAPI</li><li>Role-based access</li></ul>
+          </article>
+          <article class="layer layer--ai">
+            <p class="layer__k">AI service</p>
+            <h3>Reads each space from a camera image and returns its state.</h3>
+            <ul class="tools"><li>FastAPI</li><li>PyTorch</li><li>MobileNetV2</li><li>VPS-Net</li></ul>
+          </article>
+          <article class="layer">
+            <p class="layer__k">Data</p>
+            <h3>City data, slot images, and a log of every prediction.</h3>
+            <ul class="tools"><li>PostgreSQL</li><li>MongoDB</li><li>S3-compatible storage</li></ul>
+          </article>
+          <article class="layer">
+            <p class="layer__k">Model training</p>
+            <h3>Two-phase transfer learning on public parking datasets.</h3>
+            <ul class="tools"><li>Kaggle</li><li>NVIDIA Tesla T4</li><li>PKLot</li><li>CNRPark+EXT</li></ul>
+          </article>
+        </div>
+        <p class="stack__site">This page: <span>Vite · TypeScript · Three.js · GSAP · Lenis</span></p>
+      </section>
+
+      <section class="block" id="team">
+        <div class="block__head">
+          <p class="eyebrow">CSE499 · Section 15 · Group 03</p>
+          <h2 class="display block__title">The team.</h2>
+          <p class="block__lede">
+            Built by three students of Electrical and Computer Engineering at North South University, Dhaka,
+            for CSE499 Senior Design.
+          </p>
+        </div>
+        <ul class="team">
+          <li class="member">
+            <p class="member__role">AI/ML · Backend</p>
+            <h3>Md. Rahad Hossain</h3>
+            <p class="member__did">
+              Trained the MobileNetV2 occupancy model and reproduced VPS-Net. Built the NestJS backend,
+              the FastAPI inference service, and the scheduler that turns a prediction into a number a driver can trust.
+            </p>
+            <ul class="tools"><li>MobileNetV2</li><li>VPS-Net</li><li>NestJS</li><li>FastAPI</li><li>PostgreSQL</li></ul>
+            <a class="member__link" href="https://github.com/rahad-dll" target="_blank" rel="noopener">github.com/rahad-dll <span aria-hidden="true">↗</span></a>
+          </li>
+          <li class="member member--mobile">
+            <p class="member__role">AI/ML · Mobile</p>
+            <h3>Md. Yousuf</h3>
+            <p class="member__did">
+              Built the Flutter driver app: sign-in that survives a restart, live location, nearby parking on
+              Google Maps, and the whole booking flow from new booking to cancel.
+            </p>
+            <ul class="tools"><li>Flutter</li><li>Dart</li><li>Provider</li><li>Google Maps</li><li>REST</li></ul>
+            <a class="member__link" href="https://github.com/Yousufshishir" target="_blank" rel="noopener">github.com/Yousufshishir <span aria-hidden="true">↗</span></a>
+          </li>
+          <li class="member member--web">
+            <p class="member__role">AI/ML · Frontend</p>
+            <h3>Md. Rokib Hasan Oli</h3>
+            <p class="member__did">
+              Built the Next.js web portal for owners and authorities: role-based routing, sessions and a typed
+              API layer. Audited the YOLOv8 parking paper and re-ran all five models on Kaggle. Built this 3D site.
+            </p>
+            <ul class="tools"><li>Next.js</li><li>TypeScript</li><li>Tailwind CSS</li><li>Framer Motion</li><li>YOLOv8</li><li>Three.js</li><li>GSAP</li></ul>
+            <a class="member__link" href="https://github.com/Rokib-Hasan-Oli" target="_blank" rel="noopener">github.com/Rokib-Hasan-Oli <span aria-hidden="true">↗</span></a>
+          </li>
+        </ul>
+        <p class="team__repo">
+          Source, reports and slides: <a href="https://github.com/rahad-dll/499" target="_blank" rel="noopener">github.com/rahad-dll/499</a>
+        </p>
+      </section>
+
+      <section class="cta" id="cta">
+        <h2 class="display cta__title">Give the city<br />its lanes back.</h2>
+        <div class="hero__actions">
+          <span class="apk-dl"><a class="btn btn--download" data-apk href="/download/apk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4.5 20.5h15" /></svg> Download the app</a><small class="apk-dl__meta" data-apk-meta>Android APK · latest build</small></span>
+          <a class="btn" data-app="/signup" href="#">Create an account <span aria-hidden="true">→</span></a>
+          <a class="btn btn--ghost" data-app="/login" href="#">Sign in</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>© 2026 CityPulse — Intelligent Parking &amp; Traffic Control Platform</span>
+      <span>Made in Dhaka · North South University</span>
+      <a class="footer__classic" data-app="/?view=classic" href="#">View the classic site <span aria-hidden="true">→</span></a>
+      <details class="footer__credits">
+        <summary>3D model credits</summary>
+        <p>
+        3D models from Sketchfab, simplified and recoloured for the web:
+        <a href="https://sketchfab.com/3d-models/cng-011baf8efab94b37988e16756951a2b1" target="_blank" rel="noopener">CNG</a> by asrafullislamsiam (CC BY 4.0) ·
+        <a href="https://sketchfab.com/3d-models/bus-51b66585d32142058500fc5001567d1d" target="_blank" rel="noopener">Bus</a> by The_Ping Pro (CC BY 4.0) ·
+        <a href="https://sketchfab.com/3d-models/han66st-pickup-car-free-c86ac6d05609482fb5f66eb49a44ae65" target="_blank" rel="noopener">Pickup Car</a>,
+        <a href="https://sketchfab.com/3d-models/indonesian-lmpv-2-13dd216f01124fb89d9e3da21015c6bf" target="_blank" rel="noopener">Indonesian LMPV 2</a> (CC BY 4.0) and
+        <a href="https://sketchfab.com/3d-models/super-car-c104a0a24ccf4bb7a3f589cc091c4ae0" target="_blank" rel="noopener">Super Car</a> (Sketchfab Standard) by Han66st ·
+        <a href="https://sketchfab.com/3d-models/plymouth-road-runner-1969-low-poly-c144018981c14dd19951b5adc61dfb90" target="_blank" rel="noopener">Plymouth Road Runner 1969</a> by JUFF (CC BY 4.0) ·
+        <a href="https://sketchfab.com/3d-models/sports-car-1990-honda-nsx-872845e37cc54bacbe707b1935ba7e89" target="_blank" rel="noopener">1990 Honda NSX</a> by Jasmin Daniel (CC BY 4.0) ·
+        <a href="https://sketchfab.com/3d-models/bmw-s1000-rr-1873aed292d6465694119bd81860a0c2" target="_blank" rel="noopener">BMW S1000 RR</a> by VTX (CC BY-NC-SA 4.0) ·
+        <a href="https://sketchfab.com/3d-models/bell-206-jet-ranger-76b3a340e3d34517a26c2e8142b2867e" target="_blank" rel="noopener">Bell 206 Jet Ranger</a> by helijah and
+        <a href="https://sketchfab.com/3d-models/animated-civilian-helicopter-f25c041a8d004eb092e4aa41d1dc33f4" target="_blank" rel="noopener">Animated civilian Helicopter</a> by assetfactory (Sketchfab Standard) ·
+        <a href="https://sketchfab.com/3d-models/psx-monitor-09c0a050919f42248e3848d5bd837fbe" target="_blank" rel="noopener">PSX Monitor</a> by Charckes (Sketchfab Standard)
+        </p>
+      </details>
+    </footer>
+
+    <noscript><p class="noscript">CityPulse's 3D city needs JavaScript. The rest of the page still reads fine.</p></noscript>
+      <script>
+      /* Fills each "Download the app" caption with the latest APK's size and
+         update date from GitHub, via the Next.js route /download/apk/info. */
+      (function () {
+        fetch("/download/apk/info", { headers: { Accept: "application/json" } })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (apk) {
+            if (!apk || !apk.available) return;
+            var parts = ["Android APK"];
+            if (apk.size) parts.push(apk.size);
+            parts.push(apk.updated ? "Updated " + apk.updated : "latest build");
+            document.querySelectorAll("[data-apk-meta]").forEach(function (el) { el.textContent = parts.join(" · "); });
+            document.querySelectorAll("[data-apk]").forEach(function (a) {
+              a.title = "Download " + apk.name + (apk.size ? " (" + apk.size + ")" : "");
+            });
+          })
+          .catch(function () {});
+      })();
+    </script>
+  </body>
+</html>

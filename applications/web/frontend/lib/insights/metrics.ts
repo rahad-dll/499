@@ -140,12 +140,21 @@ export function formatTaka(paisa: number): string {
   return `৳${(paisa / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-/** Revenue a booking actually earned, in paisa. */
+/** The booking's payment status: the embedded payment row when present, else the flat field. */
+export function bookingPaymentStatus(booking: Booking): Booking["payment_status"] {
+  return booking.payment?.status ?? booking.payment_status ?? null;
+}
+
+/**
+ * Revenue a booking actually earned, in paisa: a paid booking's amount, or a
+ * completed one's when nothing was paid online (cash at the lot).
+ */
 export function bookingRevenue(booking: Booking): number {
-  if (booking.payment) {
-    return booking.payment.status === "paid" ? booking.payment.amount_unit : 0;
-  }
-  return booking.status === "completed" ? (booking.amount_unit ?? 0) : 0;
+  const amount = booking.amount_unit ?? 0;
+  const payment = bookingPaymentStatus(booking);
+  if (payment === "paid") return amount;
+  if (payment === "refunded" || payment === "failed") return 0;
+  return booking.status === "completed" ? amount : 0;
 }
 
 /** Parked time in ms: actual arrival→departure, else the booked duration. */
@@ -173,18 +182,18 @@ export function bookingsToCsv(
   bookings: Booking[],
   spaceNames: Record<string, string> = {},
 ): string {
-  const header = ["Booking ID", "Scheduled At", "Driver ID", "Parking Lot", "Slot", "Duration", "Amount (BDT)", "Earned (BDT)", "Status", "Payment"];
+  const header = ["Booking ID", "Scheduled At", "Vehicle Plate", "Parking Lot", "Slot", "Duration", "Amount (BDT)", "Earned (BDT)", "Status", "Payment"];
   const rows = bookings.map((b) => [
     b.id,
     b.scheduled_at,
-    b.driver_id,
-    b.space?.name ?? spaceNames[b.space_id] ?? b.space_id,
-    b.slot?.slot_label ?? b.slot_id,
+    b.vehicle_plate ?? "",
+    b.space_name || spaceNames[b.space_id] || b.space_id,
+    b.slot_label || b.slot_id,
     formatDuration(bookingDurationMs(b)),
-    (b.payment?.amount_unit ?? b.amount_unit ?? 0) / 100,
+    (b.amount_unit ?? 0) / 100,
     bookingRevenue(b) / 100,
     b.status,
-    b.payment?.status ?? "",
+    bookingPaymentStatus(b) ?? "",
   ]);
   return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
 }

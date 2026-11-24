@@ -11,12 +11,18 @@ import {
   MapPin,
   RefreshCcw,
   ScanEye,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
-import { LiveMap } from "@/components/maps";
+import { InfoTip } from "@/components/InfoTip";
+import { AuthorityMap, LiveMap } from "@/components/maps";
+import { useMediaQuery } from "@/components/maps/use-media-query";
 import { AuthorityShell } from "@/components/portal/AuthorityShell";
+import { LiveStatus } from "@/components/portal/LiveStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
 import {
   cityOccupancy,
   deriveAlerts,
@@ -42,9 +48,9 @@ const SEVERITY: Record<
   AlertSeverity,
   { badge: "destructive" | "warning" | "info"; label: string; card: string; icon: string }
 > = {
-  critical: { badge: "destructive", label: "CRITICAL", card: "border-destructive/45", icon: "bg-destructive/12 text-destructive" },
-  warning: { badge: "warning", label: "WARNING", card: "border-amber-500/45", icon: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
-  info: { badge: "info", label: "INFO", card: "border-brand/40", icon: "bg-brand/12 text-teal-600 dark:text-brand" },
+  critical: { badge: "destructive", label: "Critical", card: "border-destructive/45", icon: "bg-destructive/12 text-destructive" },
+  warning: { badge: "warning", label: "Warning", card: "border-amber-500/45", icon: "bg-amber-500/15 text-amber-600 dark:text-amber-400" },
+  info: { badge: "info", label: "Info", card: "border-brand/40", icon: "bg-brand/12 text-teal-600 dark:text-brand" },
 };
 
 const STRESS_TEXT: Record<Stress, string> = {
@@ -75,26 +81,69 @@ function LegendPin({ color }: { color: string }) {
   );
 }
 
+/** Legend for the OpenStreetMap fallback (the Google map draws its own). */
+function OsmLegend() {
+  return (
+    <div className="pointer-events-none absolute bottom-7 left-5 z-10 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
+      <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+        Map legend
+      </div>
+      <div className="mt-2.5 flex flex-col gap-2 text-[13px] font-medium">
+        {(
+          [
+            ["#12c2a9", "Optimal (<60% full)"],
+            ["#f59e0b", "Moderate (60–84%)"],
+            ["#ef4444", "Critical (≥85%)"],
+          ] as const
+        ).map(([color, label]) => (
+          <span key={label} className="inline-flex items-center gap-2.5">
+            <LegendPin color={color} />
+            {label}
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-2.5">
+          <span className="flex size-[18px] items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(140deg,#18d6c0,#26b7e8_55%,#8b6cff)] text-[8px] font-extrabold text-white shadow">
+            n
+          </span>
+          Group of lots (click to zoom)
+        </span>
+        <span className="inline-flex items-center gap-2.5">
+          <span className="mx-[3px] size-3 rounded-full border-2 border-white bg-amber-500 shadow" />
+          Stale camera data
+        </span>
+      </div>
+      <div className="mt-2.5 border-t border-border pt-2 text-[11.5px] text-muted-foreground">
+        Number on a pin = free slots
+      </div>
+    </div>
+  );
+}
+
 function CityMapPanel({
   spaces,
   loading,
   error,
   updatedAt,
+  nextRefreshAt,
   focusId,
   onSelect,
   onRefresh,
   className,
   compact = false,
+  mapVisible = true,
 }: {
   spaces: NearbySpace[];
   loading: boolean;
   error: string | null;
   updatedAt: number | null;
+  nextRefreshAt: number | null;
   focusId: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string | null) => void;
   onRefresh: () => void;
   className?: string;
   compact?: boolean;
+  /** the page lays out a desktop and a phone panel; only the visible one loads a map */
+  mapVisible?: boolean;
 }) {
   const pct = cityOccupancy(spaces);
   const stress = stressOf(pct);
@@ -102,37 +151,52 @@ function CityMapPanel({
 
   return (
     <div className={cn("relative overflow-hidden bg-secondary/60", className)}>
-      <LiveMap
-        spaces={spaces}
-        compact={compact}
-        focusId={focusId}
-        onSelect={onSelect}
-        className="absolute inset-0"
-      />
+      {mapVisible && (
+        <AuthorityMap
+          spaces={spaces}
+          compact={compact}
+          focusId={focusId}
+          onSelect={(id) => onSelect(id)}
+          chipsInset={compact ? 12 : 300}
+          className="absolute inset-0"
+          fallback={
+            <>
+              <LiveMap
+                spaces={spaces}
+                compact={compact}
+                focusId={focusId}
+                onSelect={onSelect}
+                className="absolute inset-0"
+              />
+              {!compact && <OsmLegend />}
+            </>
+          }
+        />
+      )}
 
       {compact ? (
         <span className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-border bg-card/95 px-3 py-1.5 text-[12.5px] font-bold shadow-sm">
           <Gauge className={cn("size-3.5", STRESS_TEXT[stress])} />
-          Stress: <span className={STRESS_TEXT[stress]}>{loading ? "…" : stress}</span>
+          Stress:{" "}
+          {loading && spaces.length === 0 ? (
+            <Skeleton className="h-3.5 w-14" />
+          ) : (
+            <span className={STRESS_TEXT[stress]}>{stress}</span>
+          )}
         </span>
       ) : (
         <div className="absolute left-5 top-5 z-10 w-64 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Gauge className={cn("size-4", STRESS_TEXT[stress])} />
-            City Parking Stress
-            <button
-              type="button"
-              onClick={onRefresh}
-              aria-label="Refresh live data"
-              className="ml-auto rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              <RefreshCcw className={cn("size-3.5", loading && "animate-spin")} />
-            </button>
+          <div className="flex items-center gap-1 text-sm font-semibold">
+            <Gauge className={cn("mr-1 size-4", STRESS_TEXT[stress])} />
+            City parking stress
+            <InfoTip term="stress" side="bottom" className="-my-1" />
           </div>
           <div className="mt-1.5 flex items-center gap-2.5">
-            <span className={cn("text-3xl font-extrabold tracking-tight", STRESS_TEXT[stress])}>
-              {loading && spaces.length === 0 ? "…" : stress}
-            </span>
+            {loading && spaces.length === 0 ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <span className={cn("text-3xl font-extrabold tracking-tight", STRESS_TEXT[stress])}>{stress}</span>
+            )}
             <Badge variant={stress === "Critical" ? "destructive" : stress === "Moderate" ? "warning" : "success"} className="text-[11px]">
               {pct}% full
             </Badge>
@@ -142,44 +206,16 @@ function CityMapPanel({
           </div>
           <div className="mt-2.5 text-[12px] text-muted-foreground">
             {spaces.length} lots · {slots} AI-monitored slots
-            {updatedAt && <> · {new Date(updatedAt).toLocaleTimeString()}</>}
           </div>
-          {error && <div className="mt-2 text-[12px] font-semibold text-destructive">{error}</div>}
-        </div>
-      )}
-
-      {!compact && (
-        <div className="pointer-events-none absolute bottom-7 left-5 z-10 rounded-2xl border border-border bg-card/95 p-4 shadow-lg backdrop-blur-sm">
-          <div className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            Map Legend
-          </div>
-          <div className="mt-2.5 flex flex-col gap-2 text-[13px] font-medium">
-            {(
-              [
-                ["#12c2a9", "Optimal (<60% full)"],
-                ["#f59e0b", "Moderate (60–84%)"],
-                ["#ef4444", "Critical (≥85%)"],
-              ] as const
-            ).map(([color, label]) => (
-              <span key={label} className="inline-flex items-center gap-2.5">
-                <LegendPin color={color} />
-                {label}
-              </span>
-            ))}
-            <span className="inline-flex items-center gap-2.5">
-              <span className="flex size-[18px] items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(140deg,#18d6c0,#26b7e8_55%,#8b6cff)] text-[8px] font-extrabold text-white shadow">
-                n
-              </span>
-              Group of lots (click to zoom)
-            </span>
-            <span className="inline-flex items-center gap-2.5">
-              <span className="mx-[3px] size-3 rounded-full border-2 border-white bg-amber-500 shadow" />
-              Stale camera data
-            </span>
-          </div>
-          <div className="mt-2.5 border-t border-border pt-2 text-[11.5px] text-muted-foreground">
-            Number on a pin = free slots
-          </div>
+          <LiveStatus
+            className="mt-1.5"
+            updatedAt={updatedAt}
+            nextRefreshAt={nextRefreshAt}
+            loading={loading}
+            error={error}
+            onRefresh={onRefresh}
+          />
+          {error && <div className="mt-1.5 text-[12px] font-semibold text-destructive">{error}</div>}
         </div>
       )}
 
@@ -217,7 +253,7 @@ function AlertCard({
         <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", s.icon)}>
           <Icon className="size-[18px]" />
         </span>
-        <Badge variant={s.badge} className="text-[10.5px] tracking-wider">
+        <Badge variant={s.badge} className="text-[10.5px] uppercase tracking-wider">
           <span className="size-1.5 rounded-full bg-current" />
           {s.label}
         </Badge>
@@ -250,10 +286,11 @@ function AlertCard({
 /* ---------------- page ---------------- */
 
 export default function CommandCenterPage() {
-  const { spaces, loading, error, updatedAt, refresh } = useLiveSpaces();
+  const { spaces, loading, error, updatedAt, nextRefreshAt, refresh } = useLiveSpaces();
   const alerts = useMemo(() => deriveAlerts(spaces), [spaces]);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState<Set<string>>(() => new Set());
+  const desktop = useMediaQuery("(min-width: 1024px)");
   const now = updatedAt ?? 0;
   const fresh = alerts.filter((a) => !acknowledged.has(a.id)).length;
 
@@ -262,10 +299,36 @@ export default function CommandCenterPage() {
   }
 
   const alertList = (compact: boolean) =>
-    alerts.length === 0 ? (
-      <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        {loading ? "Loading live alerts…" : "All clear — no alerts right now."}
-      </div>
+    loading && alerts.length === 0 ? (
+      <LoadingRegion label="Loading live alerts…" className="flex flex-col gap-3.5">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="size-9 rounded-lg" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="ml-auto h-3 w-12" />
+            </div>
+            <Skeleton className="mt-3 h-4 w-4/5" />
+            <Skeleton className="mt-2 h-3 w-1/2" />
+            <Skeleton className="mt-4 h-10 w-full rounded-md" />
+          </div>
+        ))}
+      </LoadingRegion>
+    ) : alerts.length === 0 ? (
+      <EmptyState
+        icon={error ? RefreshCcw : ShieldCheck}
+        title={error ? "Live data unavailable" : "All clear"}
+        description={
+          error
+            ? "CityPulse couldn't load the latest camera readings. Try again in a moment."
+            : "No crowded lots, unbooked slots or stale cameras right now. New alerts appear here automatically."
+        }
+        action={
+          <Button variant="outline" onClick={() => void refresh()}>
+            <RefreshCcw className="size-4" /> Check again now
+          </Button>
+        }
+      />
     ) : (
       alerts.map((alert) => (
         <AlertCard
@@ -280,7 +343,16 @@ export default function CommandCenterPage() {
       ))
     );
 
-  const mapProps = { spaces, loading, error, updatedAt, focusId, onSelect: setFocusId, onRefresh: refresh };
+  const mapProps = {
+    spaces,
+    loading,
+    error,
+    updatedAt,
+    nextRefreshAt,
+    focusId,
+    onSelect: setFocusId,
+    onRefresh: () => void refresh(),
+  };
 
   return (
     <AuthorityShell active="command" lockViewport>
@@ -289,25 +361,33 @@ export default function CommandCenterPage() {
         <section className="flex flex-col overflow-hidden border-r border-border">
           <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
             <span className="size-2.5 rounded-full bg-destructive shadow-[0_0_8px_var(--destructive)]" />
-            <h1 className="text-lg font-extrabold tracking-tight">Real-Time AI Alerts</h1>
+            <h1 className="text-lg font-extrabold tracking-tight">Real-time AI alerts</h1>
             <Badge variant={fresh > 0 ? "destructive" : "secondary"} className="ml-auto">{fresh} new</Badge>
           </div>
           <div className="flex flex-1 flex-col gap-3.5 overflow-y-auto px-5 pb-5">{alertList(false)}</div>
         </section>
 
-        <CityMapPanel {...mapProps} className="h-full" />
+        <CityMapPanel {...mapProps} mapVisible={desktop} className="h-full" />
       </div>
 
       {/* mobile / tablet stacked */}
       <div className="flex flex-1 flex-col px-4 py-5 sm:px-6 lg:hidden">
-        <h1 className="text-2xl font-extrabold tracking-tight">Command Center</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Command center</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Live city parking monitor.</p>
+        <LiveStatus
+          className="mt-1.5"
+          updatedAt={updatedAt}
+          nextRefreshAt={nextRefreshAt}
+          loading={loading}
+          error={error}
+          onRefresh={() => void refresh()}
+        />
 
-        <CityMapPanel {...mapProps} compact className="mt-4 h-64 rounded-2xl border border-border sm:h-80" />
+        <CityMapPanel {...mapProps} compact mapVisible={!desktop} className="mt-4 h-64 rounded-2xl border border-border sm:h-80" />
 
         <div className="mt-6 flex items-center gap-2.5">
           <span className="size-2.5 rounded-full bg-destructive shadow-[0_0_8px_var(--destructive)]" />
-          <h2 className="text-lg font-extrabold tracking-tight">Real-Time AI Alerts</h2>
+          <h2 className="text-lg font-extrabold tracking-tight">Real-time AI alerts</h2>
           <Badge variant={fresh > 0 ? "destructive" : "secondary"} className="ml-auto">{fresh} new</Badge>
         </div>
         <div className="mt-3.5 flex flex-col gap-3.5">{alertList(true)}</div>

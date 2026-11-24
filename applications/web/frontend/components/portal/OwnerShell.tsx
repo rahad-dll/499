@@ -11,6 +11,7 @@ import {
   Gauge,
   LayoutGrid,
   LogOut,
+  Map as MapIcon,
   ParkingCircle,
   Search,
   Settings,
@@ -18,13 +19,16 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { DigitalHeartbeatLoader } from "@/components/loading/DigitalHeartbeatLoader";
+import { PageSkeleton } from "@/components/portal/PageSkeleton";
+import { UserMenu, initialsOf } from "@/components/portal/UserMenu";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 
 export type OwnerNavKey =
   | "dashboard"
+  | "map"
   | "register"
   | "cameras"
   | "revenue"
@@ -35,24 +39,33 @@ const NAV_ITEMS: {
   key: Exclude<OwnerNavKey, "profile">;
   icon: LucideIcon;
   label: string;
+  /** label in the phone's bottom tab bar */
+  short: string;
   href: string;
 }[] = [
-  { key: "dashboard", icon: LayoutGrid, label: "Dashboard", href: "/owner" },
-  { key: "register", icon: ParkingCircle, label: "Register Lot", href: "/owner/spaces/new" },
-  { key: "cameras", icon: Cctv, label: "Cameras", href: "/owner/cameras" },
-  { key: "revenue", icon: BarChart3, label: "Revenue", href: "/owner/revenue" },
-  { key: "settings", icon: Settings, label: "Settings", href: "/owner/settings" },
+  { key: "dashboard", icon: LayoutGrid, label: "Dashboard", short: "Home", href: "/owner" },
+  { key: "map", icon: MapIcon, label: "Lot map", short: "Map", href: "/owner/map" },
+  { key: "register", icon: ParkingCircle, label: "Register lot", short: "Register", href: "/owner/spaces/new" },
+  { key: "cameras", icon: Cctv, label: "Cameras", short: "Cameras", href: "/owner/cameras" },
+  { key: "revenue", icon: BarChart3, label: "Revenue", short: "Revenue", href: "/owner/revenue" },
+  { key: "settings", icon: Settings, label: "Settings", short: "Settings", href: "/owner/settings" },
 ];
 
 /** Owner portal chrome: auth guard, sidebar (desktop), breadcrumb top bar,
- *  and the mobile bottom tab bar. Wrap page content in it. */
+ *  and the mobile bottom tab bar. Wrap page content in it.
+ *  The chrome renders straight away; until the signed-in owner is confirmed
+ *  the content area shows a skeleton instead of `children`.
+ *  `lockViewport` pins the page to the viewport on desktop; the content then
+ *  gets a flex column to fill (used by the Register Lot wizard). */
 export function OwnerShell({
   active,
   breadcrumb,
+  lockViewport = false,
   children,
 }: {
   active: OwnerNavKey;
   breadcrumb: string;
+  lockViewport?: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -69,22 +82,8 @@ export function OwnerShell({
     router.replace("/login");
   }
 
-  if (loading || !user || user.role !== "owner") {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background">
-        <DigitalHeartbeatLoader />
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
-    );
-  }
-
-  const displayName = user.full_name ?? "Owner";
-  const initials = displayName
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const ready = !loading && user?.role === "owner";
+  const displayName = (ready && user.full_name) || "Owner";
 
   return (
     <div className="min-h-screen bg-background lg:grid lg:grid-cols-[248px_1fr]">
@@ -129,6 +128,7 @@ export function OwnerShell({
           </p>
         </div>
 
+        {ready ? (
         <div className="mt-4 flex items-center gap-2 border-t border-border px-1 pt-4">
           <Link
             href="/owner/profile"
@@ -140,27 +140,42 @@ export function OwnerShell({
             )}
           >
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] to-[#8b6cff] text-xs font-bold text-white">
-              {initials}
+              {initialsOf(displayName)}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-bold">{displayName}</span>
-              <span className="block text-xs text-muted-foreground">Parking Owner</span>
+              <span className="block text-xs text-muted-foreground">Parking owner</span>
             </span>
             <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </Link>
           <button
             type="button"
             onClick={onLogout}
-            aria-label="Log out"
+            aria-label="Sign out"
+            title="Sign out"
             className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
           >
             <LogOut className="size-[18px]" />
           </button>
         </div>
+        ) : (
+          <div className="mt-4 flex items-center gap-3 border-t border-border px-2.5 pt-5">
+            <Skeleton className="size-9 rounded-full" />
+            <span className="flex-1 space-y-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </span>
+          </div>
+        )}
       </aside>
 
       {/* main column */}
-      <div className="flex min-h-screen flex-col pb-24 lg:pb-0">
+      <div
+        className={cn(
+          "flex min-h-screen flex-col pb-24 lg:pb-0",
+          lockViewport && "lg:h-screen lg:min-h-0 lg:overflow-hidden",
+        )}
+      >
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:px-6">
           <div className="lg:hidden">
             <Logo tagline={false} />
@@ -184,27 +199,33 @@ export function OwnerShell({
             <Bell className="size-[18px]" />
             <span className="absolute right-2.5 top-2.5 size-1.5 rounded-full bg-destructive" />
           </button>
-          <ThemeToggle />
-          <Link
-            href="/owner/profile"
-            aria-label="Open owner profile"
-            aria-current={active === "profile" ? "page" : undefined}
-            title={displayName}
-            className={cn(
-              "flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-[#18d6c0] via-[#4d7cf5] to-[#8b6cff] text-xs font-extrabold text-white shadow-sm ring-offset-2 ring-offset-background transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              active === "profile" && "ring-2 ring-brand",
-            )}
-          >
-            {initials}
-          </Link>
+          {/* on phones the theme choice lives in the account menu */}
+          <ThemeToggle className="hidden sm:inline-flex" />
+          {ready ? (
+            <UserMenu
+              name={displayName}
+              roleLabel="Parking owner"
+              profileHref="/owner/profile"
+              profileActive={active === "profile"}
+            />
+          ) : (
+            <Skeleton className="size-10 shrink-0 rounded-full" />
+          )}
         </header>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main
+          className={cn(
+            "flex-1 px-4 py-6 sm:px-6 lg:px-8",
+            lockViewport && "lg:flex lg:min-h-0 lg:flex-col lg:py-4",
+          )}
+        >
+          {ready ? children : <PageSkeleton />}
+        </main>
       </div>
 
       {/* mobile bottom nav */}
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur-md lg:hidden">
-        <div className="mx-auto grid max-w-xl grid-cols-5">
+        <div className="mx-auto grid max-w-xl grid-cols-6">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.key}
@@ -216,7 +237,7 @@ export function OwnerShell({
               )}
             >
               <item.icon className="size-5" />
-              {item.label}
+              {item.short}
             </Link>
           ))}
         </div>

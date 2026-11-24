@@ -1,0 +1,1 @@
+function e(){let e=globalThis.scheduler;return e?.yield?e.yield():new Promise(e=>{let t=new MessageChannel;t.port1.onmessage=()=>e(),t.port2.postMessage(null)})}async function t(t,n){for(let r of t){let t=performance.now(),i=await r.run()??``;performance.measure(`cp:${r.label}`,{start:t}),n(r,i,performance.now()-t),await e()}}export{e as n,t};

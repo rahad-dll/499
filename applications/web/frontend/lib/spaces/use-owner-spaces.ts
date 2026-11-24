@@ -72,8 +72,12 @@ export function useLotOccupancy(spaces: ParkingSpace[]) {
 
   return {
     byId,
+    /** every active lot around the owner's lots, theirs and other owners' */
+    nearby: live.spaces,
     loading: points.length > 0 && live.loading,
     error: live.error,
     updatedAt: live.updatedAt,
+    nextRefreshAt: live.nextRefreshAt,
+    refresh: live.refresh,
   };
 }

@@ -4,6 +4,7 @@ import {
   type AuthRepository,
   type AuthSession,
   type LoginInput,
+  type ResetPasswordInput,
   type Role,
   type SignupInput,
   type User,
@@ -204,7 +205,7 @@ export class CookieAuthRepository implements AuthRepository {
     return { token };
   }
 
-  async resetPassword(token: string, password: string): Promise<void> {
+  async resetPassword({ token, password }: ResetPasswordInput): Promise<void> {
     const resets = readResets();
     const entry = resets[token];
     if (!entry || entry.expiresAt < Date.now()) {

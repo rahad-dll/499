@@ -9,11 +9,19 @@ import {
   ParkingSquare,
   RotateCcw,
   ScanEye,
+  ShieldCheck,
   Ticket,
 } from "lucide-react";
+import Link from "next/link";
+import { InfoTip } from "@/components/InfoTip";
 import { AuthorityShell } from "@/components/portal/AuthorityShell";
+import { LiveStatus } from "@/components/portal/LiveStatus";
+import { CardGridSkeleton } from "@/components/portal/PageSkeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingRegion, Skeleton } from "@/components/ui/skeleton";
+import { formatDateTime } from "@/lib/format/datetime";
 import { deriveIncidents, timeAgo, type Incident } from "@/lib/insights/metrics";
 import { useLiveSpaces } from "@/lib/spaces/use-live-spaces";
 import { cn } from "@/lib/utils";
@@ -46,7 +54,7 @@ function IncidentCard({
       <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
         <Clock className="size-3.5" />
         Detected {timeAgo(inc.slot.last_updated, now)}
-        {inc.slot.last_updated && <> · {new Date(inc.slot.last_updated).toLocaleString()}</>}
+        {inc.slot.last_updated && <> · {formatDateTime(inc.slot.last_updated)}</>}
       </div>
 
       <div className="mt-3.5 border-t border-border pt-3.5">
@@ -57,7 +65,8 @@ function IncidentCard({
         <div className="mt-2.5 flex items-center gap-3 text-[13px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
             <ScanEye className="size-4" />
-            AI Confidence
+            AI confidence
+            <InfoTip term="confidence" className="-my-1 -ml-1" />
           </span>
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div className="h-full rounded-full bg-brand" style={{ width: `${confidence}%` }} />
@@ -69,7 +78,10 @@ function IncidentCard({
             <ParkingSquare className="size-4" />
           </span>
           <span>
-            <div className="text-[13.5px] font-bold">Occupied with no booking</div>
+            <div className="flex items-center gap-0.5 text-[13.5px] font-bold">
+              Occupied with no booking
+              <InfoTip term="unbooked" className="-my-1" />
+            </div>
             <div className="text-xs text-muted-foreground">
               AI label “{inc.slot.label}”{inc.space.is_stale && " · camera data is stale"}
             </div>
@@ -79,7 +91,7 @@ function IncidentCard({
 
       <Button variant={resolved ? "outline" : "brand"} className="mt-4 w-full" onClick={onToggle}>
         {resolved ? <RotateCcw className="size-4" /> : <CheckCircle2 className="size-4" />}
-        {resolved ? "Reopen" : "Mark Resolved"}
+        {resolved ? "Reopen" : "Mark resolved"}
       </Button>
     </div>
   );
@@ -88,7 +100,7 @@ function IncidentCard({
 /* ---------------- page ---------------- */
 
 export default function EnforcementLogsPage() {
-  const { spaces, loading, error, updatedAt } = useLiveSpaces();
+  const { spaces, loading, error, updatedAt, nextRefreshAt, refresh } = useLiveSpaces();
   const incidents = useMemo(() => deriveIncidents(spaces), [spaces]);
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(() => new Set());
   const [tab, setTab] = useState<"active" | "resolved">("active");
@@ -115,11 +127,19 @@ export default function EnforcementLogsPage() {
     <AuthorityShell active="enforcement">
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-10">
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-[28px]">
-          Enforcement Logs
+          Enforcement logs
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Slots the AI sees as occupied without a booking — possible unpaid parking.
         </p>
+        <LiveStatus
+          className="mt-1.5"
+          updatedAt={updatedAt}
+          nextRefreshAt={nextRefreshAt}
+          loading={loading}
+          error={error}
+          onRefresh={() => void refresh()}
+        />
 
         <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-brand/30 bg-brand/5 px-4 py-3 text-[13px] text-muted-foreground">
           <Info className="mt-0.5 size-4 shrink-0 text-teal-600 dark:text-brand" />
@@ -141,8 +161,12 @@ export default function EnforcementLogsPage() {
               <Ticket className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{active.length}</div>
-              <div className="text-[13px] text-muted-foreground">Active Incidents</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{active.length}</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">Active incidents</div>
             </div>
           </div>
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-5">
@@ -150,8 +174,12 @@ export default function EnforcementLogsPage() {
               <MapPin className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{lotsAffected}</div>
-              <div className="text-[13px] text-muted-foreground">Lots Affected</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{lotsAffected}</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">Lots affected</div>
             </div>
           </div>
           <div className="col-span-2 flex items-center gap-4 rounded-2xl border border-border bg-card p-5 sm:col-span-1">
@@ -159,8 +187,12 @@ export default function EnforcementLogsPage() {
               <ScanEye className="size-[22px]" />
             </span>
             <div>
-              <div className="text-2xl font-extrabold tracking-tight">{avgConfidence}%</div>
-              <div className="text-[13px] text-muted-foreground">Avg AI Confidence</div>
+              {loading && spaces.length === 0 ? (
+                <Skeleton className="my-1 h-6 w-12" />
+              ) : (
+                <div className="text-2xl font-extrabold tracking-tight">{avgConfidence}%</div>
+              )}
+              <div className="text-[13px] text-muted-foreground">Average AI confidence</div>
             </div>
           </div>
         </div>
@@ -175,7 +207,7 @@ export default function EnforcementLogsPage() {
               tab === "active" ? "bg-brand/10 text-teal-600 dark:text-brand" : "text-muted-foreground hover:text-foreground",
             )}
           >
-            Active Incidents
+            Active incidents
             <Badge variant={tab === "active" ? "info" : "secondary"} className="px-2">{active.length}</Badge>
           </button>
           <button
@@ -193,13 +225,35 @@ export default function EnforcementLogsPage() {
 
         {/* incident grid */}
         {list.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
-            {loading
-              ? "Scanning live AI data…"
-              : tab === "active"
-                ? "No unbooked occupancy detected right now."
-                : "Nothing resolved yet."}
-          </div>
+          loading ? (
+            <LoadingRegion label="Scanning live AI data…">
+              <CardGridSkeleton className="mt-5" />
+            </LoadingRegion>
+          ) : tab === "active" ? (
+            <EmptyState
+              className="mt-5"
+              icon={ShieldCheck}
+              title="No unbooked occupancy right now"
+              description="Every occupied slot the AI can see has a booking. New incidents appear here automatically."
+              action={
+                <Button asChild variant="outline">
+                  <Link href="/command-center">Open the live map</Link>
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              className="mt-5"
+              icon={CheckCircle2}
+              title="Nothing resolved yet"
+              description="Incidents you mark as resolved are listed here, so you can reopen them if needed."
+              action={
+                <Button variant="outline" onClick={() => setTab("active")}>
+                  View active incidents
+                </Button>
+              }
+            />
+          )
         ) : (
           <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {list.map((inc) => (

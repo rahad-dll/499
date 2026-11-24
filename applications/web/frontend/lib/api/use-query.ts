@@ -5,6 +5,7 @@ import {
   EMPTY_SNAPSHOT,
   isStale,
   loadQuery,
+  nextPollAt,
   readQuery,
   subscribeQuery,
   type QuerySnapshot,
@@ -20,6 +21,8 @@ export interface QueryOptions {
 export interface QueryResult<T> extends QuerySnapshot<T> {
   /** true until the first load finishes */
   loading: boolean;
+  /** epoch ms of the next automatic refresh (polled keys only) */
+  nextRefreshAt: number | null;
   reload: () => Promise<void>;
 }
 
@@ -60,5 +63,11 @@ export function useQuery<T>(
 
   const reload = useCallback(() => (key ? loadQuery(key, load) : Promise.resolve()), [key, load]);
 
-  return { ...snapshot, loading: !snapshot.updatedAt && !snapshot.error, reload };
+  return {
+    ...snapshot,
+    loading: !snapshot.updatedAt && !snapshot.error,
+    // read on every render: the store schedules the next poll before it publishes
+    nextRefreshAt: key && pollMs ? nextPollAt(key) : null,
+    reload,
+  };
 }

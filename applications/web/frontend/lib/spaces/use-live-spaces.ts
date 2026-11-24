@@ -82,6 +82,8 @@ export function useLiveSpaces({
     error: query.error,
     /** epoch ms of the last successful refresh */
     updatedAt: query.updatedAt || null,
+    /** epoch ms of the next automatic refresh */
+    nextRefreshAt: query.nextRefreshAt,
     refresh: query.reload,
   };
 }

@@ -4,6 +4,7 @@ import { roleDestination } from "./destination.ts";
 
 describe("roleDestination", () => {
   it("routes operational web roles to their portals", () => {
+    assert.equal(roleDestination("admin", "login"), "/admin");
     assert.equal(roleDestination("owner", "login"), "/owner");
     assert.equal(
       roleDestination("authority", "signup"),

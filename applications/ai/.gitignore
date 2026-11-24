@@ -3,3 +3,12 @@ annotation_vps/
 weights
 *.safetensors
 prototype-ui/
+
+# models the inference
+!api-services/weights/
+api-services/weights/*
+!api-services/weights/.gitkeep
+!api-services/weights/mobilenetv2/
+!api-services/weights/vps-net/
+!api-services/weights/plate-detector-yolo26n/
+!api-services/weights/plate-reader-layout/

@@ -1,0 +1,517 @@
+[
+  {
+    "name": "0",
+    "bangla": "০",
+    "kind": "digit"
+  },
+  {
+    "name": "1",
+    "bangla": "১",
+    "kind": "digit"
+  },
+  {
+    "name": "2",
+    "bangla": "২",
+    "kind": "digit"
+  },
+  {
+    "name": "3",
+    "bangla": "৩",
+    "kind": "digit"
+  },
+  {
+    "name": "4",
+    "bangla": "৪",
+    "kind": "digit"
+  },
+  {
+    "name": "5",
+    "bangla": "৫",
+    "kind": "digit"
+  },
+  {
+    "name": "6",
+    "bangla": "৬",
+    "kind": "digit"
+  },
+  {
+    "name": "7",
+    "bangla": "৭",
+    "kind": "digit"
+  },
+  {
+    "name": "8",
+    "bangla": "৮",
+    "kind": "digit"
+  },
+  {
+    "name": "9",
+    "bangla": "৯",
+    "kind": "digit"
+  },
+  {
+    "name": "A",
+    "bangla": "অ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ba",
+    "bangla": "ব",
+    "kind": "letter"
+  },
+  {
+    "name": "Bha",
+    "bangla": "ভ",
+    "kind": "letter"
+  },
+  {
+    "name": "Cha",
+    "bangla": "চ",
+    "kind": "letter"
+  },
+  {
+    "name": "Chha",
+    "bangla": "ছ",
+    "kind": "letter"
+  },
+  {
+    "name": "DA",
+    "bangla": "দ",
+    "kind": "letter"
+  },
+  {
+    "name": "Da",
+    "bangla": "ড",
+    "kind": "letter"
+  },
+  {
+    "name": "Dha",
+    "bangla": "ঢ",
+    "kind": "letter"
+  },
+  {
+    "name": "E",
+    "bangla": "এ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ga",
+    "bangla": "গ",
+    "kind": "letter"
+  },
+  {
+    "name": "Gha",
+    "bangla": "ঘ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ha",
+    "bangla": "হ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ja",
+    "bangla": "জ",
+    "kind": "letter"
+  },
+  {
+    "name": "Jha",
+    "bangla": "ঝ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ka",
+    "bangla": "ক",
+    "kind": "letter"
+  },
+  {
+    "name": "Kha",
+    "bangla": "খ",
+    "kind": "letter"
+  },
+  {
+    "name": "La",
+    "bangla": "ল",
+    "kind": "letter"
+  },
+  {
+    "name": "Ma",
+    "bangla": "ম",
+    "kind": "letter"
+  },
+  {
+    "name": "Na",
+    "bangla": "ন",
+    "kind": "letter"
+  },
+  {
+    "name": "Pa",
+    "bangla": "প",
+    "kind": "letter"
+  },
+  {
+    "name": "Sa",
+    "bangla": "স",
+    "kind": "letter"
+  },
+  {
+    "name": "Sha",
+    "bangla": "শ",
+    "kind": "letter"
+  },
+  {
+    "name": "THA",
+    "bangla": "ঠ",
+    "kind": "letter"
+  },
+  {
+    "name": "Ta",
+    "bangla": "ট",
+    "kind": "letter"
+  },
+  {
+    "name": "Tha",
+    "bangla": "থ",
+    "kind": "letter"
+  },
+  {
+    "name": "U",
+    "bangla": "উ",
+    "kind": "letter"
+  },
+  {
+    "name": "Metro",
+    "bangla": "মেট্রো",
+    "kind": "word"
+  },
+  {
+    "name": "Chatto",
+    "bangla": "চট্ট",
+    "kind": "word"
+  },
+  {
+    "name": "Raj",
+    "bangla": "রাজ",
+    "kind": "word"
+  },
+  {
+    "name": "Bagerhat",
+    "bangla": "বাগেরহাট",
+    "kind": "district"
+  },
+  {
+    "name": "Bagura",
+    "bangla": "বগুড়া",
+    "kind": "district"
+  },
+  {
+    "name": "Bandarban",
+    "bangla": "বান্দরবান",
+    "kind": "district"
+  },
+  {
+    "name": "Barguna",
+    "bangla": "বরগুনা",
+    "kind": "district"
+  },
+  {
+    "name": "Barisal",
+    "bangla": "বরিশাল",
+    "kind": "district"
+  },
+  {
+    "name": "Bhola",
+    "bangla": "ভোলা",
+    "kind": "district"
+  },
+  {
+    "name": "Brahmanbaria",
+    "bangla": "ব্রাহ্মণবাড়িয়া",
+    "kind": "district"
+  },
+  {
+    "name": "Chandpur",
+    "bangla": "চাঁদপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Chapainawabganj",
+    "bangla": "চাঁপাইনবাবগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Chattogram",
+    "bangla": "চট্টগ্রাম",
+    "kind": "district"
+  },
+  {
+    "name": "Chuadanga",
+    "bangla": "চুয়াডাঙ্গা",
+    "kind": "district"
+  },
+  {
+    "name": "Coxs-Bazar",
+    "bangla": "কক্সবাজার",
+    "kind": "district"
+  },
+  {
+    "name": "Cumilla",
+    "bangla": "কুমিল্লা",
+    "kind": "district"
+  },
+  {
+    "name": "Dhaka",
+    "bangla": "ঢাকা",
+    "kind": "district"
+  },
+  {
+    "name": "Dinajpur",
+    "bangla": "দিনাজপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Faridpur",
+    "bangla": "ফরিদপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Feni",
+    "bangla": "ফেনী",
+    "kind": "district"
+  },
+  {
+    "name": "Gaibandha",
+    "bangla": "গাইবান্ধা",
+    "kind": "district"
+  },
+  {
+    "name": "Gazipur",
+    "bangla": "গাজীপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Gopalganj",
+    "bangla": "গোপালগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Habiganj",
+    "bangla": "হবিগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Jamalpur",
+    "bangla": "জামালপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Jessore",
+    "bangla": "যশোর",
+    "kind": "district"
+  },
+  {
+    "name": "Jhalokati",
+    "bangla": "ঝালকাঠি",
+    "kind": "district"
+  },
+  {
+    "name": "Jhenaidah",
+    "bangla": "ঝিনাইদহ",
+    "kind": "district"
+  },
+  {
+    "name": "Joypurhat",
+    "bangla": "জয়পুরহাট",
+    "kind": "district"
+  },
+  {
+    "name": "Khagrachari",
+    "bangla": "খাগড়াছড়ি",
+    "kind": "district"
+  },
+  {
+    "name": "Khulna",
+    "bangla": "খুলনা",
+    "kind": "district"
+  },
+  {
+    "name": "Kishoreganj",
+    "bangla": "কিশোরগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Kurigram",
+    "bangla": "কুড়িগ্রাম",
+    "kind": "district"
+  },
+  {
+    "name": "Kustia",
+    "bangla": "কুষ্টিয়া",
+    "kind": "district"
+  },
+  {
+    "name": "Lakshmipur",
+    "bangla": "লক্ষ্মীপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Lalmonirhat",
+    "bangla": "লালমনিরহাট",
+    "kind": "district"
+  },
+  {
+    "name": "Madaripur",
+    "bangla": "মাদারীপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Magura",
+    "bangla": "মাগুরা",
+    "kind": "district"
+  },
+  {
+    "name": "Manikganj",
+    "bangla": "মানিকগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Meherpur",
+    "bangla": "মেহেরপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Moulvibazar",
+    "bangla": "মৌলভীবাজার",
+    "kind": "district"
+  },
+  {
+    "name": "Mymensingh",
+    "bangla": "ময়মনসিংহ",
+    "kind": "district"
+  },
+  {
+    "name": "Naogaon",
+    "bangla": "নওগাঁ",
+    "kind": "district"
+  },
+  {
+    "name": "Narail",
+    "bangla": "নড়াইল",
+    "kind": "district"
+  },
+  {
+    "name": "Narayanganj",
+    "bangla": "নারায়ণগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Narsingdi",
+    "bangla": "নরসিংদী",
+    "kind": "district"
+  },
+  {
+    "name": "Natore",
+    "bangla": "নাটোর",
+    "kind": "district"
+  },
+  {
+    "name": "Netrokona",
+    "bangla": "নেত্রকোনা",
+    "kind": "district"
+  },
+  {
+    "name": "Nilphamari",
+    "bangla": "নীলফামারী",
+    "kind": "district"
+  },
+  {
+    "name": "Noakhali",
+    "bangla": "নোয়াখালী",
+    "kind": "district"
+  },
+  {
+    "name": "Nowabganj",
+    "bangla": "নবাবগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Pabna",
+    "bangla": "পাবনা",
+    "kind": "district"
+  },
+  {
+    "name": "Panchagarh",
+    "bangla": "পঞ্চগড়",
+    "kind": "district"
+  },
+  {
+    "name": "Patuakhali",
+    "bangla": "পটুয়াখালী",
+    "kind": "district"
+  },
+  {
+    "name": "Pirojpur",
+    "bangla": "পিরোজপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Rajbari",
+    "bangla": "রাজবাড়ী",
+    "kind": "district"
+  },
+  {
+    "name": "Rajshahi",
+    "bangla": "রাজশাহী",
+    "kind": "district"
+  },
+  {
+    "name": "Rangamati",
+    "bangla": "রাঙ্গামাটি",
+    "kind": "district"
+  },
+  {
+    "name": "Rangpur",
+    "bangla": "রংপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Satkhira",
+    "bangla": "সাতক্ষীরা",
+    "kind": "district"
+  },
+  {
+    "name": "Shariatpur",
+    "bangla": "শরীয়তপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Sherpur",
+    "bangla": "শেরপুর",
+    "kind": "district"
+  },
+  {
+    "name": "Sirajganj",
+    "bangla": "সিরাজগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Sunamganj",
+    "bangla": "সুনামগঞ্জ",
+    "kind": "district"
+  },
+  {
+    "name": "Sylhet",
+    "bangla": "সিলেট",
+    "kind": "district"
+  },
+  {
+    "name": "Tangail",
+    "bangla": "টাঙ্গাইল",
+    "kind": "district"
+  },
+  {
+    "name": "Thakurgaon",
+    "bangla": "ঠাকুরগাঁও",
+    "kind": "district"
+  }
+]

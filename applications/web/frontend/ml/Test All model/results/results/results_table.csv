@@ -1,0 +1,8 @@
+﻿split,run,model,study,test_crops,test_exact,test_char_acc,test_plates,per_plate_exact,ci95,val_exact,box_mAP50,ms_per_plate,epochs_run,train_minutes,params_M
+fair,lpnr_v12n,"LPNR char-YOLO12n, 640 px",Cascaded-YOLO study,974,83.88,96.05,268,81.32,77.0-85.49,81.15,0.904,37.73,70,133.7,
+fair,chars_v8n,"char-YOLOv8n, 320 px",YOLOv10 / Video-LPR studies,974,83.37,96.17,268,81.52,77.22-85.76,80.43,0.9218,14.3,70,39.7,
+fair,chars_v10n,"char-YOLOv10n, 320 px",YOLOv10 study,974,79.67,96.12,268,77.36,72.46-81.97,80.12,0.9204,12.55,70,45.7,
+fair,svtrv2_s_msr,SVTRv2-S (MSR),SVTRv2 study,974,78.85,96.07,268,75.57,70.64-80.28,80.12,,8.26,60,77.3,11.25
+fair,svtrv2_t_msr,SVTRv2-T (MSR),SVTRv2 study,974,75.05,94.92,268,72.26,67.37-77.23,77.05,,8.06,60,97.8,5.13
+fair,crnn,CRNN-CTC,Super-resolution / LPLCv2 studies,974,55.44,87.03,268,49.72,44.07-55.29,56.25,,6.17,,31.2,7.69
+published,chars_v8n,"char-YOLOv8n, 320 px",YOLOv10 / Video-LPR studies,740,84.73,95.58,659,84.76,82.08-87.48,85.7,0.9599,11.29,70,41.3,

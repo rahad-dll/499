@@ -1,0 +1,100 @@
+{
+  "run": "chars_v8n",
+  "kind": "char-yolo",
+  "note": "",
+  "settings": {
+    "start_weights": "yolov8n.pt",
+    "epochs": 70,
+    "imgsz": 320,
+    "batch": 32,
+    "optimizer": "SGD",
+    "hyp": {
+      "fliplr": 0.0,
+      "mosaic": 0.5,
+      "degrees": 3.0,
+      "shear": 2.0,
+      "scale": 0.3
+    }
+  },
+  "epochs_planned": 70,
+  "epochs_run": 70,
+  "train_minutes": 41.3,
+  "val_boxes": {
+    "P": 0.9632,
+    "R": 0.9275,
+    "mAP50": 0.9731,
+    "mAP50-95": 0.7089,
+    "speed_ms": {
+      "preprocess": 0.29,
+      "inference": 1.79,
+      "loss": 0.0,
+      "postprocess": 1.6
+    }
+  },
+  "test_boxes": {
+    "P": 0.9424,
+    "R": 0.9234,
+    "mAP50": 0.9599,
+    "mAP50-95": 0.6902,
+    "speed_ms": {
+      "preprocess": 0.39,
+      "inference": 1.84,
+      "loss": 0.0,
+      "postprocess": 1.72
+    }
+  },
+  "versions": {
+    "ultralytics": "8.4.170",
+    "torch": "2.11.0+cu130",
+    "python": "3.13.16"
+  },
+  "train_device": "Tesla T4",
+  "ocr_test": {
+    "rows_decoder": {
+      "plates": 740,
+      "plate_exact_%": 84.73,
+      "CER_%": 4.42,
+      "char_acc_%": 95.58,
+      "token_acc_%": 95.62,
+      "WER_%": 6.67
+    },
+    "xsort_decoder": {
+      "plates": 740,
+      "plate_exact_%": 0.0,
+      "CER_%": 47.07,
+      "char_acc_%": 52.93,
+      "token_acc_%": 42.41,
+      "WER_%": 152.14
+    },
+    "valid_format_%": 89.05,
+    "ms_per_plate": 11.29,
+    "by_source": {
+      "bd-lpr": {
+        "plates": 194,
+        "plate_exact_%": 87.63,
+        "CER_%": 0.95,
+        "char_acc_%": 99.05,
+        "token_acc_%": 98.22,
+        "WER_%": 3.64
+      },
+      "blpd": {
+        "plates": 546,
+        "plate_exact_%": 83.7,
+        "CER_%": 5.76,
+        "char_acc_%": 94.24,
+        "token_acc_%": 94.63,
+        "WER_%": 7.89
+      }
+    },
+    "by_condition": null,
+    "extra_tests": {}
+  },
+  "ocr_val": {
+    "plates": 1371,
+    "plate_exact_%": 85.7,
+    "CER_%": 3.53,
+    "char_acc_%": 96.47,
+    "token_acc_%": 96.27,
+    "WER_%": 5.93
+  }
+}

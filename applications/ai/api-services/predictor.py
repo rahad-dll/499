@@ -280,6 +280,11 @@ def analyse_frame(image_bytes: bytes, slots: list[dict], model_name: str | None 
     Slot boxes are fractions (0-1) of the frame. Plate boxes are returned in frame pixels.
     """
     frame = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
+    return analyse_image(frame, slots, model_name)
+
+
+def analyse_image(frame: Image.Image, slots: list[dict], model_name: str | None = None) -> list[dict]:
+    """Same as analyse_frame, for a frame that is already open."""
     width, height = frame.size
 
     results = []

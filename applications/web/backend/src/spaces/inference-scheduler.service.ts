@@ -144,8 +144,13 @@ export class InferenceSchedulerService implements OnModuleInit {
         }
       }
 
+      // cameras with an uploaded picture; with the demo video on, every camera that has slots
       const cameras = await this.prisma.cameras.findMany({
-        where: { deleted_at: null, frame_key: { not: null }, space: { deleted_at: null, status: 'active' } },
+        where: {
+          deleted_at: null,
+          space: { deleted_at: null, status: 'active' },
+          ...(this.demoVideoOn() ? { slots: { some: { deleted_at: null } } } : { frame_key: { not: null } }),
+        },
         select: { id: true },
       });
       for (const camera of cameras) {
@@ -170,16 +175,47 @@ export class InferenceSchedulerService implements OnModuleInit {
     return key;
   }
 
+  /** The shared demo video is used for cameras without an uploaded picture unless DEMO_VIDEO=false. */
+  demoVideoOn(): boolean {
+    return this.config.get<string>('DEMO_VIDEO', 'true').toLowerCase() !== 'false';
+  }
+
+  private videoInfo: { at: number; value: { url: string; duration_s: number; clock_start: string } | null } | null = null;
+
+  /** Where the apps play the demo video and its shared clock; asked from the AI service once an hour. */
+  async demoVideo(): Promise<{ url: string; duration_s: number; clock_start: string } | null> {
+    if (!this.demoVideoOn()) return null;
+    if (this.videoInfo && Date.now() - this.videoInfo.at < 60 * 60 * 1000) return this.videoInfo.value;
+    const base = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001').replace(/\/$/, '');
+    let value: { url: string; duration_s: number; clock_start: string } | null = null;
+    try {
+      const r = await fetch(`${base}/api/v1/inference/video`, {
+        headers: { Authorization: `Bearer ${this.config.get<string>('AI_API_TOKEN', '')}` },
+        signal: AbortSignal.timeout(90_000),
+      });
+      if (r.ok) {
+        const v = (await r.json()) as { duration_s: number; clock_start: string };
+        value = { url: `${base}/demo-video.mp4`, duration_s: v.duration_s, clock_start: v.clock_start };
+      }
+    } catch (e) {
+      this.logger.warn(`Demo video info failed: ${e instanceof Error ? e.message : e}`);
+    }
+    this.videoInfo = { at: Date.now(), value };
+    return value;
+  }
+
   /**
-   * Reads a camera's latest picture: occupancy of each slot drawn on it and the plate of each
-   * occupied slot. Returns the number of slots updated.
+   * Reads a camera: its latest uploaded picture, or with no picture the shared demo video at the
+   * current moment. Saves occupancy of each slot and the plate of each occupied slot. Returns the
+   * number of slots updated.
    */
   async analyseCamera(cameraId: string, image?: Buffer): Promise<number> {
     const camera = await this.prisma.cameras.findFirst({
       where: { id: cameraId, deleted_at: null },
       include: { slots: { where: { deleted_at: null }, select: { id: true, bbox: true } } },
     });
-    if (!camera?.frame_key) return 0;
+    const useVideo = !!camera && !camera.frame_key && !image && this.demoVideoOn();
+    if (!camera || (!camera.frame_key && !useVideo)) return 0;
 
     const slots = camera.slots.flatMap((slot) => {
       const b = slot.bbox as { x1?: number; y1?: number; x2?: number; y2?: number } | null;
@@ -188,14 +224,23 @@ export class InferenceSchedulerService implements OnModuleInit {
     });
     if (!slots.length) return 0;
 
-    const frame = image ?? (await this.downloadPhoto(camera.frame_key));
-    const payload = (await this.postToAi(
-      '/api/v1/inference/frame',
-      { space_id: camera.space_id, camera_id: camera.id },
-      frame,
-      basename(camera.frame_key),
-      { slots: JSON.stringify(slots) },
-    )) as { slots?: FrameSlotResult[] };
+    let payload: { slots?: FrameSlotResult[] };
+    if (useVideo) {
+      payload = (await this.postJsonToAi('/api/v1/inference/video-frame', {
+        space_id: camera.space_id,
+        camera_id: camera.id,
+        slots,
+      })) as { slots?: FrameSlotResult[] };
+    } else {
+      const frame = image ?? (await this.downloadPhoto(camera.frame_key!));
+      payload = (await this.postToAi(
+        '/api/v1/inference/frame',
+        { space_id: camera.space_id, camera_id: camera.id },
+        frame,
+        basename(camera.frame_key!),
+        { slots: JSON.stringify(slots) },
+      )) as { slots?: FrameSlotResult[] };
+    }
 
     const now = new Date();
     let updated = 0;
@@ -261,6 +306,19 @@ export class InferenceSchedulerService implements OnModuleInit {
     const imgResponse = await fetch(presignedUrl, { signal: AbortSignal.timeout(60_000) });
     if (!imgResponse.ok) throw new Error(`S3 ${imgResponse.status} for ${s3Key}`);
     return Buffer.from(await imgResponse.arrayBuffer());
+  }
+
+  private async postJsonToAi(path: string, body: unknown) {
+    const aiBaseUrl = this.config.get<string>('AI_INFERENCE_URL', 'http://localhost:8001');
+    const url = new URL(path, aiBaseUrl.endsWith('/') ? aiBaseUrl : `${aiBaseUrl}/`);
+    const aiResponse = await fetch(url.toString(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.config.get<string>('AI_API_TOKEN', '')}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),
+    });
+    if (!aiResponse.ok) throw new Error(`AI ${aiResponse.status}`);
+    return aiResponse.json() as Promise<unknown>;
   }
 
   private async postToAi(

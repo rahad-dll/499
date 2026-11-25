@@ -78,6 +78,23 @@ class FrameResponse(BaseModel):
     created_at:   datetime
 
 
+class VideoFrameRequest(BaseModel):
+    slots:     list[FrameSlot] = Field(..., min_length=1, max_length=200)
+    space_id:  Optional[str] = None
+    camera_id: Optional[str] = None
+    at_s:      Optional[float] = Field(None, ge=0, description="seconds into the video; empty = now on the shared clock")
+
+
+class VideoFrameResponse(FrameResponse):
+    position_s: float           # where in the video the frame was taken
+
+
+class VideoInfo(BaseModel):
+    duration_s:  float
+    clock_start: str            # ISO time the shared clock started
+    position_s:  float          # where the video is now
+
+
 class StandardResponse(BaseModel):
     success: bool = True
     data:    Optional[dict | list | None] = None

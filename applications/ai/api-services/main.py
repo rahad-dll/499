@@ -2,10 +2,13 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import PLATE_PRELOAD
+from config import PLATE_PRELOAD, VIDEO_PATH
 from db.mongodb import connect_db, close_db
 from predictor import load_plate_models
 from routes.frames import router as frames_router
@@ -57,3 +60,11 @@ app.include_router(frames_router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/demo-video.mp4", include_in_schema=False)
+async def demo_video():
+    """The demo camera video for the apps to play (public, streamed in parts)."""
+    if not Path(VIDEO_PATH).exists():
+        raise HTTPException(status_code=404, detail="demo video not found")
+    return FileResponse(VIDEO_PATH, media_type="video/mp4")

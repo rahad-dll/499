@@ -12,3 +12,4 @@ api-services/weights/*
 !api-services/weights/vps-net/
 !api-services/weights/plate-detector-yolo26n/
 !api-services/weights/plate-reader-layout/
+!api-services/weights/onnx/

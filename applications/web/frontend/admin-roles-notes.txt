@@ -1,0 +1,61 @@
+ADMIN ROLES - FUTURE TYPES (super admin, area manager, etc.)
+============================================================
+
+Short answer: Yes, the backend is designed for that, but today only the "admin"
+role actually works fully.
+
+WHAT'S ALREADY THERE
+--------------------
+- Roles are dynamic, not hardcoded. Admin can create any role, like
+  "super_admin" or "area_manager", with POST /admin/roles, and give it
+  permissions with POST /admin/roles/:id/permissions.
+  Tables: roles, permissions, role_permissions.
+
+- The admin pages are guarded by 4 permissions:
+    admin.manage_spaces       -> approve or suspend parking spaces
+    admin.manage_users        -> list users, change a user's role
+    admin.manage_roles        -> manage roles and give them permissions
+    admin.manage_permissions  -> list and create permissions
+
+  Example: an "area_manager" role with only admin.manage_spaces could open
+  the Spaces approval page but would get a 403 on Users and Roles.
+
+- The database already has a location tree:
+  division -> district -> city -> area.
+  Both users and parking_spaces have an area_id, so an area-based role is
+  possible later.
+
+WHAT DOESN'T WORK YET
+---------------------
+1. Only a role named exactly "admin" skips every check. That makes "admin"
+   the super admin in practice. A role named "super_admin" would get no
+   special access unless it's given all 4 permissions.
+
+2. Many owner and user checks only recognize "admin". Editing another
+   owner's space, slots or cameras, acting on someone else's booking, and
+   editing another user's profile all check role === 'admin' directly.
+   An area manager would be blocked from these even with permissions.
+
+3. Nothing limits a role to one area. GET /admin/spaces returns every
+   space in the country, so an area manager would see and approve spaces
+   outside their area. The backend would need to filter by the manager's
+   area_id.
+
+4. Permission changes show up late. A user's permissions are copied into
+   their login token, so a change takes effect only at their next login or
+   token refresh.
+
+WHAT THIS MEANS FOR THE FRONTEND
+--------------------------------
+- Build /admin around permissions, not the role name. Decode the JWT, and
+  show the Spaces menu only if the user is "admin" or has
+  admin.manage_spaces, and so on for each page.
+- If built this way now, area_manager or moderator roles will appear on the
+  correct pages automatically once the backend fixes points 2 and 3.
+  No frontend rewrite needed.
+
+QUESTION FOR RAHAD
+------------------
+Are sub-roles like area manager actually planned? If yes, the backend needs
+area filtering on /admin/spaces and /admin/users, and the role === 'admin'
+checks need to become permission checks.

@@ -6,8 +6,9 @@ from pydantic import TypeAdapter, ValidationError
 
 from auth.dependencies import verify_token
 from db.mongodb import get_collection
-from models.schemas import FrameResponse, FrameSlot
-from predictor import analyse_frame
+from models.schemas import FrameResponse, FrameSlot, VideoFrameRequest, VideoFrameResponse, VideoInfo
+from predictor import analyse_frame, analyse_image
+import video_source
 
 router = APIRouter(prefix="/api/v1/inference", tags=["frames"])
 
@@ -60,4 +61,44 @@ async def read_frame(
         slots=results,
         inference_id=str(insert_result.inserted_id),
         created_at=doc["created_at"],
+    )
+
+
+@router.get("/video", response_model=VideoInfo)
+async def video_info(_token: str = Depends(verify_token)):
+    """Length of the demo camera video and where it is now on the shared clock."""
+    try:
+        return video_source.info()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/video-frame", response_model=VideoFrameResponse)
+async def read_video_frame(body: VideoFrameRequest, model: str = Query(None), _token: str = Depends(verify_token)):
+    """Like /frame, but the frame is taken from the demo camera video (now, or at at_s)."""
+    for s in body.slots:
+        if s.x2 <= s.x1 or s.y2 <= s.y1:
+            raise HTTPException(status_code=422, detail=f"slot {s.slot_id}: needs x1 < x2 and y1 < y2")
+    try:
+        frame, at = video_source.frame_at(body.at_s)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    results = analyse_image(frame, [s.model_dump() for s in body.slots], model_name=model)
+    doc = {
+        "space_id":   body.space_id,
+        "camera_id":  body.camera_id,
+        "slots":      results,
+        "source":     "video",
+        "position_s": at,
+        "created_at": datetime.now(timezone.utc),
+    }
+    try:
+        insert_result = await get_collection("frame_reads").insert_one(doc)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="inference storage unavailable") from exc
+
+    return VideoFrameResponse(
+        space_id=body.space_id, camera_id=body.camera_id, slots=results, position_s=at,
+        inference_id=str(insert_result.inserted_id), created_at=doc["created_at"],
     )

@@ -101,12 +101,20 @@ describe('InferenceSchedulerService.analyseCamera', () => {
     });
   });
 
-  it('does nothing for a camera without a picture or without boxes', async () => {
-    prisma.cameras.findFirst.mockResolvedValueOnce({
-      ...camera,
-      frame_key: null,
-    });
-    expect(await service.analyseCamera('cam-1')).toBe(0);
+  it('reads a camera without a picture from the demo video', async () => {
+    prisma.cameras.findFirst.mockResolvedValueOnce({ ...camera, frame_key: null });
+    expect(await service.analyseCamera('cam-1')).toBe(3);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain('/api/v1/inference/video-frame');
+    expect(JSON.parse(init.body as string).slots).toHaveLength(3);
+  });
+
+  it('does nothing without a picture when the demo video is off, or without boxes', async () => {
+    const off = new InferenceSchedulerService(prisma, {
+      get: (k: string, d?: string) => (k === 'DEMO_VIDEO' ? 'false' : d),
+    } as unknown as ConfigService);
+    prisma.cameras.findFirst.mockResolvedValueOnce({ ...camera, frame_key: null });
+    expect(await off.analyseCamera('cam-1')).toBe(0);
     prisma.cameras.findFirst.mockResolvedValueOnce({
       ...camera,
       slots: [{ id: 'x', bbox: null }],

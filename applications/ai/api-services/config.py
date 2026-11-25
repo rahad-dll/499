@@ -52,6 +52,9 @@ PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "pla
 PLATE_MIN_CONFIDENCE = float(os.getenv("PLATE_MIN_CONFIDENCE", 0.4))
 # "torch" (default) or "onnx"
 INFERENCE_BACKEND = os.getenv("INFERENCE_BACKEND", "torch").strip().lower()
+# demo camera video shared by every camera, and when its clock started (position = now - start, looped)
+VIDEO_PATH = os.getenv("VIDEO_PATH", "").strip() or str(BASE_DIR / "videos" / "parking-demo.mp4")
+VIDEO_CLOCK_START = os.getenv("VIDEO_CLOCK_START", "2026-01-01T00:00:00Z").strip()
 # load plate models at startup
 PLATE_PRELOAD = os.getenv("PLATE_PRELOAD", "false").strip().lower() == "true"
 

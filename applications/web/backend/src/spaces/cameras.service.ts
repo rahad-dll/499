@@ -346,6 +346,8 @@ export class CamerasService {
     ]);
     const slotRate = new Map(slotRates.map((p) => [p.slot_id, p.amount_unit]));
 
+    const demoVideo = await this.inference.demoVideo();
+
     return cameras.map((camera) => ({
       id: camera.id,
       space_id: camera.space_id,
@@ -360,6 +362,8 @@ export class CamerasService {
       media_type: camera.media_type,
       media_size: camera.media_size,
       frame_uploaded_at: camera.frame_uploaded_at,
+      // what the AI reads for this camera: play it at (now - clock_start) mod duration_s
+      video: camera.frame_key ? null : demoVideo,
       last_heartbeat: camera.last_heartbeat,
       created_at: camera.created_at,
       updated_at: camera.updated_at,

@@ -62,6 +62,12 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/live", include_in_schema=False)
+async def live_view():
+    """Page that plays the demo video and draws the slot results on it."""
+    return FileResponse(Path(__file__).parent / "static" / "live.html", media_type="text/html")
+
+
 @app.get("/demo-video.mp4", include_in_schema=False)
 async def demo_video():
     """The demo camera video for the apps to play (public, streamed in parts)."""

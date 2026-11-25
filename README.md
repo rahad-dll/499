@@ -25,6 +25,7 @@ Parking owners register their spaces and connect existing CCTV cameras. The syst
 - [Overview](#overview)
 - [Project Structure](#project-structure)
 - [CSE499A Summary](#cse499a-summary)
+- [CSE499B Progress](#cse499b-progress)
 - [CSE499B Work Plan](#cse499b-work-plan)
 - [Deliverables](#deliverables)
 - [Team Structure](#team-structure)
@@ -41,6 +42,8 @@ project-499/
 │   │   └── frontend/     # Frontend service (see full at. applications/web/frontend/README.md)
 │   ├── mobile/           # Mobile service
 │   ├── ai/               # AI/ML service
+│   │   ├── api-services/ # Inference API (occupancy, plates, camera frames, demo video)
+│   │   ├── ai-models/    # Training notebooks and results
 │   │   └── data/         # Datasets
 │   └── support/          # Shared utilities & helpers
 ├── others/               # Deliverables & documentation
@@ -48,7 +51,7 @@ project-499/
 └── README.md             # Project overview
 ```
 
-**Structure Updated:** 2026-10-07
+**Structure Updated:** 2026-11-25
 
 ---
 
@@ -66,6 +69,32 @@ project-499/
 
 ---
 
+## CSE499B Progress
+
+**Demo video:** [citypulse-1min-demo.mp4](others/citypulse-1min-demo.mp4) (75 s: API, AI pipeline, live camera reading, mobile app)
+
+**AI pipeline** (camera frame → slot occupancy → plate detection → plate reading → booking check)
+
+| Step | Model | Result |
+|---|---|---|
+| Slot occupancy | MobileNetV2 | 936/936 slot reads right on a 20-minute fixed-camera test video |
+| Plate detection | YOLO26n | mAP50 0.981 |
+| Plate reading | YOLO26s with a plate layout head | 86.5% plates fully right, character error rate 3.70% |
+
+- Runs on PyTorch or, with `INFERENCE_BACKEND=onnx`, on onnxruntime.
+- Reads uploaded camera pictures, or a shared demo video for every camera; a live view page draws the results on the video.
+
+**Backend**
+
+- Camera picture upload and scheduled reading of every camera; occupancy, plate and plate check saved per slot.
+- Plate check in Bangla or English: match, mismatch, no booking, or unknown (a one-character misread never gives mismatch).
+- Bookings (quote, check-in, extend, check-out, automatic clean-up), test payment gateway, accounts with password reset.
+- Security: rate limits, CORS allow list, security headers, 15-minute access tokens with rotating refresh tokens.
+
+**Docs:** [backend + AI slides](applications/web/backend/docs/backend-ai-progress-slides.pdf) · [AI models slides](applications/web/backend/docs/plate-model-novelty-slides.pdf)
+
+---
+
 ## CSE499B Work Plan
 
 ![CSE499B Gantt Chart](applications/support/work-plan/gantt-chart-499b.png)
@@ -76,21 +105,21 @@ project-499/
 - [x] Explore: public Bangla licence plate datasets
 - [x] Build: CSE499B review report and presentation
 - [x] Build: start Dhaka parking footage collection
-- [ ] Build: stream worker reading one camera
+- [x] Build: stream worker reading one camera
 
 ### Sprint 2 (W3–4) — Dhaka Dataset & Live Stream
 
-- [ ] Explore: labelling tools, frame sampling rate
+- [x] Explore: labelling tools, frame sampling rate
 - [x] Build: labelled Dhaka slot images; transfer test of the CSE499A model
-- [ ] Build: Redis-to-WebSocket push of slot changes
+- [x] Build: Redis-to-WebSocket push of slot changes
 - [x] Build: pricing endpoints
 
 ### Sprint 3 (W5–6) — Phase 3 & Platform Completion
 
-- [ ] Explore: fine-tuning on a small local dataset
-- [ ] Build: Phase 3 fine-tuning on a held-out Dhaka site
-- [ ] Build: booking lifecycle and account recovery
-- [ ] Build: web and mobile views on live backend data
+- [x] Explore: fine-tuning on a small local dataset
+- [x] Build: Phase 3 fine-tuning on a held-out Dhaka site
+- [x] Build: booking lifecycle and account recovery
+- [x] Build: web and mobile views on live backend data
 
 ### Sprint 4 (W7–8) — Bangla LPR
 
@@ -101,18 +130,18 @@ project-499/
 
 ### Sprint 5 (W9–10) — Authority, Pricing & Pending Features
 
-- [ ] Explore: bKash/Nagad sandbox APIs, notification delivery
-- [ ] Build: live authority views with privacy controls
-- [ ] Build: peak and surge pricing; owner revenue view
-- [ ] Build: sandbox payments and notifications
-- [ ] Build: Google sign-in and in-app route guidance
+- [x] Explore: bKash/Nagad sandbox APIs, notification delivery
+- [x] Build: live authority views with privacy controls
+- [x] Build: peak and surge pricing; owner revenue view
+- [x] Build: sandbox payments and notifications
+- [x] Build: Google sign-in and in-app route guidance
 
 ### Sprint 6 (W11–12) — Evaluation & Final Demo
 
-- [ ] Explore: end-to-end and load testing strategies
-- [ ] Build: full evaluation (metrics, latency, load test)
-- [ ] Build: bug fixes and demo preparation
-- [ ] Build: one-minute demo video, final report and presentation
+- [x] Explore: end-to-end and load testing strategies
+- [x] Build: full evaluation (metrics, latency, load test)
+- [x] Build: bug fixes and demo preparation
+- [x] Build: one-minute demo video, final report and presentation
 
 ---
 

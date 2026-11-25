@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CityPulse live slot view</title>
+<style>
+  body { margin: 0; background: #0f1923; color: #e6edf3; font: 14px system-ui, sans-serif; }
+  header { padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #16222e; }
+  header b { font-size: 16px; }
+  input { background: #0f1923; color: #e6edf3; border: 1px solid #34495e; border-radius: 4px; padding: 6px 8px; width: 260px; }
+  button { background: #18a07a; color: #fff; border: 0; border-radius: 4px; padding: 7px 14px; cursor: pointer; }
+  main { display: flex; gap: 16px; padding: 16px; flex-wrap: wrap; }
+  .stage { position: relative; flex: 1 1 760px; max-width: 1280px; }
+  video, canvas { width: 100%; display: block; border-radius: 6px; }
+  canvas { position: absolute; inset: 0; height: 100%; pointer-events: none; }
+  aside { flex: 0 1 320px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 6px 4px; border-bottom: 1px solid #23303d; text-align: left; }
+  .occ { color: #ff6b6b; } .emp { color: #46d18a; } .muted { color: #8b9aa8; }
+</style>
+</head>
+<body>
+<header>
+  <b>CityPulse live slot view</b>
+  <input id="token" type="password" placeholder="AI API token">
+  <button id="start">Start</button>
+  <span id="status" class="muted">paste the token and press Start</span>
+</header>
+<main>
+  <div class="stage">
+    <video id="video" src="/demo-video.mp4" muted playsinline loop></video>
+    <canvas id="overlay"></canvas>
+  </div>
+  <aside>
+    <table><thead><tr><th>Slot</th><th>Status</th><th>Plate</th></tr></thead><tbody id="rows"></tbody></table>
+    <p class="muted" id="info"></p>
+  </aside>
+</main>
+<script>
+// slot areas as fractions of the frame (the same boxes an owner draws)
+const SLOTS = [
+  { slot_id: "1", x1: 0.0,  y1: 0.52,   x2: 0.295, y2: 0.8533 },
+  { slot_id: "2", x1: 0.3,  y1: 0.5467, x2: 0.485, y2: 0.8533 },
+  { slot_id: "4", x1: 0.55, y1: 0.5067, x2: 0.77,  y2: 0.8667 },
+  { slot_id: "6", x1: 0.78, y1: 0.5467, x2: 0.99,  y2: 0.8667 },
+];
+const OCCUPIED_MIN = 0.9;   // same rule as the backend: less sure than this counts as free
+const video = document.getElementById("video"), canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d"), statusEl = document.getElementById("status");
+const tokenEl = document.getElementById("token");
+try { tokenEl.value = sessionStorage.getItem("aiToken") || ""; } catch {}
+let last = null, timer = null;
+
+const isOccupied = (r) => r.prediction.label === "occupied" && r.prediction.confidence >= OCCUPIED_MIN;
+
+function draw() {
+  canvas.width = video.clientWidth; canvas.height = video.clientHeight;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!last) return;
+  const W = canvas.width, H = canvas.height, vw = video.videoWidth || 1920, vh = video.videoHeight || 1080;
+  ctx.font = "bold 15px system-ui";
+  last.slots.forEach((r, i) => {
+    const s = SLOTS[i], occ = isOccupied(r);
+    const c = occ ? "#ff5a5a" : "#3ddc84";
+    const x = s.x1 * W, y = s.y1 * H, w = (s.x2 - s.x1) * W, h = (s.y2 - s.y1) * H;
+    ctx.strokeStyle = c; ctx.lineWidth = 3; ctx.strokeRect(x, y, w, h);
+    const label = `slot ${s.slot_id}: ` + (occ ? (r.plates[0]?.text_en || "occupied") : "FREE");
+    // label just above the box, so it does not cover the slot
+    const ly = Math.max(0, y - 26);
+    ctx.fillStyle = "rgba(0,0,0,.7)"; ctx.fillRect(x, ly, w, 24);
+    ctx.fillStyle = c; ctx.fillText(label, x + 6, ly + 17, w - 10);
+    for (const p of r.plates) {
+      ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2;
+      ctx.strokeRect(p.box.x1 / vw * W, p.box.y1 / vh * H, (p.box.x2 - p.box.x1) / vw * W, (p.box.y2 - p.box.y1) / vh * H);
+    }
+  });
+}
+
+let running = false, reads = 0, t0Run = 0;
+
+// continuous: read the frame on screen, draw the result, start the next read at once
+async function tick() {
+  while (running) {
+    const t0 = performance.now(), at = video.currentTime;
+    try {
+      const res = await fetch("/api/v1/inference/video-frame", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + tokenEl.value },
+        body: JSON.stringify({ space_id: "live-view", slots: SLOTS, at_s: at }),
+      });
+      if (!res.ok) throw new Error(res.status === 401 ? "wrong token" : "AI error " + res.status);
+      last = await res.json();
+      reads++;
+      const ms = Math.round(performance.now() - t0);
+      const mm = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+      const fps = (reads / ((performance.now() - t0Run) / 1000)).toFixed(1);
+      statusEl.textContent = `video ${mm(video.currentTime)} | result from ${mm(last.position_s)} | read ${ms} ms | ${fps} reads/s`;
+      document.getElementById("rows").innerHTML = last.slots.map((r) => {
+        const occ = isOccupied(r);
+        return `<tr><td>${r.slot_id}</td><td class="${occ ? "occ" : "emp"}">${occ ? "occupied" : "free"} <span class='muted'>(${r.prediction.label} ${r.prediction.confidence.toFixed(2)})</span></td>` +
+               `<td>${occ ? (r.plates[0] ? r.plates[0].text_en + "<br><span class='muted'>" + r.plates[0].text_bn + "</span>" : "-") : "-"}</td></tr>`;
+      }).join("");
+      draw();
+    } catch (e) {
+      statusEl.textContent = e.message;
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+  }
+}
+
+document.getElementById("start").onclick = async () => {
+  try { sessionStorage.setItem("aiToken", tokenEl.value); } catch {}
+  const info = await (await fetch("/api/v1/inference/video", { headers: { Authorization: "Bearer " + tokenEl.value } })).json();
+  if (!info.duration_s) { statusEl.textContent = "wrong token"; return; }
+  video.currentTime = ((Date.now() - Date.parse(info.clock_start)) / 1000) % info.duration_s;   // same moment as the AI
+  document.getElementById("info").textContent = `Video ${info.duration_s / 60} min, shared clock from ${info.clock_start}. Reads continuously.`;
+  running = true; reads = 0; t0Run = performance.now();
+  await video.play();
+  tick();
+};
+window.addEventListener("resize", draw);
+</script>
+</body>
+</html>

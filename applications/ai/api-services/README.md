@@ -92,6 +92,7 @@ Swagger UI → `http://localhost:8001/docs`
 | `MODEL_PATH_PLATE_READER`   | `plate-reader-layout/best.pt`            | plate character reader path relative to `MODEL_DIR`           |
 | `MODEL_PATH_PLATE_CLASSES`  | `plate-reader-layout/classes.json`       | reader classes with English and Bangla text                   |
 | `PLATE_MIN_CONFIDENCE`      | `0.4`                                    | plates detected below this confidence are dropped             |
+| `INFERENCE_BACKEND`         | `torch`                                  | `onnx` runs the models in `weights/onnx` with onnxruntime |
 | `PLATE_PRELOAD`             | `false`                                  | `true` loads the plate models at startup                      |
 | `HOST`                 | `0.0.0.0`                                     |                                                               |
 | `PORT`                 | `8001`                                        |                                                               |

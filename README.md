@@ -71,7 +71,7 @@ project-499/
 
 ## CSE499B Progress
 
-**Demo video:** [citypulse-demo.mp4](applications/web/backend/docs/videos/citypulse-demo.mp4) (75 s: API, AI pipeline, live camera reading, mobile app)
+**Demo video:** [citypulse-1min-demo.mp4](others/citypulse-1min-demo.mp4) (75 s: API, AI pipeline, live camera reading, mobile app)
 
 **AI pipeline** (camera frame → slot occupancy → plate detection → plate reading → booking check)
 

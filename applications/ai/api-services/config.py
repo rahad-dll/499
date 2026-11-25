@@ -50,6 +50,8 @@ PLATE_READER_MODEL   = os.getenv("MODEL_PATH_PLATE_READER", "").strip() or "plat
 PLATE_READER_CLASSES = os.getenv("MODEL_PATH_PLATE_CLASSES", "").strip() or "plate-reader-layout/classes.json"
 # boxes below this confidence are dropped (removes weak whole-image boxes on close-ups)
 PLATE_MIN_CONFIDENCE = float(os.getenv("PLATE_MIN_CONFIDENCE", 0.4))
+# "torch" (default) or "onnx"
+INFERENCE_BACKEND = os.getenv("INFERENCE_BACKEND", "torch").strip().lower()
 # load plate models at startup
 PLATE_PRELOAD = os.getenv("PLATE_PRELOAD", "false").strip().lower() == "true"
 

@@ -3,13 +3,12 @@ import json
 import re
 from pathlib import Path
 
-import torch
 from PIL import Image, ImageOps
-from torchvision import models, transforms
 
 from config import (
     DEFAULT_MODEL,
     DEFAULT_OCCUPANCY_MODEL,
+    INFERENCE_BACKEND,
     MODEL_DIR,
     MODEL_PATHS,
     PLATE_DETECTOR_MODEL,
@@ -115,6 +114,10 @@ def load_model(model_name: str | None = None):
     if _model is not None and _model_name == resolved_model:
         return _model
 
+    # imported here so the onnx backend never loads PyTorch
+    import torch
+    from torchvision import models, transforms
+
     model = models.mobilenet_v2(weights=None)
     model.classifier = torch.nn.Sequential(
         torch.nn.Dropout(p=0.2),
@@ -145,6 +148,14 @@ def predict(image_bytes: bytes, model_name: str | None = None) -> dict:
 
 def classify(img: Image.Image, model_name: str | None = None) -> dict:
     """Classify a slot image that is already open."""
+    if INFERENCE_BACKEND == "onnx":
+        import onnx_backend
+
+        idx, confidence = onnx_backend.classify(img)
+        return {"label": CLASS_NAMES[idx], "confidence": round(confidence, 4)}
+
+    import torch
+
     model = load_model(model_name)
     tensor = _transform(img).unsqueeze(0)
 
@@ -173,13 +184,18 @@ def load_plate_models():
     global _plate_models
 
     if _plate_models is None:
-        import plate_layers  # noqa: F401
-        from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
-
         classes = json.loads((Path(MODEL_DIR) / PLATE_READER_CLASSES).read_text(encoding="utf-8"))
-        _plate_models = {
-            "detector": YOLO(str(Path(MODEL_DIR) / PLATE_DETECTOR_MODEL)),
-            "reader":   YOLO(str(Path(MODEL_DIR) / PLATE_READER_MODEL)),
+        if INFERENCE_BACKEND == "onnx":
+            _plate_models = {"onnx": True}
+        else:
+            import plate_layers  # noqa: F401
+            from ultralytics import YOLO  # imported here so occupancy-only setups do not need it
+
+            _plate_models = {
+                "detector": YOLO(str(Path(MODEL_DIR) / PLATE_DETECTOR_MODEL)),
+                "reader":   YOLO(str(Path(MODEL_DIR) / PLATE_READER_MODEL)),
+            }
+        _plate_models |= {
             "bangla":   [c["bangla"] for c in classes],
             "english":  [PLATE_ENGLISH_SPELLING.get(c["name"], c["name"]) for c in classes],
             "kind":     [c["kind"] for c in classes],
@@ -206,6 +222,16 @@ def read_characters(plate_models: dict, crop: Image.Image) -> list[tuple[int, fl
     """Read the characters of one plate crop."""
     import plate_decoding
 
+    if plate_models.get("onnx"):
+        import onnx_backend
+
+        size = plate_decoding.IMAGE_SIZE
+        guesses = onnx_backend.reader_guesses(crop, size, plate_decoding.GUESS_CONFIDENCE, 100)
+        probs = onnx_backend.layout_probabilities(crop, size)
+        caps = [len(p) - 1 for p in probs]
+        guesses = plate_decoding.decode(guesses, plate_models["kind"], caps, probs)
+        return [(g["cls"], g["x"]) for g in guesses]
+
     reader = plate_models["reader"]
     guesses = plate_decoding.reader_guesses(reader, crop)
     if hasattr(reader.model, "layout_head"):
@@ -224,16 +250,23 @@ def read_plates(image_bytes: bytes, min_confidence: float = PLATE_MIN_CONFIDENCE
 def find_plates(img: Image.Image, min_confidence: float = PLATE_MIN_CONFIDENCE) -> list[dict]:
     """Find and read the plates in an image that is already open."""
     plate_models = load_plate_models()
-    detection = plate_models["detector"].predict(img, conf=min_confidence, verbose=False)[0]
+    if plate_models.get("onnx"):
+        import onnx_backend
+
+        boxes, confs, _ = onnx_backend.detect("plate-detector", img, 640, min_confidence)
+        found = [(b.tolist(), float(c)) for b, c in zip(boxes, confs)]
+    else:
+        detection = plate_models["detector"].predict(img, conf=min_confidence, verbose=False)[0]
+        found = [(b.xyxy[0].tolist(), float(b.conf)) for b in sorted(detection.boxes, key=lambda b: -float(b.conf))]
 
     plates = []
-    for box in sorted(detection.boxes, key=lambda b: -float(b.conf)):
-        x1, y1, x2, y2 = (round(v) for v in box.xyxy[0].tolist())
+    for xyxy, conf in found:
+        x1, y1, x2, y2 = (round(v) for v in xyxy)
         chars = read_characters(plate_models, img.crop((x1, y1, x2, y2)))
 
         plates.append({
             "box":        {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
-            "confidence": round(float(box.conf), 4),
+            "confidence": round(conf, 4),
             "text_en":    plate_text(chars, plate_models["english"], plate_models["kind"]),
             "text_bn":    plate_text(chars, plate_models["bangla"], plate_models["kind"]),
         })

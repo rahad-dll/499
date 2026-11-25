@@ -3,8 +3,6 @@
 import math
 
 import numpy as np
-import torch
-from ultralytics.data.augment import LetterBox
 
 KINDS = ["digit", "district", "letter", "word"]
 
@@ -29,6 +27,9 @@ def reader_guesses(reader, crop) -> list[dict]:
 
 def layout_probabilities(core, crop) -> list[np.ndarray]:
     """Character count probabilities for a plate crop."""
+    import torch
+    from ultralytics.data.augment import LetterBox
+
     image = LetterBox((IMAGE_SIZE, IMAGE_SIZE), auto=False)(image=np.asarray(crop.convert("RGB")))
     x = torch.from_numpy(image.copy()).permute(2, 0, 1).float()[None] / 255
     p = next(core.parameters())
